@@ -1,6 +1,10 @@
 # import libraly
 import psycopg2
 
+# get ids included in matched records
+import get_matched_records
+id_list = get_matched_records.numerics_id()
+
 # connect to database
 conn = psycopg2.connect("dbname=MIMIC2 user=mimic2")
 cur = conn.cursor()
