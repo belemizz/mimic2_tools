@@ -1,5 +1,5 @@
 %% add path for toolbox
-addpath('..\..\Matlab\Physionet\Toolbox\wfdb-app-toolbox-0-9-9\mcode');
+addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 
 %% get the basic infomation of the data
 siginfo = wfdbdesc('mimic2wdb/matched/s00292/s00292-3050-10-10-19-46n');
