@@ -2,27 +2,46 @@
 addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 
 base = 'mimic2wdb/matched';
-id = 's00292';
-file = 's00292-3050-10-10-19-46n';
-sig_url = sprintf('%s/%s/%s',base, id, file);
 
-metric_no = 1;
+list_id = fopen('../clinical_db/numerics_list.dat');
+numeric_list = textscan(list_id,'%s');
+fclose(list_id);
 
+for idx = 1:10
+    file = numeric_list{1}{idx};
 
-%% get the basic infomation of the data
-siginfo = wfdbdesc(sig_url);
+    sig_url = sprintf('%s/%s',base, file);
+    metric_no = 1;
 
-%% get the waveform data
-[tm,sig,a] = rdsamp(sig_url,[],siginfo(metric_no).LengthSamples);
+    %% get id
+    pat_id = file(1:6);
+    num_id = file(strfind(file, '/') + 1 : length(file));
 
-%% figure
-figure;
-plot(tm/60, sig(:,metric_no));
+    %% get the basic infomation of the data
+    siginfo = wfdbdesc(sig_url);
+    sigdesc = siginfo(metric_no).Description;
+    siggain = siginfo(metric_no).Gain;
+    sigunit = siggain(strfind(siggain,'/')+1:length(siggain));
 
-xlabel('time(min)');
-ylabel(siginfo(metric_no).Description);
-xlim([0,max(tm)/60]);
+    %% filename
+    figname = sprintf('%s-%s.png', sigdesc, num_id);
 
-yceil = ceil(max(sig(:,metric_no)) / 10) * 10;
-ylim([0,yceil]);
+    if siginfo(metric_no).LengthSamples > 1
+        %% get the waveform data
+        [tm,sig,a] = rdsamp(sig_url,[],siginfo(metric_no).LengthSamples);
 
+        %% figure
+        h = figure;
+        plot(tm/60, sig(:,metric_no));
+
+        title(num_id);
+
+        xlabel('time(min)');
+        ylabel(sprintf('%s [%s]', sigdesc, sigunit));
+        xlim([0,max(tm)/60]);
+
+        yceil = ceil(max(sig(:,metric_no)) / 10) * 10;
+        ylim([0,yceil]);
+        % saveas(h, figname);
+    end
+end
