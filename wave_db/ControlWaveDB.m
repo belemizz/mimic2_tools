@@ -4,6 +4,8 @@ function ControlWaveDB()
 addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 
 base = 'mimic2wdb/matched';
+data_folder = '../data';
+
 save_graph = true;
 sig_desc = 'RESP';
 
@@ -28,6 +30,7 @@ fclose(f);
 
 % anonymous functions
 sig_url = @(nidx) sprintf('%s/%s',base, numerics_all{nidx});
+data_path = @(filename) sprintf('%s/%s',data_folder, filename);
 
 draw_graphs();
                 
@@ -98,7 +101,7 @@ draw_graphs();
           if save_graph
             figname = sprintf('%s-%d.png', sig_desc, pid);
             set(gcf,'PaperUnits','inches','PaperPosition',[0 0 3*length(nidx_list) 1.5]);
-            saveas(h, figname);
+            saveas(h, data_path(figname));
           end
         else
           display(sprintf('%s-%d: no enough data for graph', sig_desc, pid))
@@ -160,7 +163,7 @@ draw_graphs();
       % save graph as a picture
       figname = sprintf('%s-%s.png', sig_desc, mat2str(pid_list));
       set(gcf,'PaperUnits','inches','PaperPosition',[0 0 6 1.5*length(pid_list)]);
-      saveas(h, figname);
+      saveas(h, data_path(figname));
     end
   end
 
