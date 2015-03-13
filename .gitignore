@@ -1,6 +1,7 @@
 *~
 \#*\#
 *.dat
+*.data
 *.csv
 *.pyc
 *.png
