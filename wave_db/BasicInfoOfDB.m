@@ -5,11 +5,10 @@ addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 
 base = 'mimic2wdb/matched';
 save_graph = true;
-metric_no = 1;
-%metric_desc = 'HR'
+sig_desc = 'RESP';
 
-pidx_list = 6:5:30; % Max:2808
-n_graph_per_page = 4;
+pidx_list = 1011:1020; % Max:2808
+n_graph_per_page = 5;
 
 connected_graph = true;
 
@@ -31,7 +30,7 @@ fclose(f);
 sig_url = @(nidx) sprintf('%s/%s',base, numerics_all{nidx});
 
 draw_graphs();
-
+                
 %desc_list = list_wave_desc();
 %display(desc_list);
 %display(length(desc_list));
@@ -76,7 +75,10 @@ draw_graphs();
       % prepare figure
       h = figure('Position',[100 100 300*length(nidx_list) 400]);
       for nidx = 1:length(nidx_list)
-        [sig_desc, sig_unit, sig_length, sig_start] = get_signal_info(sig_url(nidx_list(nidx)));
+        % get the basic infomation of the data
+        [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url(nidx_list(nidx)),sig_desc);
+
+        %[sig_desc, sig_unit, sig_length, sig_start] = get_signal_info(sig_url(nidx_list(nidx)));
 
         if sig_length > 1
 
@@ -85,7 +87,7 @@ draw_graphs();
 
           % figure
           subplot(1, length(nidx_list),nidx);
-          plot(tm/60/60, sig(:,metric_no));
+          plot(tm/60/60, sig(:,sig_idx));
 
           title(sprintf('ID:%d   [%s]', pid, datestr(sig_start)));
           xlabel('time(hour)');
@@ -117,36 +119,41 @@ draw_graphs();
       nidx_list = get_nidx_list_for(pid);
       display(numerics_all(nidx_list));
 
-      subplot(n_graph_per_page, 1, pidx);
       hold on;
 
+      subplot(n_graph_per_page, 1, pidx);
+      has_info = false;
+      
       for nidx = 1:length(nidx_list)
         % get the basic infomation of the data
-        [sig_desc, sig_unit, sig_length, sig_start] = get_signal_info(sig_url(nidx_list(nidx)));
-        if nidx == 1
-          base_time = sig_start;
-        end
-        
-        if sig_length > 1
+        [sig_unit_cand, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url(nidx_list(nidx)),sig_desc);
 
+        if sig_length > 1
+ 
           % get the waveform data
           [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],sig_length);
 
-          if nidx > 1
+          if has_info
             tm = tm + seconds(sig_start - base_time);
+          else
+            base_time = sig_start;
+            sig_unit = sig_unit_cand;
+            has_info = true;
           end
 
-          plot(tm/60/60, sig(:,metric_no),'Color', 'b');
+          plot(tm/60/60, sig(:,sig_idx),'Color', 'b');
+
         end
       end
 
       % set title and axis
-      title(sprintf('ID:%d   [%s]', pid, datestr(base_time)));
-      xlabel('time(hour)');
-      ylabel(sprintf('%s [%s]', sig_desc, sig_unit));
-      xlim([0,inf]);
-      ylim([0,inf]);
-
+      if has_info
+        title(sprintf('ID:%d   [%s]', pid, datestr(base_time)));
+        xlabel('time(hour)');
+        ylabel(sprintf('%s [%s]', sig_desc, sig_unit));
+        xlim([0,inf]);
+        ylim([0,inf]);
+      end
     end
     
     if save_graph
@@ -174,6 +181,27 @@ draw_graphs();
     sig_start = datetime(strcat(start_date,',',start_time), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');
   end
 
+  % return signal information for a metric
+  function [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url, sig_desc)
+    siginfo = wfdbdesc(sig_url);
+
+    sig_idx = find(ismember({siginfo.Description}, sig_desc));
+
+    if sig_idx >= 1
+      siggain = siginfo(sig_idx).Gain;
+      sig_unit = siggain(strfind(siggain,'/')+1:length(siggain));
+      sig_length = siginfo(sig_idx).LengthSamples;
+      sig_start = siginfo(sig_idx).StartTime;
+      start_date = sig_start(15:24);
+      start_time = sig_start(2:9);
+      sig_start = datetime(strcat(start_date,',',start_time), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');    
+    else % no data
+      sig_unit = '';
+      sig_length = 0;
+      sig_start = 0;
+    end
+  end
+
   function sig_desc_list = get_sig_desc_list(sig_url)
     siginfo = wfdbdesc(sig_url);
     sig_desc_list = {siginfo.Description};
@@ -192,7 +220,5 @@ draw_graphs();
   function pat_id = id_of(numerics)
     pat_id = str2num(numerics(2:6));
   end
-
-
 end
 
