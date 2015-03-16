@@ -7,11 +7,11 @@ base = 'mimic2wdb/matched';
 data_folder = '../data';
 
 save_graph = true;
-sig_desc = {'RESP', 'PULSE'};
-% supported metrics: 'HR', 'PULSE', 'RESP', SPO2
+descriptor_list = {'HR', 'SpO2', 'RESP'};
+% supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 1011:1011; % Max:2808
-n_pid_per_page = 2;
+pidx_list = 1:5; % Max:2808
+n_pid_per_page = 1;
 
 %% read lists
 numerics_all = load_numerics_all();
@@ -21,7 +21,10 @@ pid_all = load_pid_all();
 % anonymous functions
 sig_url = @(nidx) sprintf('%s/%s',base, numerics_all{nidx});
 data_path = @(filename) sprintf('%s/%s',data_folder, filename);
+get_unit = @(info) info.Gain(strfind(info.Gain,'/')+1:length(info.Gain));
+get_start_date = @(info) datetime(strcat(info.StartTime(15:24),',',info.StartTime(2:9)), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');
 
+        
 % for drawing graphs
 switch mode
   case 1
@@ -83,7 +86,7 @@ end
       h = figure('Position',[100 100 300*length(nidx_list) 400]);
       for nidx = 1:length(nidx_list)
         % get the basic infomation of the data
-        [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url(nidx_list(nidx)),sig_desc);
+        [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url(nidx_list(nidx)),descriptor_list);
 
         if sig_length > 1
 
@@ -97,16 +100,16 @@ end
           title(sprintf('ID:%d   [%s]', pid, datestr(sig_start)));
           xlabel('time(hour)');
           xlim([0,inf]);
-          ylabel(sprintf('%s [%s]', sig_desc, sig_unit));
+          ylabel(sprintf('%s [%s]', descriptor_list, sig_unit));
           ylim([0,inf]);
 
           if save_graph
-            figname = sprintf('%s-%d.png', sig_desc, pid);
+            figname = sprintf('%s-%d.png', descriptor_list, pid);
             set(gcf,'PaperUnits','inches','PaperPosition',[0 0 3*length(nidx_list) 1.5]);
             saveas(h, data_path(figname));
           end
         else
-          display(sprintf('%s-%d: no enough data for graph', sig_desc, pid))
+          display(sprintf('%s-%d: no enough data for graph', descriptor_list, pid))
         end
 
       end
@@ -116,55 +119,57 @@ end
   function draw_connected_graph(pid_list)
     
     % prepare figure
-    h = figure;
+    figure;
     
     for pidx = 1:length(pid_list)
       pid = pid_list(pidx);
       % pick numerics
       nidx_list = get_nidx_list_for(pid);
       display(numerics_all(nidx_list));
-
-      hold on;
-
-      has_info = false;
+      
+      has_info = false(length(descriptor_list),1); %flags to check if we get info
+      base_time = datetime(zeros(length(descriptor_list),6));
+      unit = cell(length(descriptor_list),1);
       
       for nidx = 1:length(nidx_list)
         % get the basic infomation of the data
-        info = get_sig_info_of(sig_url(nidx_list(nidx)), sig_desc);
+        info = get_sig_info_of(sig_url(nidx_list(nidx)), descriptor_list);
 
         if length(info) > 1
- 
-          % get the waveform data
-          [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],max(info.LengthSamples));
+          [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],max([info.LengthSamples]));        
 
-          if has_info
-            tm = tm + seconds(sig_start - base_time);
-          else
-            base_time = sig_start;
-            sig_unit = sig_unit_cand;
-            has_info = true;
+          for didx= 1:length(descriptor_list);
+            if has_info(didx)
+              tm = tm + seconds(get_start_date(info(didx)) - base_time(didx));
+            else
+              has_info(didx) = true;
+              base_time(didx) = get_start_date(info(didx));
+              unit{didx} = get_unit(info(didx));
+            end
+            
+            subplot(length(descriptor_list) * n_pid_per_page, 1, length(descriptor_list) * (pidx-1) + didx);
+            plot(tm/60/60, sig(:,info(didx).SignalIndex+1),'Color', 'b');
+            hold on;
           end
-
-          for gidx = 1:length(info)
-            subplot(length(sig_desc) * n_pid_per_page, length(sig_desc) * (pidx-1) + gidx);
-            plot(tm/60/60, sig(:,sig_idx),'Color', 'b');
-          end
+          
         end
       end
-
-      % set title and axis
-      if has_info
-        title(sprintf('ID:%d   [%s]', pid, datestr(base_time)));
-        xlabel('time(hour)');
-        ylabel(sprintf('%s [%s]', sig_desc, sig_unit));
-        xlim([0,inf]);
-        ylim([0,inf]);
+      % add axis descripton
+      for didx= 1:length(descriptor_list);
+        if has_info
+          subplot(length(descriptor_list) * n_pid_per_page, 1, length(descriptor_list) * (pidx-1) + didx);
+          title(sprintf('ID:%d   [%s]', pid, datestr(base_time(didx))));
+          xlabel('time(hour)');
+          ylabel(sprintf('%s [%s]', descriptor_list{didx}, unit{didx}));
+          xlim([0,inf]);
+          ylim([0,inf]);
+        end
       end
     end
-    
+
     if save_graph
       % save graph as a picture
-      figname = sprintf('%s-%s.png', sig_desc, mat2str(pid_list));
+      figname = sprintf('%s-%s.png', descriptor_list{1}, mat2str(pid_list));
       set(gcf,'PaperUnits','inches','PaperPosition',[0 0 6 1.5*length(pid_list)]);
       saveas(h, data_path(figname));
     end
@@ -189,25 +194,15 @@ end
 
 
 %% common functions
-%function [sig_available_desc, sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url, sig_desc)
-  function sig_info = get_sig_info_of(sig_url, sig_desc)
+  function sig_info = get_sig_info_of(sig_url, metric_list)
     % return signal information for a metric
     info = wfdbdesc(sig_url);
     
-    available_desc = intersect({info.Description}, sig_desc);
-    
-    for idx = 1:length(available_desc)
-        sig_index = find(ismember({info.Description}, available_desc{idx}));
-        sig_info(idx) = info(sig_index);
-        
-        siggain = sig_info(idx).Gain;
-        sig_info(idx).Unit = siggain(strfind(siggain,'/')+1:length(siggain));
-        
-        sig_start = sig_info(idx).StartTime;
-        start_date = sig_start(15:24);
-        start_time = sig_start(2:9);
-        sig.info(idx).Datetime = datetime(strcat(start_date,',',start_time), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');
-
+    for midx = 1:length(metric_list)
+      metric_index = find(ismember({info.Description}, metric_list{midx}));
+      if metric_index > 0
+        sig_info(midx) = info(metric_index);
+      end
     end
   end
 
