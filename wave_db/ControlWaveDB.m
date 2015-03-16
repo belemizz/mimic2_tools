@@ -1,60 +1,64 @@
 %% add path for toolbox
 
-function ControlWaveDB()
+function ControlWaveDB(mode)
 addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 
 base = 'mimic2wdb/matched';
 data_folder = '../data';
 
 save_graph = true;
-sig_desc = 'RESP';
+sig_desc = {'HR', 'PULSE'};
+% supported metrics: 'HR', 'PULSE', 'RESP', SPO2
 
-pidx_list = 1011:1020; % Max:2808
+pidx_list = 1011:1011; % Max:2808
 n_graph_per_page = 5;
 
-connected_graph = true;
-
 %% read lists
-f = fopen('../data/numerics_list.dat');
-temp = textscan(f,'%s');
-numerics_all = temp{1};
-fclose(f);
-
-f = fopen('../data/id_list.dat');
-pid_all = cell2mat(textscan(f,'%d'));
-fclose(f);
-
-% f = fopen('../data/icu_admission_details.csv');
-% admission_info = textscan(f, '%d %d %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s', 'Delimiter',',');
-% fclose(f);
+numerics_all = load_numerics_all();
+pid_all = load_pid_all();
+%admission_info = load_admission_info();
 
 % anonymous functions
 sig_url = @(nidx) sprintf('%s/%s',base, numerics_all{nidx});
 data_path = @(filename) sprintf('%s/%s',data_folder, filename);
 
-draw_graphs();
-                
-%desc_list = list_wave_desc();
-%display(desc_list);
-%display(length(desc_list));
+% for drawing graphs
+switch mode
+  case 1
+    connected_graph = true;
+    draw_graphs();
+  case 2
+    connected_graph = false;
+    draw_graphs();
+  otherwise
+    desc_list = list_wave_desc();
+    display(desc_list);
+    display(length(desc_list));
+end
 
-
-  function desc_list = list_wave_desc()
-    desc_list = {};
-    for pidx = pidx_list
-      pid = pid_all(pidx);
-      nidx_list = get_nidx_list_for(pid);
-      
-      for nidx = nidx_list
-        sig_desc_list = get_sig_desc_list(sig_url(nidx));
-        desc_list = union(desc_list, sig_desc_list);
-      end
-      display(desc_list);
-      display(length(desc_list));
-      display(pidx);
-    end
+  
+%% load Functions
+  function numerics_all = load_numerics_all()
+    % load the names of the numerics files from the file
+    f = fopen('../data/numerics_list.dat');
+    temp = textscan(f,'%s');
+    numerics_all = temp{1};
+    fclose(f);
   end
 
+  function pid_all = load_pid_all()
+    f = fopen('../data/id_list.dat');
+    pid_all = cell2mat(textscan(f,'%d'));
+    fclose(f);
+  end
+
+  function admission_info = load_admission_info()
+   f = fopen('../data/icu_admission_details.csv');
+   admission_info = textscan(f, '%d %d %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s', 'Delimiter',',');
+   fclose(f);
+  end    
+
+%% graph functions
   function draw_graphs()
     n_all_page = ceil(length(pidx_list)/n_graph_per_page);
     for page_idx = 1:n_all_page
@@ -62,7 +66,7 @@ draw_graphs();
       if connected_graph
         draw_connected_graph(patient_id_list);
       else
-         draw_graph(patient_id_list);
+        draw_graph(patient_id_list);
       end
     end
   end
@@ -80,8 +84,6 @@ draw_graphs();
       for nidx = 1:length(nidx_list)
         % get the basic infomation of the data
         [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url(nidx_list(nidx)),sig_desc);
-
-        %[sig_desc, sig_unit, sig_length, sig_start] = get_signal_info(sig_url(nidx_list(nidx)));
 
         if sig_length > 1
 
@@ -167,30 +169,32 @@ draw_graphs();
     end
   end
 
-  % return signal information for drawing graphs
-  function [sig_desc, sig_unit, sig_length, sig_start] = get_signal_info(sig_url)
-    siginfo = wfdbdesc(sig_url);
-
-    sig_desc = siginfo(metric_no).Description;
-
-    siggain = siginfo(metric_no).Gain;
-    sig_unit = siggain(strfind(siggain,'/')+1:length(siggain));
-    
-    sig_length = siginfo(metric_no).LengthSamples;
-    
-    sig_start = siginfo(metric_no).StartTime;
-    start_date = sig_start(15:24);
-    start_time = sig_start(2:9);
-    sig_start = datetime(strcat(start_date,',',start_time), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');
+%% description list
+  function desc_list = list_wave_desc()
+    desc_list = {};
+    for pidx = pidx_list
+      pid = pid_all(pidx);
+      nidx_list = get_nidx_list_for(pid);
+      
+      for nidx = nidx_list
+        sig_desc_list = get_sig_desc_list(sig_url(nidx));
+        desc_list = union(desc_list, sig_desc_list);
+      end
+      display(desc_list);
+      display(length(desc_list));
+      display(pidx);
+    end
   end
 
+
+%% common functions
   % return signal information for a metric
   function [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url, sig_desc)
     siginfo = wfdbdesc(sig_url);
+    
+    sig_metrics = intersect({siginfo.Description}, sig_desc);
 
-    sig_idx = find(ismember({siginfo.Description}, sig_desc));
-
-    if sig_idx >= 1
+    if length(sig_metrics) >= 1
       siggain = siginfo(sig_idx).Gain;
       sig_unit = siggain(strfind(siggain,'/')+1:length(siggain));
       sig_length = siginfo(sig_idx).LengthSamples;
