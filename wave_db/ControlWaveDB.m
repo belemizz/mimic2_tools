@@ -7,11 +7,11 @@ base = 'mimic2wdb/matched';
 data_folder = '../data';
 
 save_graph = true;
-sig_desc = {'HR', 'PULSE'};
+sig_desc = {'RESP', 'PULSE'};
 % supported metrics: 'HR', 'PULSE', 'RESP', SPO2
 
 pidx_list = 1011:1011; % Max:2808
-n_graph_per_page = 5;
+n_pid_per_page = 2;
 
 %% read lists
 numerics_all = load_numerics_all();
@@ -60,9 +60,9 @@ end
 
 %% graph functions
   function draw_graphs()
-    n_all_page = ceil(length(pidx_list)/n_graph_per_page);
+    n_all_page = ceil(length(pidx_list)/n_pid_per_page);
     for page_idx = 1:n_all_page
-      patient_id_list = pid_all(pidx_list(n_graph_per_page*(page_idx-1)+1 : min(length(pidx_list),n_graph_per_page * page_idx)));
+      patient_id_list = pid_all(pidx_list(n_pid_per_page*(page_idx-1)+1 : min(length(pidx_list),n_pid_per_page * page_idx)));
       if connected_graph
         draw_connected_graph(patient_id_list);
       else
@@ -126,17 +126,16 @@ end
 
       hold on;
 
-      subplot(n_graph_per_page, 1, pidx);
       has_info = false;
       
       for nidx = 1:length(nidx_list)
         % get the basic infomation of the data
-        [sig_unit_cand, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url(nidx_list(nidx)),sig_desc);
+        info = get_sig_info_of(sig_url(nidx_list(nidx)), sig_desc);
 
-        if sig_length > 1
+        if length(info) > 1
  
           % get the waveform data
-          [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],sig_length);
+          [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],max(info.LengthSamples));
 
           if has_info
             tm = tm + seconds(sig_start - base_time);
@@ -146,8 +145,10 @@ end
             has_info = true;
           end
 
-          plot(tm/60/60, sig(:,sig_idx),'Color', 'b');
-
+          for gidx = 1:length(info)
+            subplot(length(sig_desc) * n_pid_per_page, length(sig_desc) * (pidx-1) + gidx);
+            plot(tm/60/60, sig(:,sig_idx),'Color', 'b');
+          end
         end
       end
 
@@ -188,24 +189,25 @@ end
 
 
 %% common functions
-  % return signal information for a metric
-  function [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url, sig_desc)
-    siginfo = wfdbdesc(sig_url);
+%function [sig_available_desc, sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url, sig_desc)
+  function sig_info = get_sig_info_of(sig_url, sig_desc)
+    % return signal information for a metric
+    info = wfdbdesc(sig_url);
     
-    sig_metrics = intersect({siginfo.Description}, sig_desc);
+    available_desc = intersect({info.Description}, sig_desc);
+    
+    for idx = 1:length(available_desc)
+        sig_index = find(ismember({info.Description}, available_desc{idx}));
+        sig_info(idx) = info(sig_index);
+        
+        siggain = sig_info(idx).Gain;
+        sig_info(idx).Unit = siggain(strfind(siggain,'/')+1:length(siggain));
+        
+        sig_start = sig_info(idx).StartTime;
+        start_date = sig_start(15:24);
+        start_time = sig_start(2:9);
+        sig.info(idx).Datetime = datetime(strcat(start_date,',',start_time), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');
 
-    if length(sig_metrics) >= 1
-      siggain = siginfo(sig_idx).Gain;
-      sig_unit = siggain(strfind(siggain,'/')+1:length(siggain));
-      sig_length = siginfo(sig_idx).LengthSamples;
-      sig_start = siginfo(sig_idx).StartTime;
-      start_date = sig_start(15:24);
-      start_time = sig_start(2:9);
-      sig_start = datetime(strcat(start_date,',',start_time), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');    
-    else % no data
-      sig_unit = '';
-      sig_length = 0;
-      sig_start = 0;
     end
   end
 
