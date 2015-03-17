@@ -24,21 +24,15 @@ data_path = @(filename) sprintf('%s/%s',data_folder, filename);
 get_unit = @(info) info.Gain(strfind(info.Gain,'/')+1:length(info.Gain));
 get_start_date = @(info) datetime(strcat(info.StartTime(15:24),',',info.StartTime(2:9)), 'InputFormat', 'dd/MM/yyyy,HH:mm:ss');
 
-        
 % for drawing graphs
 switch mode
   case 1
-    connected_graph = true;
-    draw_graphs();
-  case 2
-    connected_graph = false;
     draw_graphs();
   otherwise
     desc_list = list_wave_desc();
     display(desc_list);
     display(length(desc_list));
 end
-
   
 %% load Functions
   function numerics_all = load_numerics_all()
@@ -66,53 +60,7 @@ end
     n_all_page = ceil(length(pidx_list)/n_pid_per_page);
     for page_idx = 1:n_all_page
       patient_id_list = pid_all(pidx_list(n_pid_per_page*(page_idx-1)+1 : min(length(pidx_list),n_pid_per_page * page_idx)));
-      if connected_graph
-        draw_connected_graph(patient_id_list);
-      else
-        draw_graph(patient_id_list);
-      end
-    end
-  end
-
-  function draw_graph(pid_list)
-    for pidx = 1:length(pid_list)
-      pid = pid_list(pidx);
-      
-      % pick numerics
-      nidx_list = get_nidx_list_for(pid);
-      display(numerics_all(nidx_list));
-      
-      % prepare figure
-      h = figure('Position',[100 100 300*length(nidx_list) 400]);
-      for nidx = 1:length(nidx_list)
-        % get the basic infomation of the data
-        [sig_unit, sig_length, sig_start, sig_idx] = get_sig_info_of(sig_url(nidx_list(nidx)),metric_list);
-
-        if sig_length > 1
-
-          % get the waveform data
-          [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],sig_length);
-
-          % figure
-          subplot(1, length(nidx_list),nidx);
-          plot(tm/60/60, sig(:,sig_idx));
-
-          title(sprintf('ID:%d   [%s]', pid, datestr(sig_start)));
-          xlabel('time(hour)');
-          xlim([0,inf]);
-          ylabel(sprintf('%s [%s]', metric_list, sig_unit));
-          ylim([0,inf]);
-
-          if save_graph
-            figname = sprintf('%s-%d.png', metric_list, pid);
-            set(gcf,'PaperUnits','inches','PaperPosition',[0 0 3*length(nidx_list) 1.5]);
-            saveas(h, data_path(figname));
-          end
-        else
-          display(sprintf('%s-%d: no enough data for graph', metric_list, pid))
-        end
-
-      end
+      draw_connected_graph(patient_id_list);
     end
   end
 
