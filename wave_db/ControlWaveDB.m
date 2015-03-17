@@ -16,7 +16,7 @@ n_pid_per_page = 1;
 %% read lists
 numerics_all = load_numerics_all();
 pid_all = load_pid_all();
-%admission_info = load_admission_info();
+admission_info = LoadIcustayDetail();
 
 % anonymous functions
 sig_url = @(nidx) sprintf('%s/%s',base, numerics_all{nidx});
@@ -28,6 +28,8 @@ get_start_date = @(info) datetime(strcat(info.StartTime(15:24),',',info.StartTim
 switch mode
   case 1
     draw_graphs();
+  case 2
+    admission_statics();
   otherwise
     desc_list = list_wave_desc();
     display(desc_list);
@@ -49,11 +51,10 @@ end
     fclose(f);
   end
 
-  function admission_info = load_admission_info()
-   f = fopen('../data/icu_admission_details.csv');
-   admission_info = textscan(f, '%d %d %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s', 'Delimiter',',');
-   fclose(f);
-  end    
+%% admission statics
+  function admission_statics()
+    display(admission_info)
+  end
 
 %% graph functions
   function draw_graphs()
