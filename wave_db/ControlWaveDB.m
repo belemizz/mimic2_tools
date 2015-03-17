@@ -10,7 +10,7 @@ save_graph = false;
 metric_list = {'HR', 'RESP'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 11:14; % Max:2808
+pidx_list = 1:200:2808; % Max:2808
 n_pid_per_page = 2;
 
 %% read lists
@@ -30,7 +30,7 @@ switch mode
   case 2
     graph_of_icu_expire_flg_eq('Y', pidx_list);
   otherwise
-    desc_list = list_wave_desc();
+    desc_list = list_wave_metric();
     display(desc_list);
     display(length(desc_list));
 end
@@ -134,18 +134,29 @@ end
   end
 
 %% description list
-  function desc_list = list_wave_desc()
-    desc_list = {};
+  function [metric_list,freq] = list_wave_metric()
+    metric_list = {};
+    freq = [];
+    
     for pidx = pidx_list
       pid = pid_all(pidx);
       nidx_list = get_nidx_list_for(pid);
       
       for nidx = nidx_list
-        sig_desc_list = get_sig_desc_list(sig_url(nidx));
-        desc_list = union(desc_list, sig_desc_list);
+        available_list = get_metric_list(sig_url(nidx));
+        for aidx = 1:length(available_list)
+          midx = find(ismember(metric_list,available_list{aidx}));
+          if midx > 0
+            freq(midx) = freq(midx) + 1;
+          else
+            metric_list = [metric_list, available_list{aidx}];
+            freq(length(freq)+1) = 1;
+          end
+        end
       end
-      display(desc_list);
-      display(length(desc_list));
+      display(metric_list);
+      display(freq);
+      display(length(metric_list));
       display(pidx);
     end
   end
@@ -164,9 +175,9 @@ end
     end
   end
 
-  function sig_desc_list = get_sig_desc_list(sig_url)
+  function metric_list = get_metric_list(sig_url)
     siginfo = wfdbdesc(sig_url);
-    sig_desc_list = {siginfo.Description};
+    metric_list = strrep({siginfo.Description}, ' ','');
   end
 
   % return indexs of numerics list for a specific id
