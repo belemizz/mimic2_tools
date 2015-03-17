@@ -6,17 +6,16 @@ addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 base = 'mimic2wdb/matched';
 data_folder = '../data';
 
-save_graph = true;
+save_graph = false;
 metric_list = {'HR', 'RESP'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 1:1; % Max:2808
-n_pid_per_page = 1;
+pidx_list = 11:14; % Max:2808
+n_pid_per_page = 2;
 
 %% read lists
 numerics_all = load_numerics_all();
 pid_all = load_pid_all();
-admission_info = LoadIcustayDetail();
 
 % anonymous functions
 sig_url = @(nidx) sprintf('%s/%s',base, numerics_all{nidx});
@@ -29,7 +28,7 @@ switch mode
   case 1
     draw_graphs();
   case 2
-    admission_statics();
+    graph_of_icu_expire_flg_eq('Y', pidx_list);
   otherwise
     desc_list = list_wave_desc();
     display(desc_list);
@@ -52,16 +51,23 @@ end
   end
 
 %% admission statics
-  function admission_statics()
-    display(admission_info)
+  function graph_of_icu_expire_flg_eq(flg, pidx)
+    all_list = PidOfIcustayExpireFlagEq(flg);
+    pid_list = all_list(pidx);
+    
+    n_all_page = ceil(length(pid_list)/n_pid_per_page);
+    for page_idx = 1:n_all_page
+      pid_for_page = pid_list(n_pid_per_page * (page_idx-1)+1: min(length(pidx_list),n_pid_per_page * page_idx));
+      draw_connected_graph(pid_for_page);
+    end
   end
 
 %% graph functions
   function draw_graphs()
     n_all_page = ceil(length(pidx_list)/n_pid_per_page);
     for page_idx = 1:n_all_page
-      patient_id_list = pid_all(pidx_list(n_pid_per_page*(page_idx-1)+1 : min(length(pidx_list),n_pid_per_page * page_idx)));
-      draw_connected_graph(patient_id_list);
+      pid_for_page = pid_all(pidx_list(n_pid_per_page*(page_idx-1)+1 : min(length(pidx_list),n_pid_per_page * page_idx)));
+      draw_connected_graph(pid_for_page);
     end
   end
 
@@ -79,6 +85,7 @@ end
       has_info = false(length(metric_list),1); %flags to check if we get info
       base_time = datetime(zeros(length(metric_list),6));
       unit = cell(length(metric_list),1);
+      max_tm = 0;
       
       for nidx = 1:length(nidx_list)
         % get the basic infomation of the data
@@ -97,7 +104,9 @@ end
             end
             
             subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
-            plot(tm/60/60, sig(:,info(didx).SignalIndex+1),'Color', 'b');
+%            plot(tm/60/60, sig(:,info(didx).SignalIndex+1),'Color', 'b');
+            plot(tm/60/60, sig(:,info(didx).SignalIndex+1));
+            max_tm = max(max_tm, max(tm)/60/60);
             hold on;
           end
           
@@ -110,7 +119,7 @@ end
           title(sprintf('ID:%d   [%s]', pid, datestr(base_time(didx))));
           xlabel('time(hour)');
           ylabel(sprintf('%s [%s]', metric_list{didx}, unit{didx}));
-          xlim([0,inf]);
+          xlim([0,max_tm]);
           ylim([0,inf]);
         end
       end
