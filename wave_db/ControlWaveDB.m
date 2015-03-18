@@ -7,11 +7,11 @@ base = 'mimic2wdb/matched';
 data_folder = '../data';
 
 save_graph = false;
-metric_list = {'HR', 'RESP'};
+metric_list = {'HR','SpO2','RESP', 'NBPMean'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 1:200:2808; % Max:2808
-n_pid_per_page = 2;
+pidx_list = 2553:2556; % Max:2808
+n_pid_per_page = 1;
 
 %% read lists
 numerics_all = load_numerics_all();
@@ -91,30 +91,33 @@ end
         % get the basic infomation of the data
         info = get_sig_info_of(sig_url(nidx_list(nidx)), metric_list);
 
-        if length(info) > 1
+        if ~isempty(info)
           [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],max([info.LengthSamples]));        
 
           for didx= 1:length(metric_list);
-            if has_info(didx)
-              tm = tm + seconds(get_start_date(info(didx)) - base_time(didx));
-            else
-              has_info(didx) = true;
-              base_time(didx) = get_start_date(info(didx));
-              unit{didx} = get_unit(info(didx));
+            if ~isempty(info(didx).LengthTime)
+              tm_from_base = tm;
+              if has_info(didx)
+                tm_from_base = tm + seconds(get_start_date(info(didx)) - base_time(didx));
+              else
+                has_info(didx) = true;
+                base_time(didx) = get_start_date(info(didx));
+                unit{didx} = get_unit(info(didx));
+              end
+
+              subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
+  %            plot(tm/60/60, sig(:,info(didx).SignalIndex+1),'Color', 'b');
+              plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1));
+              max_tm = max(max_tm, max(tm_from_base)/60/60);
+              hold on;
             end
-            
-            subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
-%            plot(tm/60/60, sig(:,info(didx).SignalIndex+1),'Color', 'b');
-            plot(tm/60/60, sig(:,info(didx).SignalIndex+1));
-            max_tm = max(max_tm, max(tm)/60/60);
-            hold on;
           end
           
         end
       end
       % add axis descripton
       for didx= 1:length(metric_list);
-        if has_info
+        if has_info(didx)
           subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
           title(sprintf('ID:%d   [%s]', pid, datestr(base_time(didx))));
           xlabel('time(hour)');
@@ -167,17 +170,29 @@ end
     % return signal information for a metric
     info = wfdbdesc(sig_url);
     
-    for midx = 1:length(metric_list)
-      metric_index = find(ismember({info.Description}, metric_list{midx}));
-      if metric_index > 0
-        sig_info(midx) = info(metric_index);
+    if ~isempty(info)
+      for midx = 1:length(metric_list)
+        metric_in_info = strrep({info.Description}, ' ','');
+        metric_index = find(ismember(metric_in_info, metric_list{midx}));
+        if metric_index > 0
+          sig_info(midx) = info(metric_index);
+        end
       end
+    end
+    
+    if ~exist('sig_info','var')
+      sig_info = struct([]);
     end
   end
 
   function metric_list = get_metric_list(sig_url)
-    siginfo = wfdbdesc(sig_url);
-    metric_list = strrep({siginfo.Description}, ' ','');
+    info = wfdbdesc(sig_url);
+    if length(info)>1
+      metric_list = strrep({info.Description}, ' ','');
+    else
+      metric_list = {};
+    end
+    
   end
 
   % return indexs of numerics list for a specific id
