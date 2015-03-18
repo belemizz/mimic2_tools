@@ -10,7 +10,7 @@ save_graph = false;
 metric_list = {'HR','SpO2','RESP', 'NBPMean'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 2553:2556; % Max:2808
+pidx_list = 21:24; % Max:2808
 n_pid_per_page = 1;
 
 %% read lists
@@ -106,7 +106,6 @@ end
               end
 
               subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
-  %            plot(tm/60/60, sig(:,info(didx).SignalIndex+1),'Color', 'b');
               plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1));
               max_tm = max(max_tm, max(tm_from_base)/60/60);
               hold on;
@@ -170,12 +169,20 @@ end
     % return signal information for a metric
     info = wfdbdesc(sig_url);
     
+    field = fieldnames(info);
+    n_field = length(field);
+    init = cell(1, n_field);
+    
+    blank_struct = cell2struct(init, field,2);
+    
     if ~isempty(info)
       for midx = 1:length(metric_list)
         metric_in_info = strrep({info.Description}, ' ','');
         metric_index = find(ismember(metric_in_info, metric_list{midx}));
         if metric_index > 0
           sig_info(midx) = info(metric_index);
+        else
+          sig_info(midx) = blank_struct;
         end
       end
     end
