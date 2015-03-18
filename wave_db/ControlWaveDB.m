@@ -28,7 +28,7 @@ switch mode
   case 1
     draw_graphs();
   case 2
-    graph_of_icu_expire_flg_eq('Y', pidx_list);
+    graph_of_icu_expire_flg_eq(true, pidx_list);
   otherwise
     desc_list = list_wave_metric();
     display(desc_list);
