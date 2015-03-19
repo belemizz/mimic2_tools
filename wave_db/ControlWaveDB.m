@@ -6,11 +6,12 @@ addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 base = 'mimic2wdb/matched';
 data_folder = '../data';
 
-save_graph = false;
+save_graph = true;
+%metric_list = {'HR'};
 metric_list = {'HR','SpO2','RESP', 'NBPMean'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 21:24; % Max:2808
+pidx_list = 12:13; % Max:2808
 n_pid_per_page = 1;
 
 %% read lists
