@@ -7,11 +7,11 @@ base = 'mimic2wdb/matched';
 data_folder = '../data';
 
 save_graph = true;
-%metric_list = {'HR','SpO2','RESP', 'NBPMean'};
-metric_list = {'NBPSys','NBPDias','NBPMean'};
+metric_list = {'HR', 'SpO2', 'RESP', 'NBPMean', 'ABPMean'};
+%metric_list = {'NBPSys','NBPDias','NBPMean'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 12:13; % Max:2808
+pidx_list = 1:100; % Max:2808
 n_pid_per_page = 1;
 
 %% read lists
@@ -93,27 +93,40 @@ end
         info = get_sig_info_of(sig_url(nidx_list(nidx)), metric_list);
 
         if ~isempty(info)
-          display(max([info.LengthSamples]));
-          [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],max([info.LengthSamples]));        
-
-          for didx= 1:length(metric_list);
-            if ~isempty(info(didx).LengthTime)
-              tm_from_base = tm;
-              if has_info(didx)
-                tm_from_base = tm + seconds(get_start_date(info(didx)) - base_time(didx));
-              else
-                has_info(didx) = true;
-                base_time(didx) = get_start_date(info(didx));
-                unit{didx} = get_unit(info(didx));
-              end
-
-              subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
-              plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1));
-              max_tm = max(max_tm, max(tm_from_base)/60/60);
-              hold on;
-            end
-          end
+          signal_length = max([info.LengthSamples]);
+          limit_length = 200000;
+          split_num = ceil(signal_length / limit_length);
           
+          for idx = 1:split_num
+            sample_stop = min(limit_length * idx, signal_length);
+            sample_start = limit_length*(idx - 1) +1;
+            display(sprintf('%s: %d - %d',sig_url(nidx_list(nidx)), sample_start, sample_stop));
+            [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],sample_stop, sample_start);
+            
+            for didx= 1:length(metric_list);
+              if ~isempty(info(didx).LengthTime)
+                tm_from_base = tm;
+                if has_info(didx)
+                  tm_from_base = tm + seconds(get_start_date(info(didx)) - base_time(didx));
+                else
+                  has_info(didx) = true;
+                  base_time(didx) = get_start_date(info(didx));
+                  unit{didx} = get_unit(info(didx));
+                end
+
+                subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
+%                plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1));
+                plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1),'Color','b');
+
+                max_tm = max(max_tm, max(tm_from_base)/60/60);
+                hold on;
+              end
+            end
+
+          end
+
+
+
         end
       end
       % add axis descripton
@@ -122,7 +135,7 @@ end
           subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
           title(sprintf('ID:%d   [%s]', pid, datestr(base_time(didx))));
           xlabel('time(hour)');
-          ylabel(sprintf('%s [%s]', metric_list{didx}, unit{didx}));
+          ylabel(sprintf('%s\n[%s]', metric_list{didx}, unit{didx}));
           xlim([0,max_tm]);
           ylim([0,inf]);
         end
