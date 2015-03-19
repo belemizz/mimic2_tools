@@ -6,11 +6,12 @@ addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 base = 'mimic2wdb/matched';
 data_folder = '../data';
 
-save_graph = false;
-metric_list = {'HR','SpO2','RESP', 'NBPMean'};
+save_graph = true;
+%metric_list = {'HR','SpO2','RESP', 'NBPMean'};
+metric_list = {'NBPSys','NBPDias','NBPMean'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 2553:2556; % Max:2808
+pidx_list = 200:210; % Max:2808
 n_pid_per_page = 1;
 
 %% read lists
@@ -88,10 +89,12 @@ end
       max_tm = 0;
       
       for nidx = 1:length(nidx_list)
+        
         % get the basic infomation of the data
         info = get_sig_info_of(sig_url(nidx_list(nidx)), metric_list);
 
         if ~isempty(info)
+          display(max([info.LengthSamples]));
           [tm,sig,~] = rdsamp(sig_url(nidx_list(nidx)),[],max([info.LengthSamples]));        
 
           for didx= 1:length(metric_list);
