@@ -7,11 +7,19 @@ base = 'mimic2wdb/matched';
 data_folder = '../data';
 
 save_graph = true;
+<<<<<<< HEAD
+%metric_list = {'HR'};
+metric_list = {'HR','SpO2','RESP', 'NBPMean'};
+% supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
+
+pidx_list = 12:13; % Max:2808
+=======
 %metric_list = {'HR','SpO2','RESP', 'NBPMean'};
 metric_list = {'NBPSys','NBPDias','NBPMean'};
 % supported metrics: 'HR', 'PULSE', 'RESP', 'SpO2'
 
-pidx_list = 12:13; % Max:2808
+pidx_list = 200:210; % Max:2808
+>>>>>>> b2943dc92ad0c36dd2adceaef23e72bb7f110996
 n_pid_per_page = 1;
 
 %% read lists
@@ -89,6 +97,7 @@ end
       max_tm = 0;
       
       for nidx = 1:length(nidx_list)
+        
         % get the basic infomation of the data
         info = get_sig_info_of(sig_url(nidx_list(nidx)), metric_list);
 
