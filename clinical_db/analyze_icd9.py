@@ -4,11 +4,12 @@ n_code_to_see = 3
 sort_flag = True
 target_code = '428.0' #only count codes includes this code, set '' to ignore
 
-
+# select icd code entries
 import control_mimic2db as cm
 mimic2db = cm.control_mimic2db()
 mimic2db.icd9_eq_higher_than(n_code_to_see,savepath)
 
+# read csv and list code
 import csv
 f = open(savepath, 'rb')
 dataReader = csv.reader(f)
@@ -31,6 +32,9 @@ for row in dataReader:
         codes=[row[3]]
         prev_adm_id = row[1]
 
+f.close()
+
+# count code sequence
 codes_and_counts = {}
 for code in all_codes:
     if target_code in code:
