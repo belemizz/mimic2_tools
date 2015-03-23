@@ -20,5 +20,3 @@ def numerics_id():
 
 def pick_id(str):
     return int(str[1:6])
-
-

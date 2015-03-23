@@ -1,4 +1,4 @@
-# import libraly
+# import library
 import psycopg2
 
 # get ids included in matched records
@@ -9,6 +9,7 @@ id_list = get_matched_records.numerics_id()
 conn = psycopg2.connect("dbname=MIMIC2 user=mimic2")
 cur = conn.cursor()
 
+
 current_id = id_list[4]
 
 # generate table
@@ -18,7 +19,6 @@ cur.execute("CREATE TABLE mimic2v26.test AS (SELECT * FROM mimic2v26.icustay_det
 # save the table to csvfile
 with open('../data/icu_admission_details.csv', 'w') as f:
     cur.copy_to(f, 'mimic2v26.test', sep=",")
-
 f.closed
 
 # delete the tablep
