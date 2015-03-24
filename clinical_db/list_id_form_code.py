@@ -1,38 +1,37 @@
 tmppath = '../data/tmp.csv'
+outpath = '../data/out.csv'
+target_codes = ['410.71','414.01','428.0']
 
 ignore_order = True
-target_codes = ['428.0']
-only_matched_waveform = True
-
-def list_of(path):
-    f = open(tmppath, 'rb')
-    dataReader = csv.reader(f)
-
-    id_list = []
-    for row in dataReader:
-        id_list.append(row[0])
-    f.close()
-    return id_list
 
 import control_mimic2db as cm
-import csv
+import control_csv as cc
 
 mimic2db = cm.control_mimic2db()
 id_lists = []
 
-for code in target_codes:
-    seq_cond = "<=%d"%len(target_codes)
+# extract subjects who have each target code
+for index, code in enumerate(target_codes):
+    if ignore_order:
+        seq_cond = "<=%d"%len(target_codes)
+    else:
+        seq_cond = "=%d"%(index+1)
     mimic2db.subject_with_icd9(code,seq_cond, tmppath)
 
-    id_list = list_of(tmppath)
+    tmp_csv = cc.control_csv(tmppath);
+    id_list = tmp_csv.read_first_column();
     id_lists.append(id_list)
 
+# extract subjects who have matched waveform
 mimic2db.subject_matched_waveforms(tmppath)
-id_list = list_of(tmppath)
+id_list = tmp_csv.read_first_column()
 id_lists.append(id_list)
 
+# find intersection of extracted subjects
 id_set = set(id_lists[0])
 for index in range(1,len(id_lists)):
     id_set = id_set.intersection(set(id_lists[index]))
     
-print id_set
+# output to outpath
+output = cc.control_csv(outpath)
+output.write_single_list(sorted(list(id_set)))

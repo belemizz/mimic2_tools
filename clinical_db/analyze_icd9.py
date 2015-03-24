@@ -1,7 +1,7 @@
 savepath = '../data/tmp.csv'
 
 n_code_to_see = 3
-sort_flag = True
+ignore_order = True
 target_code = '428.0' #only count codes includes this code, set '' to ignore
 
 # select icd code entries
@@ -22,7 +22,7 @@ for row in dataReader:
     if prev_adm_id == row[1]:# admission id
         codes.append(row[3])
     else:
-        if sort_flag:
+        if ignore_order:
             joint_code = '_'.join(sorted(codes))
         else:
             joint_code = '_'.join(codes)
