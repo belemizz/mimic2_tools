@@ -1,6 +1,9 @@
-%% add path for toolbox
 
 function ControlWaveDB(mode)
+% this function is no longer used
+% use draw_graph_of
+
+%% add path for toolbox
 addpath('../../Matlab/Physionet/Toolbox/wfdb-app-toolbox-0-9-9/mcode');
 
 base = 'mimic2wdb/matched';
@@ -122,11 +125,7 @@ end
                 hold on;
               end
             end
-
           end
-
-
-
         end
       end
       % add axis descripton
