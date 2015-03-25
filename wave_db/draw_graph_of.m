@@ -1,4 +1,4 @@
-function [  ] = draw_graph_of( id_list, metric_list, save_graph, length_of_data)
+function [  ] = draw_graph_of( id_list, metric_list, save_graph, duration)
 % draw graph of given ids and metrics
 % length_of_data:
 %   length of signal to be plotted in seconds
@@ -9,7 +9,8 @@ if nargin<3
   save_graph = false;
 end
 if nargin<4
-  length_of_data = 0; %draw graph of all value;
+  duration = inf; %draw graph of all value;
+%  length_of_data = inf; %draw graph of all value;
 end
 
 set_path;
@@ -54,17 +55,17 @@ end
       base_time = datetime(zeros(length(metric_list),6));
       unit = cell(length(metric_list),1);
       max_tm = 0;
-      min_tm = inf;
+      min_tm = Inf;
       
-      if length_of_data > 0
-        plotdata(pidx, nurl_list{length(nurl_list)});
-      else
+      if isinf(duration)
         for nidx = 1:length(nurl_list)
           nurl = nurl_list{nidx};
           plotdata(pidx,nurl);
         end
+      else
+        plotdata(pidx, nurl_list{length(nurl_list)});
       end
-
+      
       % add axis descripton
       for didx= 1:length(metric_list);
         if has_info(didx)
@@ -92,28 +93,15 @@ end
     % get the basic infomation of the data
     info = get_sig_info_of(nurl, metric_list);
     
-    
     if ~isempty(info)
-      signal_end = max([info.LengthSamples]);
-      signal_freq = max([info.SamplingFrequency]);
-      
-      if length_of_data > 0
-        if signal_freq == 1
-          signal_start = max(1, signal_end - length_of_data + 1);
-        else
-          signal_start = max(1,signal_end - floor(length_of_data / 60) + 1);
-        end
-      else
-        signal_start = 1;
-      end
-
-      split_num = ceil( (signal_end - signal_start + 1) / limit_length);
+      signal = get_signal_index(info, duration);
+      split_num = ceil( (signal.End - signal.Start + 1) / limit_length);
       
       for idx = 1:split_num
-        sample_start = limit_length*(idx - 1) +signal_start;
-        sample_stop = min(limit_length * idx + signal_start, signal_end);
-        display(sprintf('%s: %d - %d',nurl, sample_start, sample_stop));
-        [tm,sig,~] = rdsamp(nurl,[],sample_stop, sample_start,1,1);
+        sample_start = limit_length*(idx - 1) +signal.Start;
+        sample_end = min(limit_length * idx + signal.Start, signal.End);
+        display(sprintf('%s: %d - %d',nurl, sample_start, sample_end));
+        [tm,sig,~] = rdsamp(nurl,[],sample_end, sample_start);
         cycle = (tm(length(tm))-tm(1))/(length(tm)-1);
         display(sprintf('cycle: %d',cycle));
         

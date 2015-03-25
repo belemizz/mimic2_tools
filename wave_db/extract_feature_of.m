@@ -13,21 +13,23 @@ for pidx = 1:length(id_list)
   sig_url = nurl_list{length(nurl_list)};
   display(sig_url);
   
-%  feature_of(nurl_list);
   feature = extract_feature_from(sig_url);
 
   display(feature);
 end
+
 end
 
 function feature = extract_feature_from(sig_url)
   metric_list = {'HR'};
+  duration = 3600; %sec
+  
   info = get_sig_info_of(sig_url, metric_list);
 
   feature = NaN;
   if ~isempty(info)
-    signal_length = max([info.LengthSamples]);
-    feature = signal_length;
+    signal = get_signal_index(info,duration);
+    [tm,sig,~] = rdsamp(sig_url,[],signal.End, signal.Start);
+    feature = mean(sig(:,info(1).SignalIndex+1));
   end
-  
  end
