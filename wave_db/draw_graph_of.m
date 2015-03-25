@@ -73,7 +73,12 @@ end
           title(sprintf('ID:%d   [%s]', pid, datestr(base_time(didx))));
           xlabel('time(hour)');
           ylabel(sprintf('%s\n[%s]', metric_list{didx}, unit{didx}));
-          xlim([min_tm,max_tm]);
+%          xlim([min_tm,max_tm]);
+          if isinf(duration)
+            xlim([min_tm,max_tm]);
+          else
+            xlim([max_tm-duration/60/60,max_tm]);
+          end
           ylim([0,inf]);
         end
       end
