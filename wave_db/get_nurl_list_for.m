@@ -1,5 +1,5 @@
 function nurl_list = get_nurl_list_for(pid, numerics_all)
-% return indexs of numerics list for a specific id
+% return url of numerics list for a given specific patient id, pid
 
 base = 'mimic2wdb/matched';
 sig_url = @(nidx) sprintf('%s/%s',base, numerics_all{nidx});
