@@ -26,16 +26,18 @@ csvwrite(output_path, feature_list);
 end
 
 function feature = extract_feature_from(sig_url)
-  metric_list = {'HR'};
-  duration = 7200; %sec
-  
-  info = get_sig_info_of(sig_url, metric_list);
+metric_list = {'HR'};
+duration = 7200; %sec
 
-  feature = NaN;
-  if ~isempty(info)
-    signal = get_signal_index(info,duration);
-    [tm,sig,~] = rdsamp(sig_url,[],signal.End, signal.Start);
-    hr_signal = sig(:,info(1).SignalIndex+1);
-    feature = [mean(hr_signal) var(hr_signal)];
-  end
- end
+info = get_sig_info_of(sig_url, metric_list);
+
+feature = NaN;
+if ~isempty(info)
+  signal = get_signal_index(info,duration);
+  [tm,sig,~] = rdsamp(sig_url,[],signal.End, signal.Start);
+  hr_signal = sig(:,info(1).SignalIndex+1);
+  [~, sig_r, ~] = reliable_signal(tm, hr_signal);
+  
+  feature = [mean(sig_r) var(sig_r)];
+end
+end

@@ -103,7 +103,7 @@ end
       
       for idx = 1:split_num
         sample_start = limit_length*(idx - 1) +signal.Start;
-        sample_end = min(limit_length * idx + signal.Start, signal.End);
+        sample_end = min(limit_length * idx + signal.Start-1, signal.End);
         display(sprintf('%s: %d - %d',nurl, sample_start, sample_end));
         [tm,sig,~] = rdsamp(nurl,[],sample_end, sample_start);
         cycle = (tm(length(tm))-tm(1))/(length(tm)-1);
@@ -121,14 +121,14 @@ end
               unit{didx} = get_unit(info(didx));
             end
 
-            signal = sig(:,info(didx).SignalIndex+1);
-            [tm_r, signal_r, ~] = extract_reliable(tm_from_base, signal);
-            
+            sig_of_int = sig(:,info(didx).SignalIndex+1);
+            [tm_r, signal_r, tm_e] = reliable_signal(tm_from_base, sig_of_int);
             
             subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
             hold on;
-            plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1),'Color','b');
-            plot(tm_r/60/60, signal_r, 'Color', 'r');
+%            plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1),'Color','b');
+            plot(tm_r/60/60, signal_r, 'b:.');
+            plot(tm_e/60/60, zeros(size(tm_e)), 'r.');
             
             max_tm = max(max_tm, max(tm_from_base)/60/60);
             min_tm = min(min_tm, min(tm_from_base)/60/60);
@@ -137,10 +137,4 @@ end
       end
     end
   end
-end
-
-function [tm_reliable, sig_reliable, tm_excluded] = extract_reliable(tm,sig)
-  tm_reliable = tm(sig>0);
-  sig_reliable = sig(sig>0);
-  tm_excluded = tm(sig<=0);
 end
