@@ -30,6 +30,6 @@ function feature = extract_feature_from(sig_url)
   if ~isempty(info)
     signal = get_signal_index(info,duration);
     [tm,sig,~] = rdsamp(sig_url,[],signal.End, signal.Start);
-    feature = mean(sig(:,info(1).SignalIndex+1));
+    feature = mean(sig(:,info(1).SignalIndex+1)) ;
   end
  end
