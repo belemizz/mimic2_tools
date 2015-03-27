@@ -73,7 +73,12 @@ end
           title(sprintf('ID:%d   [%s]', pid, datestr(base_time(didx))));
           xlabel('time(hour)');
           ylabel(sprintf('%s\n[%s]', metric_list{didx}, unit{didx}));
-          xlim([min_tm,max_tm]);
+%          xlim([min_tm,max_tm]);
+          if isinf(duration)
+            xlim([min_tm,max_tm]);
+          else
+            xlim([max_tm-duration/60/60,max_tm]);
+          end
           ylim([0,inf]);
         end
       end
@@ -82,14 +87,13 @@ end
     if save_graph
       % save graph as a picture
       data_path = sprintf('%s/%s-%s.png', data_folder, strjoin(metric_list,'_'), mat2str(pid_list));
-      set(gcf,'PaperUnits','inches','PaperPosition',[0 0 6 1.5*length(pid_list)*length(metric_list)]);
+      set(gcf,'PaperUnits','inches','PaperPosition',[0 0 6 1.5*n_pid_per_page*length(metric_list)]);
       saveas(h, data_path);
     end
   end
 
   function plotdata(pidx, nurl)
     % plot the data of list of subjects
-    
     % get the basic infomation of the data
     info = get_sig_info_of(nurl, metric_list);
     
@@ -107,6 +111,7 @@ end
         
         for didx= 1:length(metric_list);
           if ~isempty(info(didx).LengthTime)
+            
             tm_from_base = tm;
             if has_info(didx)
               tm_from_base = tm + seconds(get_start_date(info(didx)) - base_time(didx));
@@ -115,16 +120,27 @@ end
               base_time(didx) = get_start_date(info(didx));
               unit{didx} = get_unit(info(didx));
             end
+
+            signal = sig(:,info(didx).SignalIndex+1);
+            [tm_r, signal_r, ~] = extract_reliable(tm_from_base, signal);
+            
             
             subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
+            hold on;
             plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1),'Color','b');
+            plot(tm_r/60/60, signal_r, 'Color', 'r');
             
             max_tm = max(max_tm, max(tm_from_base)/60/60);
             min_tm = min(min_tm, min(tm_from_base)/60/60);
-            hold on;
           end
         end
       end
     end
   end
+end
+
+function [tm_reliable, sig_reliable, tm_excluded] = extract_reliable(tm,sig)
+  tm_reliable = tm(sig>0);
+  sig_reliable = sig(sig>0);
+  tm_excluded = tm(sig<=0);
 end

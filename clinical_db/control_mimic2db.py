@@ -22,15 +22,23 @@ class control_mimic2db:
                      "ORDER BY subject_id "
         self.__select_and_save(select_seq, savepath)
 
+    def subject_with_icu_expire_flg(self, savepath):
+        select_seq = "SELECT subject_id "+\
+                     "FROM mimic2v26.icustay_detail "+\
+                     "WHERE icustay_expire_flg='Y' "+\
+                     "GROUP BY subject_id " +\
+                     "ORDER BY subject_id "
+        self.__select_and_save(select_seq, savepath)
+
     def subject_with_icd9(self, code, seq_cond,savepath):
-        
         select_seq = "SELECT subject_id "+\
                      "FROM mimic2v26.icd9 "+\
                      "WHERE code='%s' AND sequence%s"%(code,seq_cond) +\
                      "GROUP BY subject_id " +\
                      "ORDER BY subject_id "
         self.__select_and_save(select_seq, savepath)
-    
+
+        
 
     def icd9_incl(self,code,savepath):
         select_seq = "SELECT * FROM mimic2v26.icd9 "+\

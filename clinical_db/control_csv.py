@@ -12,17 +12,23 @@ class control_csv:
         self.__close()
         return result
 
+    def read_single_list(self):
+        reader = self.__open_reader()
+        list_object = reader.next()
+        self.__close()
+        return list_object
+
     def write_single_list(self, list_object):
         writer = self.__open_writer()
         writer.writerow(list_object)
         self.__close()
         print list_object
 
-    def read_single_list(self):
-        reader = self.__open_reader()
-        list_object = reader.next()
+    def write_list(self, list_object):
+        writer = self.__open_writer()
+        writer.writerows(list_object)
         self.__close()
-        return list_object
+        print list_object
 
     def __open_reader(self):
         self.__f = open(self.filepath, 'r')

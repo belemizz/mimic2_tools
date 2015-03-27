@@ -1,7 +1,7 @@
 savepath = '../data/tmp.csv'
 
-n_code_to_see = 3
-ignore_order = True
+n_code_to_see = 2
+ignore_order = False
 target_code = '428.0' #only count codes includes this code, set '' to ignore
 
 # select icd code entries
