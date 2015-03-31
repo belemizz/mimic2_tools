@@ -62,8 +62,10 @@ end
           nurl = nurl_list{nidx};
           plotdata(pidx,nurl);
         end
-      else
-        plotdata(pidx, nurl_list{length(nurl_list)});
+      els
+        if ~isempty(nurl_list)
+          plotdata(pidx, nurl_list{length(nurl_list)});
+        end
       end
       
       % add axis descripton
