@@ -1,13 +1,15 @@
-function display_feature(feature_file, flag)
+function display_feature(feature_file, flag, index)
 % plot feature with flag
 % flag 1: red
 % flag 0: blue
 
 feature_seq = csvread(feature_file);
-display(feature_seq);
+feature_of_int = feature_seq(:,index);
 
-red_feature = feature_seq(flag==1, :);
-blue_feature = feature_seq(flag==0, :);
+%display(feature_of_int);
+
+red_feature = feature_of_int(flag==1, :);
+blue_feature = feature_of_int(flag==0, :);
 
 % regular graph
 figure;
