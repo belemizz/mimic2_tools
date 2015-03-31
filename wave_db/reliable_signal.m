@@ -12,9 +12,15 @@ if var_width > 0
   sig_ave = smooth(sig,var_width,'moving');
   var = sig2_ave - sig_ave.^2;
   
-  tm_reliable = tm(sig > 0 & var > zero);
-  sig_reliable = sig(sig > 0 & var> zero);
-  tm_excluded = tm(sig<=0 | var<=zero);
+  if isempty(sig2_ave)
+    tm_reliable = [];
+    sig_reliable = [];
+    tm_excluded = tm;
+  else
+    tm_reliable = tm(sig > 0 & var > zero);
+    sig_reliable = sig(sig > 0 & var> zero);
+    tm_excluded = tm(sig<=0 | var<=zero);
+  end
 else
   tm_reliable = tm(sig > 0);
   sig_reliable = sig(sig > 0);
