@@ -26,9 +26,9 @@ extract_feature_of(id_list, 'first',feature_path);
 
 %% Test 5:SVM Classification
 csvdata = csvread('../data/428.0.csv');
-id_list = csvdata(1,1:10);
-mortality_flag = csvdata(2,1:10);
+id_list = csvdata(1,:);
+mortality_flag = csvdata(2,:);
 feature_path = '../data/test_feature.csv';
-loss = classify_feature(feature_path, mortality_flag);
+loss = classify_feature(feature_path, mortality_flag, [1 3]);
 display(loss);
 
