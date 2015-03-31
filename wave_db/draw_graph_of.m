@@ -62,7 +62,7 @@ end
           nurl = nurl_list{nidx};
           plotdata(pidx,nurl);
         end
-      els
+      else
         if ~isempty(nurl_list)
           plotdata(pidx, nurl_list{length(nurl_list)});
         end

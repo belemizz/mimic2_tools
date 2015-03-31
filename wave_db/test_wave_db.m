@@ -20,8 +20,17 @@ extract_feature_of(id_select, 'first');
 
 %% Test 4:Feature mapping
 csvdata = csvread('../data/428.0.csv');
-id_list = csvdata(1,1:5);
-mortality_flag = csvdata(2,1:5);
-output_path = '../data/test_feature.csv';
-extract_feature_of(id_list, 'first',output_path);
-display_feature(output_path, mortality_flag);
+id_list = csvdata(1,1:10);
+mortality_flag = csvdata(2,1:10);
+feature_path = '../data/test_feature.csv';
+extract_feature_of(id_list, 'first',feature_path);
+display_feature(feature_path, mortality_flag);
+
+%% Test 5:SVM Classification
+csvdata = csvread('../data/428.0.csv');
+id_list = csvdata(1,1:10);
+mortality_flag = csvdata(2,1:10);
+feature_path = '../data/test_feature.csv';
+loss = classify_feature(feature_path, mortality_flag);
+display(loss);
+
