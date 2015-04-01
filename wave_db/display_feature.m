@@ -11,7 +11,7 @@ feature_of_int = feature_seq(:,index);
 red_feature = feature_of_int(flag==1, :);
 blue_feature = feature_of_int(flag==0, :);
 
-% regular graph
+% % regular graph
 figure;
 plot(red_feature(:,1), red_feature(:,2), 'r.', 'MarkerSize', 20);
 hold on;
@@ -20,11 +20,19 @@ xlabel('feature 1');
 ylabel('feature 2');
 
 % semilog graph
-% figure;
-% semilogy(red_feature(:,1), red_feature(:,2), 'r.', 'MarkerSize', 20);
-% hold on;
-% semilogy(blue_feature(:,1), blue_feature(:,2), 'b.', 'MarkerSize', 20);
-% xlabel('feature 1');
-% ylabel('feature 2');
+figure;
+semilogy(red_feature(:,1), red_feature(:,2), 'r.', 'MarkerSize', 20);
+hold on;
+semilogy(blue_feature(:,1), blue_feature(:,2), 'b.', 'MarkerSize', 20);
+xlabel('feature 1');
+ylabel('feature 2');
+
+% loglog graph
+figure;
+loglog(red_feature(:,1), red_feature(:,2), 'r.', 'MarkerSize', 20);
+hold on;
+loglog(blue_feature(:,1), blue_feature(:,2), 'b.', 'MarkerSize', 20);
+xlabel('feature 1');
+ylabel('feature 2');
 
 end

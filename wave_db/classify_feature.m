@@ -3,7 +3,7 @@ function loss = classify_feature(feature_file, flag, index)
 % flag 1: red
 % flag 0: blue
 
-display_feature(feature_file, flag, index);
+%display_feature(feature_file, flag, index);
 %svmStruct = svmtrain(feature_file, flag, 'ShowPlot', true);
 
 feature_seq = csvread(feature_file);

@@ -1,4 +1,4 @@
-function extract_feature_of( id_list, output_path, metric_list)
+function extract_feature_of( id_list, output_path, metric_list, duration, var_width)
 % extract feature of ids in id_list with alogrithm
 
 if nargin < 2
@@ -7,14 +7,20 @@ end
 if nargin < 3
   metric_list = {'HR','RESP'};
 end
+if nargin < 4
+  duration = 7200; % sec
+end
+if nargin < 5
+  var_width = 5;
+end
 
 set_path;
 
 numerics_all = load_numerics_all();
 feature_list = [];
-feature_dim = 4 * length(metric_list);
-var_width = 5;
-duration = 10800; %sec
+
+feature_per_metric = 3;
+feature_dim = feature_per_metric * length(metric_list);
 
 for pidx = 1:length(id_list)
   pid = id_list(pidx);
@@ -47,12 +53,24 @@ if ~isempty(info)
     single_signal = sig(:,info(idx).SignalIndex+1);
     [tm_r, sig_r, ~] = reliable_signal(tm, single_signal, var_width);
     
-    coef_feature = [NaN NaN];
-    if ~isempty(tm_r)
-      l_reg_model = fitlm(tm_r, sig_r); % linear regression
-      coef_feature = l_reg_model.Coefficients.Estimate';
-    end
+    coef_feature = linear_reg_feature(tm_r,sig_r, 2);
+    
     feature = [feature coef_feature mean(sig_r) var(sig_r)];
   end
+end
+end
+
+function coef_feature = linear_reg_feature(tm, sig, order)
+if nargin < 3
+  order = 2; %only 1st order coefficient
+end
+  
+feature_dim = length(order);
+coef_feature = NaN(1,feature_dim);
+
+if ~isempty(tm)
+  l_reg_model = fitlm(tm, sig); % linear regression
+  coefficients = l_reg_model.Coefficients.Estimate';
+  coef_feature = coefficients(order);
 end
 end

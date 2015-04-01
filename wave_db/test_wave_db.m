@@ -15,7 +15,7 @@ draw_graph_of(id_select, metric_list, save_graph, length_of_data);
 
 %% Test 3:Extract feature
 csvdata = csvread('../data/428.0.csv');
-id_list = csvdata(1,1:10);
+id_list = csvdata(1,1:1);
 feature_path = '../data/test_feature.csv';
 extract_feature_of(id_list, feature_path);
 
