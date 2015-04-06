@@ -11,7 +11,7 @@ if nargin < 4
   duration = 7200; % sec
 end
 if nargin < 5
-  var_width = 5;
+  var_width = 7;
 end
 
 set_path;

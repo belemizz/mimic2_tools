@@ -1,8 +1,26 @@
-function [  ] = draw_graph_of( id_list, metric_list, save_graph, duration)
+function [  ] = draw_graph_of( id_list, metric_list, save_graph, duration, exclude_unreliable)
 % draw graph of given ids and metrics
-% length_of_data:
+%
+% Required Parameters:
+%
+% id_list
+%   array of subject id of the data
+%
+% metric_list
+%   cell array of metrics of interest
+%
+%
+% Optional Parameters:
+%
+% save_graph
+%   if true save the output graph(s)
+%
+% duration
 %   length of signal to be plotted in seconds
-%   when 0, then plot all available data
+%   when inf, then plot all available data
+%
+% exclude_unreliable
+%   if true exclude unreliable datapoints
 
 % default values
 if nargin<3
@@ -10,7 +28,9 @@ if nargin<3
 end
 if nargin<4
   duration = inf; %draw graph of all value;
-%  length_of_data = inf; %draw graph of all value;
+end
+if nargin<5
+  exclude_unreliable = true;
 end
 
 set_path;
@@ -75,7 +95,7 @@ end
           title(sprintf('ID:%d   [%s]', pid, datestr(base_time(didx))));
           xlabel('time(hour)');
           ylabel(sprintf('%s\n[%s]', metric_list{didx}, unit{didx}));
-%          xlim([min_tm,max_tm]);
+          %          xlim([min_tm,max_tm]);
           if isinf(duration)
             xlim([min_tm,max_tm]);
           else
@@ -88,7 +108,7 @@ end
     
     if save_graph
       % save graph as a picture
-      data_path = sprintf('%s/%s-%s.png', data_folder, strjoin(metric_list,'_'), mat2str(pid_list));
+      data_path = sprintf('%s/%s-%s-%d.png', data_folder, strjoin(metric_list,'_'), mat2str(pid_list), exclude_unreliable);
       set(gcf,'PaperUnits','inches','PaperPosition',[0 0 6 1.5*n_pid_per_page*length(metric_list)]);
       saveas(h, data_path);
     end
@@ -122,15 +142,19 @@ end
               base_time(didx) = get_start_date(info(didx));
               unit{didx} = get_unit(info(didx));
             end
-
+            
             sig_of_int = sig(:,info(didx).SignalIndex+1);
-            [tm_r, signal_r, tm_e] = reliable_signal(tm_from_base, sig_of_int);
             
             subplot(length(metric_list) * n_pid_per_page, 1, length(metric_list) * (pidx-1) + didx);
             hold on;
-%            plot(tm_from_base/60/60, sig(:,info(didx).SignalIndex+1),'Color','b');
-            plot(tm_r/60/60, signal_r, 'b:.');
-            plot(tm_e/60/60, zeros(size(tm_e)), 'r.');
+            
+            if exclude_unreliable
+              [tm_r, signal_r, tm_e] = reliable_signal(tm_from_base, sig_of_int);
+              plot(tm_r/60/60, signal_r, 'b');
+              plot(tm_e/60/60, zeros(size(tm_e)), 'r.');
+            else
+              plot(tm_from_base(~isnan(sig_of_int))/60/60, sig_of_int(~isnan(sig_of_int)),'b');
+            end
             
             max_tm = max(max_tm, max(tm_from_base)/60/60);
             min_tm = min(min_tm, min(tm_from_base)/60/60);
