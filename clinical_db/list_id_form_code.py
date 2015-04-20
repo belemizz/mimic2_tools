@@ -1,3 +1,7 @@
+"""
+Script to generate subject id list who have target icd9 code.
+"""
+
 tmppath = '../data/tmp.csv'
 #outpath = '../data/out.csv'
 outfolder = '../data/'
@@ -16,8 +20,6 @@ outfolder = '../data/'
 target_codes = ['428.0', '518.81']
 ignore_order = False
 add_icu_expire_flag = True
-
-
 
 outpath = outfolder + '_'.join(target_codes)
 if ignore_order:

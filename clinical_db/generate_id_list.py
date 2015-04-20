@@ -1,3 +1,7 @@
+"""
+Get list of numeric records and list of id included in numeric reords.
+"""
+
 ## generate_id_list
 import get_matched_records
 

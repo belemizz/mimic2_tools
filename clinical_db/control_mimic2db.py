@@ -2,12 +2,60 @@ import psycopg2
 
 class control_mimic2db:
     def __init__(self):
-        self.conn = psycopg2.connect("dbname=MIMIC2 user=mimic2")
+        self.conn = psycopg2.connect("dbname=MIMIC2 user=kimimizobe")
         self.cur = self.conn.cursor()
     
     def __del__(self):
         self.cur.close()
         self.conn.close()
+
+    def d_patients(self, patient_id, savepath):
+        select_seq = "SELECT D.* FROM mimic2v26.D_PATIENTS D "+\
+                     "WHERE subject_id =%d"%(patient_id);
+        self.__select_and_save(select_seq, savepath)
+
+    def icd9(self, patient_id, savepath):
+        select_seq = "SELECT I.* FROM mimic2v26.ICD9 I "+\
+                     "WHERE subject_id =%d "%(patient_id) +\
+                     "ORDER BY SEQUENCE";
+        self.__select_and_save(select_seq, savepath)
+
+    def med_events(self, patient_id, savepath):
+        select_seq = "SELECT M.*, T.LABEL "+\
+                     "FROM mimic2v26.MEDEVENTS M, mimic2v26.D_MEDITEMS T "+\
+                     "WHERE subject_id =%d "%(patient_id)+\
+                     "AND M.ITEMID = T.ITEMID ORDER BY REALTIME";
+        self.__select_and_save(select_seq, savepath)
+
+
+    def note_events(self, patient_id, savepath):
+        select_seq = "SELECT N.* FROM mimic2v26.NOTEEVENTS N "+\
+                     "WHERE subject_id =%d "%(patient_id)+\
+                     "ORDER BY CHARTTIME";
+        self.__select_and_save(select_seq, savepath)
+
+    def poe_order(self, patient_id, savepath):
+        select_seq = "SELECT P.* FROM mimic2v26.POE_ORDER P "+\
+                     "WHERE subject_id =%d "%(patient_id)+\
+                     "ORDER BY START_DT";
+        self.__select_and_save(select_seq, savepath)
+
+
+    def labevents(self, patient_id, savepath):
+        select_seq = "SELECT L.*, T.TEST_NAME, T.FLUID, T.CATEGORY, T.LOINC_CODE, T.LOINC_DESCRIPTION "+\
+                     "FROM mimic2v26.LABEVENTS L, mimic2v26.D_LABITEMS T "+\
+                     "WHERE subject_id =%d "%(patient_id)+\
+                     "AND L.ITEMID = T.ITEMID "+\
+                     "ORDER BY CHARTTIME"
+        self.__select_and_save(select_seq, savepath)
+
+    def microbiologyevents(self, patient_id, savepath):
+        select_seq = "SELECT M.*, C.TYPE AS STYPE, C.LABEL AS SLABEL, C.DESCRIPTION AS SDESC, D.TYPE AS OTYPE, D.LABEL AS OLABEL, D.DESCRIPTION AS ODESC, E.TYPE AS ATYPE, E.LABEL AS ALABEL, E.DESCRIPTION AS ADESC "+\
+                     "FROM mimic2v26.MICROBIOLOGYEVENTS M, mimic2v26.D_CODEDITEMS C, mimic2v26.D_CODEDITEMS D, mimic2v26.D_CODEDITEMS E "+\
+                     "WHERE subject_id =%d "%(patient_id)+\
+                     "AND M.SPEC_ITEMID = C.ITEMID AND M.ORG_ITEMID = D.ITEMID AND M.AB_ITEMID = E.ITEMID ORDER BY CHARTTIME";
+
+        self.__select_and_save(select_seq, savepath)
 
     def matched_icustay_detail(self,savepath):
         select_seq = "SELECT * FROM mimic2v26.icustay_detail "+\
@@ -38,7 +86,6 @@ class control_mimic2db:
                      "ORDER BY subject_id "
         self.__select_and_save(select_seq, savepath)
 
-        
 
     def icd9_incl(self,code,savepath):
         select_seq = "SELECT * FROM mimic2v26.icd9 "+\
@@ -90,12 +137,13 @@ class control_mimic2db:
     def __select_and_save(self, select_seq, filepath):
         print "exec:"
         print select_seq
-        
-        sql_seq = "CREATE TABLE mimic2v26.test AS (%s)"%select_seq
-        self.cur.execute(sql_seq)
-        
-        with open(filepath, 'w') as f:
-            self.cur.copy_to(f, "mimic2v26.test", sep=",")
-        f.closed
 
-        self.cur.execute("DROP TABLE mimic2v26.test")
+        import csv
+        
+        self.cur.execute(select_seq)
+        result = self.cur.fetchall()
+
+        writer = csv.writer(open(filepath, 'wb'))
+        writer.writerows(result)
+        
+        
