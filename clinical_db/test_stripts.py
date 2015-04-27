@@ -1,15 +1,12 @@
 """
 Test code for scripts
 """
-
-######## test of Unittest
-
 import unittest
-import control_mimic2db as cm
 
 class TestSequenceFunctions(unittest.TestCase):
 
 #    def setUp(self):
+#    def tearDown(self):
 
     def test_generate_id_list(self):
         import generate_id_list
@@ -26,7 +23,5 @@ class TestSequenceFunctions(unittest.TestCase):
     def test_show_medical_record(self):
         import show_medical_record
 
-
 if __name__ == '__main__':
     unittest.main()
-

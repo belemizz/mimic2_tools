@@ -9,7 +9,7 @@ class control_mimic2db:
         self.cur.close()
         self.conn.close()
 
-    def d_patients(self, patient_id, savepath):
+    def patient(self, patient_id, savepath):
         select_seq = "SELECT D.* FROM mimic2v26.D_PATIENTS D "+\
                      "WHERE subject_id =%d"%(patient_id);
         self.__select_and_save(select_seq, savepath)
@@ -17,7 +17,7 @@ class control_mimic2db:
     def icd9(self, patient_id, savepath):
         select_seq = "SELECT I.* FROM mimic2v26.ICD9 I "+\
                      "WHERE subject_id =%d "%(patient_id) +\
-                     "ORDER BY SEQUENCE";
+                     "ORDER BY hadm_id, sequence"
         self.__select_and_save(select_seq, savepath)
 
     def med_events(self, patient_id, savepath):
@@ -26,7 +26,6 @@ class control_mimic2db:
                      "WHERE subject_id =%d "%(patient_id)+\
                      "AND M.ITEMID = T.ITEMID ORDER BY REALTIME";
         self.__select_and_save(select_seq, savepath)
-
 
     def note_events(self, patient_id, savepath):
         select_seq = "SELECT N.* FROM mimic2v26.NOTEEVENTS N "+\
@@ -41,7 +40,7 @@ class control_mimic2db:
         self.__select_and_save(select_seq, savepath)
 
 
-    def labevents(self, patient_id, savepath):
+    def lab_events(self, patient_id, savepath):
         select_seq = "SELECT L.*, T.TEST_NAME, T.FLUID, T.CATEGORY, T.LOINC_CODE, T.LOINC_DESCRIPTION "+\
                      "FROM mimic2v26.LABEVENTS L, mimic2v26.D_LABITEMS T "+\
                      "WHERE subject_id =%d "%(patient_id)+\
@@ -49,11 +48,15 @@ class control_mimic2db:
                      "ORDER BY CHARTTIME"
         self.__select_and_save(select_seq, savepath)
 
-    def microbiologyevents(self, patient_id, savepath):
-        select_seq = "SELECT M.*, C.TYPE AS STYPE, C.LABEL AS SLABEL, C.DESCRIPTION AS SDESC, D.TYPE AS OTYPE, D.LABEL AS OLABEL, D.DESCRIPTION AS ODESC, E.TYPE AS ATYPE, E.LABEL AS ALABEL, E.DESCRIPTION AS ADESC "+\
-                     "FROM mimic2v26.MICROBIOLOGYEVENTS M, mimic2v26.D_CODEDITEMS C, mimic2v26.D_CODEDITEMS D, mimic2v26.D_CODEDITEMS E "+\
-                     "WHERE subject_id =%d "%(patient_id)+\
-                     "AND M.SPEC_ITEMID = C.ITEMID AND M.ORG_ITEMID = D.ITEMID AND M.AB_ITEMID = E.ITEMID ORDER BY CHARTTIME";
+    def microbiology_events(self, patient_id, savepath):
+        select_seq = "SELECT M.*, "+\
+          "C.TYPE AS STYPE, C.LABEL AS SLABEL, C.DESCRIPTION AS SDESC, "+\
+          "D.TYPE AS OTYPE, D.LABEL AS OLABEL, D.DESCRIPTION AS ODESC, "+\
+          "E.TYPE AS ATYPE, E.LABEL AS ALABEL, E.DESCRIPTION AS ADESC "+\
+          "FROM mimic2v26.MICROBIOLOGYEVENTS M, mimic2v26.D_CODEDITEMS C, mimic2v26.D_CODEDITEMS D, mimic2v26.D_CODEDITEMS E "+\
+          "WHERE subject_id =%d "%(patient_id)+\
+          "AND M.SPEC_ITEMID = C.ITEMID AND M.ORG_ITEMID = D.ITEMID AND M.AB_ITEMID = E.ITEMID "+\
+          "ORDER BY CHARTTIME";
 
         self.__select_and_save(select_seq, savepath)
 
@@ -86,17 +89,10 @@ class control_mimic2db:
                      "ORDER BY subject_id "
         self.__select_and_save(select_seq, savepath)
 
-
     def icd9_incl(self,code,savepath):
         select_seq = "SELECT * FROM mimic2v26.icd9 "+\
                      "WHERE code='%s' "%code +\
                      "ORDER BY subject_id, hadm_id"
-        self.__select_and_save(select_seq, savepath)
-
-    def icd9_of_subject(self,subject_id,savepath):
-        select_seq = "SELECT * FROM mimic2v26.icd9 "+\
-                     "WHERE subject_id=%d "%subject_id +\
-                     "ORDER BY hadm_id, sequence"
         self.__select_and_save(select_seq, savepath)
 
     def icd9_eq_higher_than(self, rank, savepath):
@@ -104,7 +100,6 @@ class control_mimic2db:
                      "WHERE sequence<=%d"%rank +\
                      "ORDER BY subject_id, hadm_id, sequence"
         self.__select_and_save(select_seq, savepath)
-
 
     def count_entry_of(self,table,savepath):
         select_seq = "SELECT count(*)"+\
@@ -138,12 +133,9 @@ class control_mimic2db:
         print "exec:"
         print select_seq
 
-        import csv
-        
         self.cur.execute(select_seq)
         result = self.cur.fetchall()
 
+        import csv
         writer = csv.writer(open(filepath, 'wb'))
         writer.writerows(result)
-        
-        
