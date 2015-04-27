@@ -46,7 +46,7 @@ class control_mimic2db:
                      "WHERE subject_id =%d "%(patient_id)+\
                      "AND L.ITEMID = T.ITEMID "+\
                      "ORDER BY CHARTTIME"
-        self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq, savepath)
 
     def microbiology_events(self, patient_id, savepath):
         select_seq = "SELECT M.*, "+\
@@ -139,3 +139,5 @@ class control_mimic2db:
         import csv
         writer = csv.writer(open(filepath, 'wb'))
         writer.writerows(result)
+
+        return result
