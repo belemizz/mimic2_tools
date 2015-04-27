@@ -10,3 +10,6 @@
 *.asv
 *.zip
 *.orig
+*/.ropeproject/*
+*TAGS
+*tags
