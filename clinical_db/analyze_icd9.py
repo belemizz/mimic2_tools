@@ -5,8 +5,8 @@ ignore_order = False
 target_code = '428.0' #only count codes includes this code, set '' to ignore
 
 # select icd code entries
-import control_mimic2db as cm
-mimic2db = cm.control_mimic2db()
+import control_mimic2db as mimic2
+mimic2db = mimic2.control_mimic2db()
 mimic2db.icd9_eq_higher_than(n_code_to_see,savepath)
 
 # read csv and list code

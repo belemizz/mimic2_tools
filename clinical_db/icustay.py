@@ -7,3 +7,8 @@ class icustay:
         self.icustay_id = icustay_id
         self.intime = intime
         self.outtime = outtime
+
+    def set_medications(self, medications):
+        self.medications = medications
+        
+    

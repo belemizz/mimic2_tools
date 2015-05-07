@@ -16,7 +16,6 @@ class control_mimic2db:
         patient = self.patient(subject_id)
         subject_ins = subject.subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
         subject_ins.set_admissions(self.admission_class(subject_id))
-
         return subject_ins
 
     def admission_class(self, subject_id):
@@ -31,10 +30,15 @@ class control_mimic2db:
             admission_ins.set_icustays(icustay_list)
 
             #labtest
-            lab_events_list = self.lab_events_in_admission(admission_ins.hadm_id)
-            lab_events_trends = self.lab_events_trends(lab_events_list)
-            admission_ins.set_lab(lab_events_trends)
-            
+            lab_events = self.lab_events_in_admission(admission_ins.hadm_id)
+            lab_event_trends = self.lab_event_trends(lab_events)
+            admission_ins.set_labs(lab_event_trends)
+
+            #notes
+            note_events = self.note_events_in_admission(admission_ins.hadm_id)
+            admission_ins.set_notes(note_events)
+
+            #append to admission_ins
             admission_list.append(admission_ins)
 
         return admission_list
@@ -43,7 +47,34 @@ class control_mimic2db:
         select_seq = "SELECT * FROM mimic2v26.ICUSTAY_DETAIL "+\
                      "WHERE hadm_id =%d "%(hadm_id)
         icustays = self.__select_and_save(select_seq)
-        return [icustay.icustay(item[0],item[21],item[22]) for item in icustays]
+
+        icustay_list = []
+        for item in icustays:
+            icustay_ins = icustay.icustay(item[0],item[21],item[22])
+
+            # medication
+            med_events = self.med_events_in_icustay(icustay_ins.icustay_id)
+            med_trends = self.med_event_trends(med_events)
+            icustay_ins.set_medications(med_trends)
+            
+            icustay_list.append(icustay_ins)
+            
+        return icustay_list
+
+    def med_event_trends(self, med_events):
+        itemid_list = set([item[2] for item in med_events])
+        trends = []
+        for itemid in itemid_list:
+            record = [item for item in med_events if item[2] == itemid and item[9]!=None]
+
+            descripition = record[0][16]
+            doseuom = record[0][10]
+            charttime = [item[3] for item in record]
+            realtime = [item[5] for item in record]
+            dose = [item[9] for item in record]
+
+            trends.append([itemid, descripition, doseuom, charttime, realtime, dose])
+        return trends
 
     def lab_events_in_admission(self, hadm_id):
         select_seq = "SELECT L.*, T.TEST_NAME, T.FLUID, T.CATEGORY, T.LOINC_CODE, T.LOINC_DESCRIPTION "+\
@@ -53,7 +84,7 @@ class control_mimic2db:
                      "ORDER BY ITEMID, CHARTTIME"
         return self.__select_and_save(select_seq)
 
-    def lab_events_trends(self,lab_events_list):
+    def lab_event_trends(self,lab_events_list):
         itemid_list = set([item[3] for item in lab_events_list])
         trends = []
         for itemid in itemid_list:
@@ -125,9 +156,16 @@ class control_mimic2db:
         select_seq = "SELECT M.*, T.LABEL "+\
                      "FROM mimic2v26.MEDEVENTS M, mimic2v26.D_MEDITEMS T "+\
                      "WHERE subject_id =%d "%(patient_id)+\
-                     "AND M.ITEMID = T.ITEMID ORDER BY REALTIME";
+                     "AND M.ITEMID = T.ITEMID ORDER BY ITEMID, REALTIME";
         return self.__select_and_save(select_seq, savepath)
 
+    def med_events_in_icustay(self, icustay_id):
+        select_seq = "SELECT M.*, T.LABEL "+\
+                     "FROM mimic2v26.MEDEVENTS M, mimic2v26.D_MEDITEMS T "+\
+                     "WHERE icustay_id =%d "%(icustay_id)+\
+                     "AND M.ITEMID = T.ITEMID ORDER BY ITEMID, REALTIME";
+        return self.__select_and_save(select_seq)
+        
     def note_events(self, patient_id, savepath = ""):
         if len(savepath) == 0:
             savepath = "../data/%d_note_events.csv"%patient_id
@@ -136,6 +174,12 @@ class control_mimic2db:
                      "WHERE subject_id =%d "%(patient_id)+\
                      "ORDER BY CHARTTIME";
         return self.__select_and_save(select_seq, savepath)
+
+    def note_events_in_admission(self, hadm_id):
+        select_seq = "SELECT N.* FROM mimic2v26.NOTEEVENTS N "+\
+                     "WHERE hadm_id =%d "%(hadm_id)+\
+                     "ORDER BY CHARTTIME";
+        return self.__select_and_save(select_seq)
 
     def poe_order(self, patient_id, savepath = ""):
         if len(savepath) == 0:

@@ -26,10 +26,10 @@ if ignore_order:
     outpath = outpath + '_io'
 outpath = outpath + '.csv'
 
-import control_mimic2db as cm
+import control_mimic2db as mimic2
 import control_csv as cc
 
-mimic2db = cm.control_mimic2db()
+mimic2db = mimic2.control_mimic2db()
 id_lists = []
 
 # extract subjects who have each target code

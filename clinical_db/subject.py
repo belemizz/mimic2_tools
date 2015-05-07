@@ -11,5 +11,4 @@ class subject:
 
     def set_admissions(self,admission_list):
         self.admissions = admission_list
-
-    
+        
