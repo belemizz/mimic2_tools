@@ -18,3 +18,8 @@ class admission:
         if len(result) > 1:
             raise Exception("There is more than one record")
         return result[0]
+
+    def display_available_lab(self):
+        available_labs = [(item[0],len(item[4]),item[1]) for item in self.lab]
+        for item in available_labs:
+            print item

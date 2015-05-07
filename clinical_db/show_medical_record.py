@@ -53,9 +53,6 @@ for admission in patient.admissions:
     title = "ID:%d [%s]"%(subject_id, admission.admit_dt)
     draw_lab_dual_graph(base_time, lab_itemid1, lab_itemid2, title, filename)
 
-
-
-
 ## # Get Data
 ## patient = mimic2db.patient(subject_id)
 ## admissions = mimic2db.admission(subject_id)

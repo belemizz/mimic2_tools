@@ -14,6 +14,8 @@ class TestSequenceFunctions(unittest.TestCase):
     def test_patient_class(self):
         patient_class = self.mimic2.patient_class(1855)
         eq_(len(patient_class.admissions[0].lab), 50, "Num of Labtests")
+        print "available lab__"
+        patient_class.admissions[0].display_available_lab()
 
 
 
