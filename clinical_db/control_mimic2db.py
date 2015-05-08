@@ -56,10 +56,37 @@ class control_mimic2db:
             med_events = self.med_events_in_icustay(icustay_ins.icustay_id)
             med_trends = self.med_event_trends(med_events)
             icustay_ins.set_medications(med_trends)
-            
+
+            # chart_events
+            chart_trends = self.chart_trends_in_icustay(icustay_ins.icustay_id)
+            icustay_ins.set_charts(chart_trends)
+
             icustay_list.append(icustay_ins)
             
         return icustay_list
+
+    def chart_trends_in_icustay(self, icustay_id):
+        select_seq = "SELECT C.*, T.LABEL, T.CATEGORY, T.DESCRIPTION "+\
+                     "FROM mimic2v26.CHARTEVENTS C, mimic2v26.D_CHARTITEMS T "+\
+                     "WHERE icustay_id =%d AND C.ITEMID = T.ITEMID "%icustay_id+\
+                     "ORDER BY ITEMID, REALTIME"
+        events = self.__select_and_save(select_seq)
+        itemid_list = set([item[2] for item in events])
+        
+        trends = []
+        for itemid in itemid_list:
+            record = [item for item in events if item[2] == itemid]
+
+            descriptoin = record[0][16]
+            uom = record[0][9]
+            charttime = [item[3] for item in record]
+            realtime = [item[5] for item in record]
+            value = [item[8] for item in record]
+            
+            trends.append([itemid, descriptoin, uom, charttime, realtime, value])
+
+        return trends
+        
 
     def med_event_trends(self, med_events):
         itemid_list = set([item[2] for item in med_events])

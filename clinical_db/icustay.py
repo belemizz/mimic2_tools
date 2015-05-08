@@ -11,4 +11,5 @@ class icustay:
     def set_medications(self, medications):
         self.medications = medications
         
-    
+    def set_charts(self, charts):
+        self.charts = charts
