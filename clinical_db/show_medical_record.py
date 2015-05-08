@@ -4,9 +4,7 @@ Script to show summery of  medical record of a patient.
 
 import control_mimic2db
 import control_graph
-
 import matplotlib.pyplot as plt
-import numpy as np
 
 def lab_event_extract(result, admission_id, ronic_code):
     ex_record = [item for item in result if (item[1] == admission_id and item[12] == ronic_code)]
@@ -16,37 +14,8 @@ def lab_event_extract(result, admission_id, ronic_code):
     ex_unit = ex_record[0][8]
     return (ex_time, ex_value, ex_unit)
 
-def time_diff_in_hour(time_seq, base_time):
-    return [(item - base_time).total_seconds()/3600 for item in time_seq]
-
 def icustay_detail_in_admission(admission):
     return [item for item in icustay_detail if item[8] == admission[0]]
-
-def draw_lab_dual_graph(base_time, itemid1, itemid2,title="", filename = ""):
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-
-    ax1.set_title(title)
-    ax1.set_xlabel('Hours since Admission')
-
-    result = admission.get_lab_itemid(itemid1)
-    time_diff = time_diff_in_hour(result[3], base_time)
-    values = result[4]
-
-    ax1.plot(time_diff, values, 'bs--')
-    ax1.set_ylabel("%s (%s)"%(result[1], result[2]), color = 'b')
-
-    result = admission.get_lab_itemid(itemid2)
-    time_diff = time_diff_in_hour(result[3], base_time)
-    values = result[4]
-
-    ax2.plot(time_diff, values, 'rs--')
-    ax2.set_ylabel("%s (%s)"%(result[1], result[2]), color = 'r')
-
-    fig.show()
-    fig.savefig(filename)
-
-
 
 
 subject_id = 1855
@@ -62,7 +31,10 @@ for admission in patient.admissions:
     lab_itemid2 = 50177
     filename = "../data/CR_BUN_%d_%d.png"%(subject_id, admission.hadm_id)
     title = "ID:%d [%s]"%(subject_id, admission.admit_dt)
-    draw_lab_dual_graph(base_time, lab_itemid1, lab_itemid2, title, filename)
+    graph.draw_lab_adm_itemid(admission, (lab_itemid1, lab_itemid2), title, filename)
+
+    filename = "../data/AllLab_%d_%d.png"%(subject_id, admission.hadm_id)
+    graph.draw_lab_adm(admission, title, filename)
 
     for icustay in admission.icustays[0:1]:
         icustay_base_time = icustay.intime
