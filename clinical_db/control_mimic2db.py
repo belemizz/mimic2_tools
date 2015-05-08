@@ -2,6 +2,7 @@ import psycopg2
 import subject
 import admission
 import icustay
+import pdb
 
 class control_mimic2db:
     def __init__(self):
@@ -72,35 +73,33 @@ class control_mimic2db:
                      "ORDER BY ITEMID, REALTIME"
         events = self.__select_and_save(select_seq)
         itemid_list = set([item[2] for item in events])
-        
         trends = []
         for itemid in itemid_list:
-            record = [item for item in events if item[2] == itemid]
-
-            descriptoin = record[0][16]
-            uom = record[0][9]
-            charttime = [item[3] for item in record]
-            realtime = [item[5] for item in record]
-            value = [item[8] for item in record]
-            
-            trends.append([itemid, descriptoin, uom, charttime, realtime, value])
+            record = [item for item in events if item[2] == itemid and item[9]!=None]
+            if len(record)>0:
+                descriptoin = record[0][16]
+                uom = record[0][10]
+                charttime = [item[3] for item in record]
+                realtime = [item[5] for item in record]
+                value = [item[9] for item in record]
+                trends.append([itemid, descriptoin, uom, charttime, realtime, value])
 
         return trends
         
-
     def med_event_trends(self, med_events):
         itemid_list = set([item[2] for item in med_events])
         trends = []
         for itemid in itemid_list:
             record = [item for item in med_events if item[2] == itemid and item[9]!=None]
 
-            descripition = record[0][16]
-            doseuom = record[0][10]
-            charttime = [item[3] for item in record]
-            realtime = [item[5] for item in record]
-            dose = [item[9] for item in record]
-
-            trends.append([itemid, descripition, doseuom, charttime, realtime, dose])
+            if len(record)>0:
+                descripition = record[0][16]
+                doseuom = record[0][10]
+                charttime = [item[3] for item in record]
+                realtime = [item[5] for item in record]
+                dose = [item[9] for item in record]
+                trends.append([itemid, descripition, doseuom, charttime, realtime, dose])
+                
         return trends
 
     def lab_events_in_admission(self, hadm_id):

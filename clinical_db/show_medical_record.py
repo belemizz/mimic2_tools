@@ -31,16 +31,20 @@ for admission in patient.admissions:
     lab_itemid2 = 50177
     filename = "../data/CR_BUN_%d_%d.png"%(subject_id, admission.hadm_id)
     title = "ID:%d [%s]"%(subject_id, admission.admit_dt)
-    graph.draw_lab_adm_itemid(admission, (lab_itemid1, lab_itemid2), title, filename)
+#    graph.draw_lab_adm_itemid(admission, (lab_itemid1, lab_itemid2), title, filename)
 
     filename = "../data/AllLab_%d_%d.png"%(subject_id, admission.hadm_id)
-    graph.draw_lab_adm(admission, title, filename)
+#    graph.draw_lab_adm(admission, title, filename)
 
     for icustay in admission.icustays:
         icustay_base_time = icustay.intime
         filename = "../data/Med_%d.png"%icustay.icustay_id
         title = "ID:%d [%s]"%(subject_id, icustay.intime)
         graph.draw_med_icu(icustay, admission.admit_dt, title, filename);
+        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename);
+        
+
+        
         
 plt.waitforbuttonpress()
         

@@ -14,10 +14,10 @@ class control_graph:
 #    def __del__(self):
 
     def draw_med_icu(self, icustay, base_time,  title, filename="", show_flag = True):
-        result = icustay.medications
+        data = icustay.medications
         fig, ax = self.figure_with_side_legend()
 
-        for item in result:
+        for item in data:
             time_diff = self.time_diff_in_hour(item[3], base_time)
             value = np.array(item[5])
             plot_value, order = self.normalize(value)
@@ -31,7 +31,30 @@ class control_graph:
 
         icu_io = self.time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
         ax.axvspan(icu_io[0], icu_io[1], alpha = 0.2, color = 'red')
-            
+        self.show_and_save(fig, filename, show_flag)
+
+    def draw_chart_icu(self, icustay, base_time, title, filename="", show_flag = True):
+        data = icustay.charts
+        fig, ax = self.figure_with_side_legend()
+
+        for item in data:
+            time_diff = self.time_diff_in_hour(item[3], base_time)
+
+            try:
+                print item[5]
+                value = np.array([float(num) for num in item[5]])
+                plot_val, order = self.normalize(value)
+                tag = "%s [%d %s]"%(item[1], order, item[2])
+                ax.plot(time_diff, plot_val,  label = tag )
+            except ValueError:
+                print "Can't plot %s"%item[1]
+
+        ax.set_title(title)
+        ax.set_xlabel("Hours since Admission")
+
+        ax.legend(bbox_to_anchor = (1.02, 1),  loc = 'upper left', borderaxespad = 0)
+        icu_io = self.time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
+        ax.axvspan(icu_io[0], icu_io[1], alpha = 0.2, color = 'red')
         self.show_and_save(fig, filename, show_flag)
 
     def draw_lab_adm(self, admission, title, filename="", show_flag = True):
@@ -48,7 +71,6 @@ class control_graph:
                 ax.plot(time_diff, plot_val, label = tag)                    
             except ValueError:
                 print "Can't plot %s"%item[1]
-                #print item[4]
 
         ax.set_title(title)
         ax.set_xlabel("Hours since Admission")
@@ -103,8 +125,6 @@ class control_graph:
         return fig, ax
 
     def time_diff_in_hour(self, time_seq, base_time):
-#        pdb.set_trace()
-    
         return [(item - base_time).total_seconds()/3600 for item in time_seq]
 
 
