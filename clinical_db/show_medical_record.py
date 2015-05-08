@@ -17,7 +17,7 @@ def lab_event_extract(result, admission_id, ronic_code):
 def icustay_detail_in_admission(admission):
     return [item for item in icustay_detail if item[8] == admission[0]]
 
-
+#subject_id = 1924
 subject_id = 1855
 mimic2db = control_mimic2db.control_mimic2db()
 patient = mimic2db.patient_class(subject_id)
@@ -36,11 +36,11 @@ for admission in patient.admissions:
     filename = "../data/AllLab_%d_%d.png"%(subject_id, admission.hadm_id)
     graph.draw_lab_adm(admission, title, filename)
 
-    for icustay in admission.icustays[0:1]:
+    for icustay in admission.icustays:
         icustay_base_time = icustay.intime
         filename = "../data/Med_%d.png"%icustay.icustay_id
         title = "ID:%d [%s]"%(subject_id, icustay.intime)
-        graph.draw_med_icu(icustay, title, filename);
+        graph.draw_med_icu(icustay, admission.admit_dt, title, filename);
         
 plt.waitforbuttonpress()
         
