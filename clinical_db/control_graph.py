@@ -26,11 +26,13 @@ class control_graph:
                 
         ax.set_title(title)
         ax.set_xlabel("Hours since Admission")
+
         ax.set_ylabel("Amount of Dose")
         ax.legend(bbox_to_anchor = (1.02, 1),  loc = 'upper left', borderaxespad = 0)
 
         icu_io = self.time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
         ax.axvspan(icu_io[0], icu_io[1], alpha = 0.2, color = 'red')
+
         self.show_and_save(fig, filename, show_flag)
 
     def draw_chart_icu(self, icustay, base_time, title, filename="", show_flag = True):
@@ -53,8 +55,10 @@ class control_graph:
         ax.set_xlabel("Hours since Admission")
 
         ax.legend(bbox_to_anchor = (1.02, 1),  loc = 'upper left', borderaxespad = 0)
+        
         icu_io = self.time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
         ax.axvspan(icu_io[0], icu_io[1], alpha = 0.2, color = 'red')
+
         self.show_and_save(fig, filename, show_flag)
 
     def draw_lab_adm(self, admission, title, filename="", show_flag = True):
@@ -74,6 +78,7 @@ class control_graph:
 
         ax.set_title(title)
         ax.set_xlabel("Hours since Admission")
+
         ax.legend(bbox_to_anchor = (1.02, 1),  loc = 'upper left', borderaxespad = 0)
 
         self.show_icustay_span(ax, admission)
