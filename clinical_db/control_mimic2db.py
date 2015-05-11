@@ -92,7 +92,7 @@ class control_mimic2db:
     def io_event_trends_in_icustay(self, icustay_id):
         select_seq = "SELECT I.*, T.LABEL, T.CATEGORY "+\
                      "FROM mimic2v26.IOEVENTS I, mimic2v26.D_IOITEMS T "+\
-                     "WHERE subject_id =%d AND I.ITEMID = T.ITEMID  "%icustay_id+\
+                     "WHERE icustay_id =%d AND I.ITEMID = T.ITEMID  "%icustay_id+\
                      "ORDER BY ITEMID, REALTIME"
 
         events = self.__select_and_save(select_seq)

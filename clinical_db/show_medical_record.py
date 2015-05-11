@@ -48,6 +48,6 @@ for admission in patient.admissions:
         # TODO: Show fluid IO
         filename = "../data/Fluid_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Fluid)"%(subject_id, admission.admit_dt)
-        #graph.draw_fluid_icu(icustay, admission.admit_dt, title, filename)
+        graph.draw_io_icu(icustay, admission.admit_dt, title, filename)
 
 plt.waitforbuttonpress()
