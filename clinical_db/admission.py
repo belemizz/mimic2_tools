@@ -1,20 +1,24 @@
 """
  Admission Class
 """
+
 class admission:
     def __init__(self, hadm_id, admit_dt, disch_dt):
         self.hadm_id = hadm_id
         self.admit_dt = admit_dt
         self.disch_dt = disch_dt
 
+    def set_icd9(self, icd9):
+        self.icd9 = icd9
+
+    def set_notes(self, note_events):
+        self.notes = note_events
+
     def set_icustays(self, icustay_list):
         self.icustays = icustay_list
 
     def set_labs(self, lab_event_trends):
         self.labs = lab_event_trends
-        
-    def set_notes(self, note_events):
-        self.notes = note_events
         
     def get_lab_itemid(self, itemid):
         result = [item for item in self.labs if item[0] == itemid]

@@ -27,7 +27,7 @@ class control_graph:
         self.show_legend(ax)
         self.show_icustay_span_in_icu(ax, icustay, base_time)
         self.show_and_save(fig, filename, show_flag)
-
+        
     def draw_chart_icu(self, icustay, base_time, title, filename="", show_flag = True):
         data = icustay.charts
         fig, ax = self.figure_with_side_legend()
@@ -45,7 +45,6 @@ class control_graph:
 
         ax.set_title(title)
         ax.set_xlabel("Hours since Admission")
-
 
         self.show_legend(ax)
         self.show_icustay_span_in_icu(ax, icustay, base_time)
@@ -100,7 +99,6 @@ class control_graph:
 
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
-
         colors = ['b', 'r']
         axis = [ax1, ax2]
 
@@ -149,4 +147,3 @@ class control_graph:
 
     def time_diff_in_hour(self, time_seq, base_time):
         return [(item - base_time).total_seconds()/3600 for item in time_seq]
-    

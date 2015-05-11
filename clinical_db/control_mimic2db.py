@@ -13,6 +13,7 @@ class control_mimic2db:
         self.cur.close()
         self.conn.close()
 
+    ## RETURN CLASSES ##
     def patient_class(self, subject_id):
         patient = self.patient(subject_id)
         subject_ins = subject.subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
@@ -26,6 +27,14 @@ class control_mimic2db:
         for item in admissions:
             admission_ins = admission.admission(item[0], item[2], item[3])
 
+            #icd9
+            icd9 = self.icd9_in_admission(admission_ins.hadm_id)
+            admission_ins.set_icd9(icd9)
+
+            #notes
+            note_events = self.note_events_in_admission(admission_ins.hadm_id)
+            admission_ins.set_notes(note_events)
+
             #icustay info
             icustay_list = self.icustay_class(admission_ins.hadm_id)
             admission_ins.set_icustays(icustay_list)
@@ -34,10 +43,6 @@ class control_mimic2db:
             lab_events = self.lab_events_in_admission(admission_ins.hadm_id)
             lab_event_trends = self.lab_event_trends(lab_events)
             admission_ins.set_labs(lab_event_trends)
-
-            #notes
-            note_events = self.note_events_in_admission(admission_ins.hadm_id)
-            admission_ins.set_notes(note_events)
 
             #append to admission_ins
             admission_list.append(admission_ins)
@@ -48,7 +53,6 @@ class control_mimic2db:
         select_seq = "SELECT * FROM mimic2v26.ICUSTAY_DETAIL "+\
                      "WHERE hadm_id =%d "%(hadm_id)
         icustays = self.__select_and_save(select_seq)
-
         icustay_list = []
         for item in icustays:
             icustay_ins = icustay.icustay(item[0],item[21],item[22])
@@ -69,6 +73,19 @@ class control_mimic2db:
             icustay_list.append(icustay_ins)
             
         return icustay_list
+
+    ## RETURN ELEMENTS WHICH BELONG TO ADMISSION##
+    def icd9_in_admission(self, hadm_id):
+        select_seq = "SELECT I.* FROM mimic2v26.ICD9 I "+\
+                     "WHERE hadm_id =%d "%(hadm_id) +\
+                     "ORDER BY sequence"
+        return self.__select_and_save(select_seq)
+
+    def note_events_in_admission(self, hadm_id):
+        select_seq = "SELECT N.* FROM mimic2v26.NOTEEVENTS N "+\
+                     "WHERE hadm_id =%d "%(hadm_id)+\
+                     "ORDER BY CHARTTIME";
+        return self.__select_and_save(select_seq)
 
     def chart_trends_in_icustay(self, icustay_id):
         select_seq = "SELECT C.*, T.LABEL, T.CATEGORY, T.DESCRIPTION "+\
@@ -108,6 +125,7 @@ class control_mimic2db:
                 value = [item[9] for item in record]
                 trends.append([itemid, descriptoin, uom, charttime, realtime, value])
         return trends
+
         
     def med_event_trends(self, med_events):
         itemid_list = set([item[2] for item in med_events])
@@ -122,8 +140,8 @@ class control_mimic2db:
                 realtime = [item[5] for item in record]
                 dose = [item[9] for item in record]
                 trends.append([itemid, descripition, doseuom, charttime, realtime, dose])
-                
         return trends
+    
 
     def lab_events_in_admission(self, hadm_id):
         select_seq = "SELECT L.*, T.TEST_NAME, T.FLUID, T.CATEGORY, T.LOINC_CODE, T.LOINC_DESCRIPTION "+\
@@ -223,12 +241,6 @@ class control_mimic2db:
                      "WHERE subject_id =%d "%(patient_id)+\
                      "ORDER BY CHARTTIME";
         return self.__select_and_save(select_seq, savepath)
-
-    def note_events_in_admission(self, hadm_id):
-        select_seq = "SELECT N.* FROM mimic2v26.NOTEEVENTS N "+\
-                     "WHERE hadm_id =%d "%(hadm_id)+\
-                     "ORDER BY CHARTTIME";
-        return self.__select_and_save(select_seq)
 
     def poe_order(self, patient_id, savepath = ""):
         if len(savepath) == 0:

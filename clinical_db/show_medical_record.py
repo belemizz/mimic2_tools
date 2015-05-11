@@ -4,6 +4,7 @@ Script to show summery of  medical record of a patient.
 
 import control_mimic2db
 import control_graph
+
 import matplotlib.pyplot as plt
 
 #subject_id = 1924
@@ -30,7 +31,11 @@ for admission in patient.admissions:
     graph.draw_lab_adm(admission, title, filename)
 
     # TODO: Save Profile,ICD9 and Notes to a text file
-    filename = "../data/Notes_%d_%d.png"%(subject_id, admission.hadm_id)
+    filename = "../data/Prof_Notes_%d_%d.txt"%(subject_id, admission.hadm_id)
+    outfile = control_csv.control_csv(filename)
+    
+
+    
     
     for icustay in admission.icustays:
         icustay_base_time = icustay.intime
@@ -45,9 +50,9 @@ for admission in patient.admissions:
         title = "ID:%d [%s] (Chart)"%(subject_id, admission.admit_dt)
         graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
 
-        # TODO: Show fluid IO
+        #Fluid IO
         filename = "../data/Fluid_%d.png"%icustay.icustay_id
-        title = "ID:%d [%s] (Fluid)"%(subject_id, admission.admit_dt)
+        title = "ID:%d [%s] (Fluid IO)"%(subject_id, admission.admit_dt)
         graph.draw_io_icu(icustay, admission.admit_dt, title, filename)
 
 plt.waitforbuttonpress()
