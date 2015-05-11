@@ -22,12 +22,16 @@ class TestSequenceFunctions(unittest.TestCase):
         print "medication__"
         for item in patient_class.admissions[1].icustays[0].medications:
             print item[5]
-        
+
         print "chart__"
         print len(patient_class.admissions[0].icustays[0].charts)
         for item in patient_class.admissions[0].icustays[0].charts:
             print (item[1],item[5])
 
+        print "io_events__"
+        for item in patient_class.admissions[1].icustays[0].ios:
+            print (item[1],item[5])
+        
 
 if __name__ == '__main__':
     unittest.main()

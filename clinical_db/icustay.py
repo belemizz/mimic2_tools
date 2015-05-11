@@ -13,3 +13,6 @@ class icustay:
         
     def set_charts(self, charts):
         self.charts = charts
+
+    def set_ios(self, ios):
+        self.ios = ios
