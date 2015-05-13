@@ -24,8 +24,20 @@ class control_csv:
         self.__close()
         print list_object
 
+    def append_single_list(self, list_object):
+        writer = self.__open_append()
+        writer.writerow(list_object)
+        self.__close()
+        print list_object
+
     def write_list(self, list_object):
         writer = self.__open_writer()
+        writer.writerows(list_object)
+        self.__close()
+        print list_object
+
+    def append_list(self, list_object):
+        writer = self.__open_append()
         writer.writerows(list_object)
         self.__close()
         print list_object
@@ -36,6 +48,10 @@ class control_csv:
 
     def __open_writer(self):
         self.__f = open(self.filepath, 'w')
+        return csv.writer(self.__f)
+
+    def __open_append(self):
+        self.__f = open(self.filepath, 'a')
         return csv.writer(self.__f)
 
     def __close(self):

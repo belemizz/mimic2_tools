@@ -4,6 +4,7 @@ Script to show summery of  medical record of a patient.
 
 import control_mimic2db
 import control_graph
+import control_csv
 
 import matplotlib.pyplot as plt
 
@@ -28,14 +29,15 @@ for admission in patient.admissions:
     # All lab tests
     filename = "../data/Lab_%d_%d.png"%(subject_id, admission.hadm_id)
     title = "ID:%d [%s] (Lab)"%(subject_id, admission.admit_dt)
-    graph.draw_lab_adm(admission, title, filename)
+#    graph.draw_lab_adm(admission, title, filename)
 
-    # TODO: Save Profile,ICD9 and Notes to a text file
+    # Save Profile,ICD9 and Notes to a text file
     filename = "../data/Prof_Notes_%d_%d.txt"%(subject_id, admission.hadm_id)
     outfile = control_csv.control_csv(filename)
-    
-
-    
+    outfile.write_single_list(["ICD9"])
+    outfile.append_list(admission.icd9)
+    outfile.append_single_list(["Notes"])
+    outfile.append_list(admission.notes)
     
     for icustay in admission.icustays:
         icustay_base_time = icustay.intime
@@ -43,16 +45,16 @@ for admission in patient.admissions:
         #Medication
         filename = "../data/Med_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Medication)"%(subject_id, admission.admit_dt)
-        graph.draw_med_icu(icustay, admission.admit_dt, title, filename)
+#        graph.draw_med_icu(icustay, admission.admit_dt, title, filename)
 
         #Charts
         filename = "../data/Chart_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Chart)"%(subject_id, admission.admit_dt)
-        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
+#        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
 
         #Fluid IO
         filename = "../data/Fluid_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Fluid IO)"%(subject_id, admission.admit_dt)
-        graph.draw_io_icu(icustay, admission.admit_dt, title, filename)
+#        graph.draw_io_icu(icustay, admission.admit_dt, title, filename)
 
 plt.waitforbuttonpress()
