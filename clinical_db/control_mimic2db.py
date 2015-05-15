@@ -332,40 +332,6 @@ class control_mimic2db:
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq, savepath)
 
-    ## def icd9_incl(self,code,savepath = ""):
-    ##     select_seq = "SELECT * FROM mimic2v26.icd9 "+\
-    ##                  "WHERE code='%s' "%code +\
-    ##                  "ORDER BY subject_id, hadm_id"
-    ##     return self.__select_and_save(select_seq, savepath)
-
-    ## def count_entry_of(self,table,savepath = ""):
-    ##     select_seq = "SELECT count(*)"+\
-    ##                  "FROM mimic2v26.%s "%table
-    ##     return self.__select_and_save(select_seq, savepath)
-
-    ## def count_icd9(self, savepath = ""):
-    ##     select_seq = "SELECT code, count(code) "+\
-    ##                  "FROM mimic2v26.icd9 "+\
-    ##                  "GROUP BY code " +\
-    ##                  "ORDER BY count(code) DESC "
-    ##     return self.__select_and_save(select_seq, savepath)
-
-    ## def count_icd9_eq_higher_than(self, rank, savepath = ""):
-    ##     select_seq = "SELECT code, count(code) "+\
-    ##                  "FROM mimic2v26.icd9 "+\
-    ##                  "WHERE sequence<=%d"%rank +\
-    ##                  "GROUP BY code " +\
-    ##                  "ORDER BY count(code) DESC "
-    ##     return self.__select_and_save(select_seq, savepath)
-
-    ## def count_sequence_of_icd9_eq(self, code, savepath = ""):
-    ##     select_seq = "SELECT sequence, count(sequence) "+\
-    ##                  "FROM mimic2v26.icd9 "+\
-    ##                  "WHERE code='%s' "%code +\
-    ##                  "GROUP BY sequence " +\
-    ##                  "ORDER BY sequence ASC "
-    ##     return self.__select_and_save(select_seq, savepath)
-
     def __select_and_save(self, select_seq, filepath="", print_query = False):
 
         if print_query:
