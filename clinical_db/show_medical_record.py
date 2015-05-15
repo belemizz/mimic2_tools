@@ -1,5 +1,5 @@
 """
-Script to show summery of  medical record of a patient.
+Script to show summery of  medical record of a subject.
 """
 
 import control_mimic2db
@@ -8,15 +8,15 @@ import control_csv
 
 import matplotlib.pyplot as plt
 
-subject_id = 1924
-#subject_id = 1855
+#subject_id = 1924
+subject_id = 1855
 
 mimic2db = control_mimic2db.control_mimic2db()
 graph = control_graph.control_graph()
 
-patient = mimic2db.patient_class(subject_id)
+subject = mimic2db.get_subject(subject_id)
 
-for admission in patient.admissions:
+for admission in subject.admissions:
     base_time = admission.admit_dt
 
     # CR and BUN

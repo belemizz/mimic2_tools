@@ -17,6 +17,7 @@ graph = control_graph.control_graph()
 target_codes = ['428.0']
 tmppath = '../data/tmp.csv'
 ignore_order = True
+
 # extract subjects who have each target code
 for index, code in enumerate(target_codes):
     if ignore_order:
@@ -37,7 +38,7 @@ expire_values = [[], [], [], []]
 
 for str_id in subject_ids:
     sid = int(str_id)
-    patient = mimic2db.patient_class(sid)
+    patient = mimic2db.get_subject(sid)
     if patient:
         final_adm = patient.get_final_admission()
 
