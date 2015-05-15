@@ -16,4 +16,4 @@ class subject:
         return self.admissions[len(self.admissions) - 1]
 
         
-    
+  

@@ -22,7 +22,7 @@ class admission:
         self.labs = lab_event_trends
         
     def get_lab_itemid(self, itemid):
-        result = [item for item in self.labs if item[0] == itemid]
+        result = [item for item in self.labs if item.itemid == itemid]
         if len(result) > 1:
             raise Exception("There is more than one record")
         return result[0]
@@ -30,22 +30,22 @@ class admission:
     def get_newest_lab_at_time(self, time_of_interest):
         result = []
         for item in self.labs:
-            if item[3][0] < time_of_interest:
+            if item.timestamps[0] < time_of_interest:
                 
                 over = False
-                for i, t in enumerate(item[3]):
+                for i, t in enumerate(item.timestamps):
                     if t > time_of_interest:
                         over = True
                         break
                 
                 if over:
-                    timestamp = item[3][i-1]
-                    value = item[4][i-1]
+                    timestamp = item.timestamps[i-1]
+                    value = item.values[i-1]
                 else:
-                    timestamp = item[3][i]
-                    value = item[4][i]
+                    timestamp = item.timestamps[i]
+                    value = item.values[i]
                     
-                result.append([item[0], item[1], item[2], timestamp, value])
+                result.append([item.itemid, item.description, item.unit, timestamp, value])
 
         return result
 

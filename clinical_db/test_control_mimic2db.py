@@ -19,8 +19,6 @@ class TestSequenceFunctions(unittest.TestCase):
         eq_(len(patient_class.admissions[0].labs), 135, "Num of Labtests")
         eq_(len(patient_class.admissions[0].notes), 125, "Num of Notes")
         eq_(len(patient_class.admissions[1].icd9[1]), 5, "Dim of ICD9")
-        eq_(len(patient_class.admissions[0].icustays[0].medications[3]),6, "Dim of Medication")
-        eq_(len(patient_class.admissions[0].icustays[0].charts[2]),6, "Dim of Charts")
         eq_(len(patient_class.admissions[0].icustays[0].ios), 34, "Num of ios")
         eq_(len(patient_class.admissions[1].get_newest_lab_at_time(datetime.datetime(3408,6,4))),47)
         eq_(len(patient_class.admissions[1].get_newest_lab_at_time(datetime.datetime(3408,6,1))),0)

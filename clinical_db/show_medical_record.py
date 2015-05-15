@@ -8,8 +8,8 @@ import control_csv
 
 import matplotlib.pyplot as plt
 
-#subject_id = 1924
-subject_id = 1855
+subject_id = 1924
+#subject_id = 1855
 
 mimic2db = control_mimic2db.control_mimic2db()
 graph = control_graph.control_graph()
@@ -24,12 +24,12 @@ for admission in subject.admissions:
     lab_itemid2 = 50177
     filename = "../data/CR_BUN_%d_%d.png"%(subject_id, admission.hadm_id)
     title = "ID:%d [%s]"%(subject_id, admission.admit_dt)
-    graph.draw_lab_adm_itemid(admission, (lab_itemid1, lab_itemid2), title, filename)
+#    graph.draw_lab_adm_itemid(admission, (lab_itemid1, lab_itemid2), title, filename)
 
     # All lab tests
     filename = "../data/Lab_%d_%d.png"%(subject_id, admission.hadm_id)
     title = "ID:%d [%s] (Lab)"%(subject_id, admission.admit_dt)
-    graph.draw_lab_adm(admission, title, filename)
+#    graph.draw_lab_adm(admission, title, filename)
 
     # Save Profile,ICD9 and Notes to a text file
     filename = "../data/Prof_Notes_%d_%d.txt"%(subject_id, admission.hadm_id)
@@ -45,12 +45,12 @@ for admission in subject.admissions:
         #Medication
         filename = "../data/Med_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Medication)"%(subject_id, admission.admit_dt)
-        graph.draw_med_icu(icustay, admission.admit_dt, title, filename)
+#        graph.draw_med_icu(icustay, admission.admit_dt, title, filename)
 
         #Charts
         filename = "../data/Chart_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Chart)"%(subject_id, admission.admit_dt)
-        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
+#        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
 
         #Fluid IO
         filename = "../data/Fluid_%d.png"%icustay.icustay_id

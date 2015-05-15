@@ -4,99 +4,38 @@ A class for controling graph
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from more_itertools import chunked
 
 class control_graph:
-#    def __init__(self):
+    def __init__(self):
+        self.limit_timeseries = 25
 
 #    def __del__(self):
-
-    def draw_med_icu(self, icustay, base_time,  title, filename="", show_flag = True):
-        data = icustay.medications
-        fig, ax = self.figure_with_side_legend()
-
-        for item in data:
-            time_diff = self.time_diff_in_hour(item[3], base_time)
-            value = np.array(item[5])
-            plot_value, order = self.normalize(value)
-            tag = "%s [%0.1f %s]"%(item[1], order, item[2])
-            ax.plot(time_diff,plot_value, 'o', label = tag)
-                
-        ax.set_title(title)
-        ax.set_xlabel("Hours since Admission")
-
-        self.show_legend(ax)
-        self.show_icustay_span_in_icu(ax, icustay, base_time)
-        self.show_and_save(fig, filename, show_flag)
-        
-    def draw_chart_icu(self, icustay, base_time, title, filename="", show_flag = True):
-        data = icustay.charts
-        fig, ax = self.figure_with_side_legend()
-
-        for item in data:
-            time_diff = self.time_diff_in_hour(item[3], base_time)
-
-            try:
-                value = np.array([float(num) for num in item[5]])
-                plot_val, order = self.normalize(value)
-                tag = "%s [%0.1f %s]"%(item[1], order, item[2])
-                ax.plot(time_diff, plot_val,  label = tag )
-            except ValueError:
-                print "Can't plot %s"%item[1]
-
-        ax.set_title(title)
-        ax.set_xlabel("Hours since Admission")
-
-        self.show_legend(ax)
-        self.show_icustay_span_in_icu(ax, icustay, base_time)
-        self.show_and_save(fig, filename, show_flag)
-
-    def draw_io_icu(self, icustay, base_time, title, filename="", show_flag = True):
-        data = icustay.ios
-        fig, ax = self.figure_with_side_legend()
-        
-        for item in data:
-            time_diff = self.time_diff_in_hour(item[3], base_time)
-
-            try:
-                value = np.array([float(num) for num in item[5]])
-                plot_val, order = self.normalize(value)
-                tag = "%s [%0.1f %s]"%(item[1], order, item[2])
-                ax.plot(time_diff, plot_val,'o',  label = tag )
-            except ValueError:
-                print "Can't plot %s"%item[1]
-
-        ax.set_title(title)
-        ax.set_xlabel("Hours since Admission")
-
-        self.show_legend(ax)
-        self.show_icustay_span_in_icu(ax, icustay, base_time)
-        self.show_and_save(fig, filename, show_flag)
 
     def draw_lab_adm(self, admission, title, filename="", show_flag = True):
         base_time = admission.admit_dt
         data = admission.labs
-        fig, ax = self.figure_with_side_legend()
-        counter = 0
+        plot_list = self.__get_plot_list(base_time, data)
+        icu_ios = [self.__time_diff_in_hour([icustay.intime, icustay.outtime], base_time) for icustay in admission.icustays]
+        self.__draw_series_with_legend(plot_list, icu_ios, title, filename, show_flag)
 
-        for item in data:
-            time_diff = self.time_diff_in_hour(item[3], base_time)
-            try:
-                value = np.array([float(num) for num in item[4]])
-                plot_val, order = self.normalize(value)
-                tag = "%s [%0.1f %s]"%(item[1],order,item[2])
-                ax.plot(time_diff, plot_val, label = tag)
-                counter = counter + 1
-                if counter >= 30:
-                    break
-            except ValueError:
-                print "Can't plot %s"%item[1]
+    def draw_med_icu(self, icustay, base_time,  title, filename="", show_flag = True):
+        data = icustay.medications
+        plot_list = self.__get_plot_list(base_time, data)
+        icu_io = self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
+        self.__draw_series_with_legend(plot_list, [icu_io], title, filename, show_flag, 'o')
+        
+    def draw_chart_icu(self, icustay, base_time, title, filename="", show_flag = True):
+        data = icustay.charts
+        plot_list = self.__get_plot_list(base_time, data)
+        icu_io = self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
+        self.__draw_series_with_legend(plot_list, [icu_io], title, filename, show_flag)
 
-        ax.set_title(title)
-        ax.set_xlabel("Hours since Admission")
-
-        self.show_legend(ax)
-        self.show_icustay_span(ax, admission)
-        self.show_and_save(fig, filename, show_flag)
+    def draw_io_icu(self, icustay, base_time, title, filename="", show_flag = True):
+        data = icustay.ios
+        plot_list = self.__get_plot_list(base_time, data)
+        icu_io = self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
+        self.__draw_series_with_legend(plot_list, [icu_io], title, filename, show_flag,'o')
 
     def draw_lab_adm_itemid(self, admission, itemids, title, filename = "", show_flag = True):
         base_time = admission.admit_dt
@@ -108,16 +47,19 @@ class control_graph:
 
         for idx, id in enumerate(itemids):
             data = admission.get_lab_itemid(id)
-            time_diff = self.time_diff_in_hour(data[3], base_time)
-            values = data[4]
+            time_diff = self.__time_diff_in_hour(data.timestamps, base_time)
+            values = data.values
             axis[idx].plot(time_diff, values, "%ss--"%colors[idx])
-            axis[idx].set_ylabel("%s [%s]"%(data[1], data[2]), color = colors[idx])
+            axis[idx].set_ylabel("%s [%s]"%(data.description, data.unit), color = colors[idx])
 
         ax1.set_title(title)
         ax1.set_xlabel("Hours since Admission")
         
-        self.show_icustay_span(ax1, admission)
-        self.show_and_save(fig, filename, show_flag)
+        base_time = admission.admit_dt
+        icu_ios = [self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time) for icustay in admission.icustays]
+        for span in icu_ios:
+            ax1.axvspan(span[0], span[1], alpha = 0.2, color = 'red')
+        self.__show_and_save(fig, filename, show_flag)
 
     def draw_lab_distribution(self, expire_values, recover_values, title, filename = "", show_flag = True):
         fig, ax = plt.subplots()
@@ -129,38 +71,58 @@ class control_graph:
         ax.set_xlabel("Creatinine [mg/dL]")
         ax.set_ylabel("Urea Nitrogen[mg/dL]")
 
-        self.show_and_save(fig, filename, show_flag)
+        self.__show_and_save(fig, filename, show_flag)
         
-    def show_icustay_span_in_icu(self, ax, icustay, base_time):
-        icu_io = self.time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
-        ax.axvspan(icu_io[0], icu_io[1], alpha = 0.2, color = 'red')
-
-    def show_icustay_span(self, ax, admission):
-        base_time = admission.admit_dt
-        icu_ios = [self.time_diff_in_hour([icustay.intime, icustay.outtime],base_time) for icustay in admission.icustays]
-        for span in icu_ios:
-            ax.axvspan(span[0], span[1], alpha = 0.2, color = 'red')
-
-
-    def show_and_save(self, fig, filename, show_flag):
-        if len(filename) > 0:
-            fig.savefig(filename)
-        if show_flag:
-            fig.show()
-
     def normalize(self, value):
         max_val = max(abs(value))
         order = 10.0 ** int(math.log10(float(max_val)))
         n_value = value / order
         return n_value, order
 
-    def figure_with_side_legend(self):
+    def __show_and_save(self, fig, filename, show_flag):
+        if len(filename) > 0:
+            fig.savefig(filename)
+        if show_flag:
+            fig.show()
+
+    def __figure_with_legend(self):
         fig = plt.figure(figsize = plt.figaspect(0.5))
         ax = fig.add_axes([.05,.1,.5,.8])
         return fig, ax
 
-    def show_legend(self, ax):
+    def __show_legend(self, ax):
         ax.legend(bbox_to_anchor = (1.02, 1),  loc = 'upper left', borderaxespad = 0, prop = {'size':8})
 
-    def time_diff_in_hour(self, time_seq, base_time):
+    def __time_diff_in_hour(self, time_seq, base_time):
         return [(item - base_time).total_seconds()/3600 for item in time_seq]
+
+    def __get_plot_list(self, base_time, time_series):
+        plot_list = []
+        for item in time_series:
+            try:
+                time_diff = self.__time_diff_in_hour(item.timestamps, base_time)
+                value = np.array([float(num) for num in item.values])
+                plot_val, order = self.normalize(value)
+                tag = "%s [%0.1f %s]"%(item.description,order,item.unit)
+                plot_list.append([time_diff, plot_val, tag])
+            except ValueError:
+                print "Can't plot %s"%item.description
+        return plot_list
+
+    def __draw_series_with_legend(self,plot_list, icu_ios, title, filename, show_flag, style = '-'):
+        plot_all = list(chunked(plot_list,self.limit_timeseries))
+        for plot_list in plot_all:
+            fig, ax = self.__figure_with_legend()
+            for item in plot_list:
+                ax.plot(item[0], item[1], style, label = item[2])
+
+            for span in icu_ios:
+                ax.axvspan(span[0], span[1], alpha = 0.2, color = 'red')
+
+            ax.set_title(title)
+            ax.set_xlabel("Hours since Admission") 
+
+            self.__show_legend(ax)
+            self.__show_and_save(fig, filename, show_flag)
+
+

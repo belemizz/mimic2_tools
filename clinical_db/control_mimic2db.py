@@ -2,6 +2,8 @@ import psycopg2
 import subject
 import admission
 import icustay
+import series
+
 import pdb
 
 class control_mimic2db:
@@ -75,8 +77,8 @@ class control_mimic2db:
             unit = record[0][8]
             timestamp = [item[4] for item in record]
             values = [item[5] for item in record]
-
-            trends.append([itemid, description, unit, timestamp, values])
+            trend = series.series(itemid, description, unit, timestamp, values)
+            trends.append(trend)
         return trends
 
     def get_medications(self, icustay_id):
@@ -87,28 +89,28 @@ class control_mimic2db:
             record = [item for item in events if item[2] == itemid and item[9]!=None]
 
             if len(record)>0:
-                descripition = record[0][16]
+                description = record[0][16]
                 doseuom = record[0][10]
-                charttime = [item[3] for item in record]
                 realtime = [item[5] for item in record]
                 dose = [item[9] for item in record]
-                trends.append([itemid, descripition, doseuom, charttime, realtime, dose])
+                trend = series.series(itemid, description, doseuom, realtime, dose)
+                trends.append(trend)
         return trends
 
     def get_charts(self, icustay_id):
         events = self.chart_events_in_icustay(icustay_id)
-        
         itemid_list = set([item[2] for item in events])
         trends = []
         for itemid in itemid_list:
             record = [item for item in events if item[2] == itemid and item[9]!=None]
+
             if len(record)>0:
-                descriptoin = record[0][16]
+                description = record[0][16]
                 uom = record[0][10]
-                charttime = [item[3] for item in record]
                 realtime = [item[5] for item in record]
                 value = [item[9] for item in record]
-                trends.append([itemid, descriptoin, uom, charttime, realtime, value])
+                trend = series.series(itemid, description, uom, realtime, value)
+                trends.append(trend)
         return trends
 
     def get_ios(self, icustay_id):
@@ -119,12 +121,12 @@ class control_mimic2db:
         for itemid in itemid_list:
             record = [item for item in events if item[2] == itemid and item[9]!=None]
             if len(record)>0:
-                descriptoin = record[0][16]
+                description = record[0][16]
                 uom = record[0][10]
-                charttime = [item[3] for item in record]
                 realtime = [item[6] for item in record]
                 value = [item[9] for item in record]
-                trends.append([itemid, descriptoin, uom, charttime, realtime, value])
+                trend = series.series(itemid, description, uom, realtime, value)
+                trends.append(trend)
         return trends
 
     ##  Basic queries to get items for a patient ##
@@ -178,7 +180,6 @@ class control_mimic2db:
                      "WHERE subject_id =%d "%(patient_id) +\
                      "ORDER BY hadm_id, sequence"
         return self.__select_and_save(select_seq, savepath)
-
 
     def med_events(self, patient_id, savepath = ""):
         if len(savepath) == 0:
@@ -364,8 +365,6 @@ class control_mimic2db:
     ##                  "GROUP BY sequence " +\
     ##                  "ORDER BY sequence ASC "
     ##     return self.__select_and_save(select_seq, savepath)
-
-
 
     def __select_and_save(self, select_seq, filepath="", print_query = False):
 
