@@ -45,7 +45,7 @@ class admission:
                     timestamp = item[3][i]
                     value = item[4][i]
                     
-                result.append((item[0], item[1], item[2], timestamp, value))
+                result.append([item[0], item[1], item[2], timestamp, value])
 
         return result
 

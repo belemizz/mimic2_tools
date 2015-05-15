@@ -16,9 +16,10 @@ class control_mimic2db:
     ## RETURN CLASSES ##
     def patient_class(self, subject_id):
         patient = self.patient(subject_id)
-        subject_ins = subject.subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
-        subject_ins.set_admissions(self.admission_class(subject_id))
-        return subject_ins
+        if len(patient) > 0:
+            subject_ins = subject.subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
+            subject_ins.set_admissions(self.admission_class(subject_id))
+            return subject_ins
 
     def admission_class(self, subject_id):
         admissions = self.admission(subject_id)
@@ -179,7 +180,8 @@ class control_mimic2db:
             savepath = "../data/%d_admission.csv"%patient_id
 
         select_seq = "SELECT * FROM mimic2v26.ADMISSIONS "+\
-                     "WHERE subject_id =%d "%(patient_id)
+                     "WHERE subject_id =%d "%(patient_id)+\
+                     "ORDER BY disch_dt"
         return self.__select_and_save(select_seq, savepath)
 
     def icd9(self, patient_id, savepath = ""):

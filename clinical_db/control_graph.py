@@ -18,7 +18,7 @@ class control_graph:
             time_diff = self.time_diff_in_hour(item[3], base_time)
             value = np.array(item[5])
             plot_value, order = self.normalize(value)
-            tag = "%s [%d %s]"%(item[1],order,item[2])
+            tag = "%s [%0.1f %s]"%(item[1], order, item[2])
             ax.plot(time_diff,plot_value, 'o', label = tag)
                 
         ax.set_title(title)
@@ -38,7 +38,7 @@ class control_graph:
             try:
                 value = np.array([float(num) for num in item[5]])
                 plot_val, order = self.normalize(value)
-                tag = "%s [%d %s]"%(item[1], order, item[2])
+                tag = "%s [%0.1f %s]"%(item[1], order, item[2])
                 ax.plot(time_diff, plot_val,  label = tag )
             except ValueError:
                 print "Can't plot %s"%item[1]
@@ -60,7 +60,7 @@ class control_graph:
             try:
                 value = np.array([float(num) for num in item[5]])
                 plot_val, order = self.normalize(value)
-                tag = "%s [%d %s]"%(item[1], order, item[2])
+                tag = "%s [%0.1f %s]"%(item[1], order, item[2])
                 ax.plot(time_diff, plot_val,'o',  label = tag )
             except ValueError:
                 print "Can't plot %s"%item[1]
@@ -76,14 +76,18 @@ class control_graph:
         base_time = admission.admit_dt
         data = admission.labs
         fig, ax = self.figure_with_side_legend()
+        counter = 0
 
         for item in data:
             time_diff = self.time_diff_in_hour(item[3], base_time)
             try:
                 value = np.array([float(num) for num in item[4]])
                 plot_val, order = self.normalize(value)
-                tag = "%s [%d %s]"%(item[1], order, item[2])
-                ax.plot(time_diff, plot_val, label = tag)                    
+                tag = "%s [%0.1f %s]"%(item[1],order,item[2])
+                ax.plot(time_diff, plot_val, label = tag)
+                counter = counter + 1
+                if counter >= 30:
+                    break
             except ValueError:
                 print "Can't plot %s"%item[1]
 
@@ -115,6 +119,18 @@ class control_graph:
         self.show_icustay_span(ax1, admission)
         self.show_and_save(fig, filename, show_flag)
 
+    def draw_lab_distribution(self, expire_values, recover_values, title, filename = "", show_flag = True):
+        fig, ax = plt.subplots()
+        for value in expire_values:
+            ax.plot(value[0], value[1], "ro")
+        for value in recover_values:
+            ax.plot(value[0], value[1], "bo")
+
+        ax.set_xlabel("Creatinine [mg/dL]")
+        ax.set_ylabel("Urea Nitrogen[mg/dL]")
+
+        self.show_and_save(fig, filename, show_flag)
+        
     def show_icustay_span_in_icu(self, ax, icustay, base_time):
         icu_io = self.time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
         ax.axvspan(icu_io[0], icu_io[1], alpha = 0.2, color = 'red')
@@ -125,6 +141,7 @@ class control_graph:
         for span in icu_ios:
             ax.axvspan(span[0], span[1], alpha = 0.2, color = 'red')
 
+
     def show_and_save(self, fig, filename, show_flag):
         if len(filename) > 0:
             fig.savefig(filename)
@@ -133,7 +150,7 @@ class control_graph:
 
     def normalize(self, value):
         max_val = max(abs(value))
-        order = 10 ** int(math.log10(float(max_val)))
+        order = 10.0 ** int(math.log10(float(max_val)))
         n_value = value / order
         return n_value, order
 
@@ -143,7 +160,7 @@ class control_graph:
         return fig, ax
 
     def show_legend(self, ax):
-        ax.legend(bbox_to_anchor = (1.02, 1),  loc = 'upper left', borderaxespad = 0, prop = {'size':6})
+        ax.legend(bbox_to_anchor = (1.02, 1),  loc = 'upper left', borderaxespad = 0, prop = {'size':8})
 
     def time_diff_in_hour(self, time_seq, base_time):
         return [(item - base_time).total_seconds()/3600 for item in time_seq]

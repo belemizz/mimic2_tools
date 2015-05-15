@@ -7,9 +7,13 @@ class subject:
         self.sex = sex
         self.dob = dob
         self.dod = dod
-        self.holpital_expire_flg = hospital_expire_flg
+        self.hospital_expire_flg = hospital_expire_flg
 
     def set_admissions(self,admission_list):
         self.admissions = admission_list
 
+    def get_final_admission(self):
+        return self.admissions[len(self.admissions) - 1]
+
         
+    
