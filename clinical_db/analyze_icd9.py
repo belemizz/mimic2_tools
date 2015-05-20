@@ -17,14 +17,13 @@ dataReader = csv.reader(f)
 prev_adm_id = 0
 all_codes = []
 codes = []
-
 for row in dataReader:
     if prev_adm_id == row[1]:# admission id
         codes.append(row[3])
     else:
         if ignore_order:
             joint_code = '_'.join(sorted(codes))
-        else:
+        else:s
             joint_code = '_'.join(codes)
         
         all_codes.append(joint_code)

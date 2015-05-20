@@ -72,7 +72,16 @@ class control_graph:
         ax.set_ylabel("Urea Nitrogen[mg/dL]")
 
         self.__show_and_save(fig, filename, show_flag)
-        
+
+    def plot_classification(self, positive, negative, line, title, filename = "", show_flag = True):
+        fig, ax = plt.subplots()
+        ax.plot(positive[:,0], positive[:,1], 'ro')
+        ax.plot(negative[:,0], negative[:,1], 'bo')
+        ax.plot([line[0], line[1]], [line[2], line[3]])
+
+        fig.show()
+        self.__show_and_save(fig, filename, show_flag)
+
     def normalize(self, value):
         max_val = max(abs(value))
         order = 10.0 ** int(math.log10(float(max_val)))
