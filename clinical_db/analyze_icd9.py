@@ -23,7 +23,7 @@ for row in dataReader:
     else:
         if ignore_order:
             joint_code = '_'.join(sorted(codes))
-        else:s
+        else:
             joint_code = '_'.join(codes)
         
         all_codes.append(joint_code)

@@ -13,7 +13,7 @@ class TestSequenceFunctions(unittest.TestCase):
 
     #    def tearDown(self):
 
-    def test_patient_class(self):k
+    def test_patient_class(self):
         patient_class = self.mimic2.get_subject(1855)
         
         eq_(len(patient_class.admissions[0].labs), 135, "Num of Labtests")

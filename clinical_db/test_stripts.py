@@ -23,5 +23,9 @@ class TestSequenceFunctions(unittest.TestCase):
     def test_show_medical_record(self):
         import show_medical_record
 
+    def test_classification(self):
+        import classify_patients
+        classify_patients.main()
+
 if __name__ == '__main__':
     unittest.main()

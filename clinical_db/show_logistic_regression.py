@@ -12,11 +12,11 @@ def sample_generation(n_neg_sample = 100, n_pos_sample = 100):
     data = []
     
     for i in xrange(0,n_neg_sample):
-        vec = numpy.random.randn(1,2) - 0.5
+        vec = numpy.random.randn(1,2) + 2
         flag = 0
         data.append([vec,flag])
     for i in range(0,n_pos_sample):
-        vec = numpy.random.randn(1,2) + 0.5
+        vec = numpy.random.randn(1,2) + 8
         flag = 1
         data.append([vec,flag])
 
@@ -36,11 +36,10 @@ def sample_generation(n_neg_sample = 100, n_pos_sample = 100):
     return [shared_x, shared_y]
 
 
-def show_logistic_regression(learning_rate = 0.05):
+    
+def show_logistic_regression(train_set_x, train_set_y, learning_rate = 0.2, n_epochs = 1000, show_span = 500 ):
     gr = control_graph.control_graph()
     
-    [train_set_x, train_set_y] = sample_generation()
-
     x = T.matrix('x') # design matrix
     y = T.ivectors('y') # answer
 
@@ -54,39 +53,56 @@ def show_logistic_regression(learning_rate = 0.05):
                (classifier.b, classifier.b -learning_rate * g_b)
            ]
 
+
     train_model = theano.function(
         inputs = [x,y],
         outputs = cost_function,
         updates = updates,
         )
+    func_cost = theano.function([x, y], cost_function)
 
     epoch = 0
-    n_epochs = 500
 
     x =  train_set_x.get_value()
+    max_x = max(x[:,0])
+    min_x = min(x[:,0])
+    
     y =  train_set_y.eval()
     positive_x = x[y==1]
     negative_x = x[y==0]
+
 
     while epoch < n_epochs:
         epoch = epoch +1
         
         train_model(train_set_x.get_value(), train_set_y.eval())
-#        print func_neg_log_like(train_set_x.get_value(), train_set_y.eval())
+        print func_cost(train_set_x.get_value(), train_set_y.eval())
 
-        if epoch % 100 == 0:
-            x_0 = T.scalar()
-            x_1_x_0 = -((classifier.W.get_value()[0] * x_0 + classifier.b.get_value())
-                                       / classifier.W.get_value()[1])[0]
-            x_1_mx_0 = -((classifier.W.get_value()[0] * (- x_0) + classifier.b.get_value())
-                                       / classifier.W.get_value()[1])[0]
-            x_all = [-x_0, x_0, x_1_mx_0, x_1_x_0]
-            func_x_1 =theano.function([x_0], x_all)
-            linev = func_x_1(5.0)
-            
+        if epoch % show_span == 0:
+            a_0 = T.scalar()
+            a_1 = T.scalar()
+            x_all = [ a_0,
+                      a_1,
+                      (
+                          ( -classifier.W.get_value()[0] * a_0 -classifier.b.get_value() )
+                          /  classifier.W.get_value()[1]
+                      )[0],
+                      (
+                          ( -classifier.W.get_value()[0] * a_1 -classifier.b.get_value() )
+                          /  classifier.W.get_value()[1]
+                      )[0]
+                      ]
+            func_x_all = theano.function([a_0, a_1], x_all)
+            linev = func_x_all(min_x, max_x)
+                
             gr.plot_classification(positive_x, negative_x, linev, "Title")
             plt.waitforbuttonpress()
 
+
+
+def main():
+    [train_set_x, train_set_y] = sample_generation()
+    show_logistic_regression(train_set_x, train_set_y)
     
 if __name__ == '__main__':
-    show_logistic_regression()
+    main()

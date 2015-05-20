@@ -8,14 +8,15 @@ import control_csv as cc
 
 import matplotlib.pyplot as plt
 import datetime
+import time
 
 import pdb
+
 
 mimic2db = control_mimic2db.control_mimic2db()
 graph = control_graph.control_graph()
 
 target_codes = ['428.0']
-tmppath = '../data/tmp.csv'
 ignore_order = True
 
 # extract subjects who have each target code
@@ -24,10 +25,8 @@ for index, code in enumerate(target_codes):
         seq_cond = "<=%d"%len(target_codes)
     else:
         seq_cond = "=%d"%(index+1)
-    mimic2db.subject_with_icd9(code,seq_cond, tmppath)
-
-    tmp_csv = cc.control_csv(tmppath);
-    id_list = tmp_csv.read_first_column();
+    subjects = mimic2db.subject_with_icd9(code,seq_cond)
+    id_list = [item[0] for item in subjects]
 
 subject_ids = id_list
 print subject_ids
@@ -36,8 +35,11 @@ days_before_discharge = [0, 1, 2, 3]
 recover_values = [[], [], [], []]
 expire_values = [[], [], [], []]
 
+start_time = time.clock()
+
 for str_id in subject_ids:
     sid = int(str_id)
+    print sid
     patient = mimic2db.get_subject(sid)
     if patient:
         final_adm = patient.get_final_admission()
@@ -57,7 +59,12 @@ for str_id in subject_ids:
                 else:
                     recover_values[index].append([cr_value, bun_value])
 
+end_time = time.clock()
+print "data_retrieving_time: %f sec"%(end_time - start_time)
+
 for index, dbd in enumerate(days_before_discharge):
     title = "Lab Tests %d days before discharge"%dbd
     filename = "../data/Lab_Dist_%d_days_before_disch.png"%dbd
     graph.draw_lab_distribution(expire_values[index], recover_values[index], title, filename)
+
+
