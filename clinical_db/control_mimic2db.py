@@ -1,28 +1,40 @@
 import psycopg2
+import cPickle
+import os
+
 import subject
 import admission
 import icustay
 import series
 
-import pdb
-
 class control_mimic2db:
     def __init__(self):
         self.conn = psycopg2.connect("dbname=MIMIC2 user=kimimizobe")
         self.cur = self.conn.cursor()
+        self.cache_dir = "../data/cache/"
     
     def __del__(self):
         self.cur.close()
         self.conn.close()
 
+    def cache_path(self, cache_name):
+        return self.cache_dir + '/' + cache_name
+        
     ## get classes ##
     def get_subject(self, subject_id):
-        patient = self.patent(subject_id)
-        if len(patient) > 0:
-            subject_ins = subject.subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
-            subject_ins.set_admissions(self.get_admission(subject_id))
+        cache_name = "subject_%d.pcl"%subject_id
+        path = self.cache_path(cache_name)
 
-            return subject_ins
+        if os.path.isfile(path):
+            subject_ins = self.__retrieve_cache(cache_name)
+        else:
+            patient = self.patent(subject_id)
+            if len(patient) > 0:
+                subject_ins = subject.subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
+                subject_ins.set_admissions(self.get_admission(subject_id))
+                self.__cache_object(subject_ins, cache_name)
+                
+        return subject_ins
 
     def get_admission(self, subject_id):
         admissions = self.admission(subject_id)
@@ -332,6 +344,19 @@ class control_mimic2db:
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq, savepath)
 
+    def __cache_object(self, obj, filename):
+        filepath = self.cache_path(filename)
+        f = open(filepath, 'w')
+        cPickle.dump(obj, f)
+        f.close()
+
+    def __retrieve_cache(self, filename):
+        filepath = self.cache_path(filename)
+        f = open(filepath, 'r')
+        ret = cPickle.load(f)
+        f.close()
+        return ret
+
     def __select_and_save(self, select_seq, filepath="", print_query = False):
 
         if print_query:
@@ -347,3 +372,6 @@ class control_mimic2db:
             writer.writerows(result)
 
         return result
+
+
+
