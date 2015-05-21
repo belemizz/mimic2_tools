@@ -8,6 +8,7 @@ import icustay
 import series
 
 class control_mimic2db:
+    """ MIMIC2 Controller """
     def __init__(self):
         self.conn = psycopg2.connect("dbname=MIMIC2 user=kimimizobe")
         self.cur = self.conn.cursor()

@@ -79,6 +79,17 @@ class control_graph:
         ax.plot(negative[:,0], negative[:,1], 'bo')
         ax.plot([line[0], line[1]], [line[2], line[3]])
 
+        margin_rate = 0.05
+        x_max = max(max(positive[:,0]), max(negative[:,0]))
+        x_min = min(min(positive[:,0]), min(negative[:,0]))
+        x_margin = (x_max - x_min) * margin_rate
+        ax.set_xlim([x_min-x_margin, x_max+x_margin] )
+
+        y_max = max(max(positive[:,1]), max(negative[:,1]))
+        y_min = min(min(positive[:,1]), min(negative[:,1]))
+        y_margin = (y_max - y_min) * margin_rate
+        ax.set_ylim([y_min - y_margin, y_max + y_margin] )
+        
         fig.show()
         self.__show_and_save(fig, filename, show_flag)
 
