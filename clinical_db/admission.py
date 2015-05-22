@@ -1,8 +1,6 @@
 """
  Admission Class
 """
-import pdb
-
 class admission:
     def __init__(self, hadm_id, admit_dt, disch_dt):
         self.hadm_id = hadm_id

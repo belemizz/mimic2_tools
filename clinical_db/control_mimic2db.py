@@ -18,13 +18,11 @@ class control_mimic2db:
         self.cur.close()
         self.conn.close()
 
-    def cache_path(self, cache_name):
-        return self.cache_dir + '/' + cache_name
         
     ## get classes ##
     def get_subject(self, subject_id):
         cache_name = "subject_%d.pcl"%subject_id
-        path = self.cache_path(cache_name)
+        path = self.__cache_path(cache_name)
 
         if os.path.isfile(path):
             subject_ins = self.__retrieve_cache(cache_name)
@@ -345,14 +343,17 @@ class control_mimic2db:
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq, savepath)
 
+    def __cache_path(self, cache_name):
+        return self.cache_dir + '/' + cache_name
+
     def __cache_object(self, obj, filename):
-        filepath = self.cache_path(filename)
+        filepath = self.__cache_path(filename)
         f = open(filepath, 'w')
         cPickle.dump(obj, f)
         f.close()
 
     def __retrieve_cache(self, filename):
-        filepath = self.cache_path(filename)
+        filepath = self.__cache_path(filename)
         f = open(filepath, 'r')
         ret = cPickle.load(f)
         f.close()
