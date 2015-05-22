@@ -1,16 +1,19 @@
 import psycopg2
 import cPickle
+
 import os
+import getpass
 
 import subject
 import admission
 import icustay
 import series
 
+
 class control_mimic2db:
     """ MIMIC2 Controller """
     def __init__(self):
-        self.conn = psycopg2.connect("dbname=MIMIC2 user=kimimizobe")
+        self.conn = psycopg2.connect("dbname=MIMIC2 user=%s"%getpass.getuser())
         self.cur = self.conn.cursor()
         self.cache_dir = "../data/cache/"
     
