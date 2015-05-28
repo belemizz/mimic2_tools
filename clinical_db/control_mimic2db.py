@@ -5,9 +5,6 @@ import os
 import getpass
 
 import subject
-import admission
-import icustay
-import series
 
 
 class control_mimic2db:
@@ -31,6 +28,7 @@ class control_mimic2db:
             subject_ins = self.__retrieve_cache(cache_name)
         else:
             patient = self.patent(subject_id)
+            print patient
             if len(patient) > 0:
                 subject_ins = subject.subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
                 subject_ins.set_admissions(self.get_admission(subject_id))
@@ -43,7 +41,7 @@ class control_mimic2db:
 
         admission_list = []
         for item in admissions:
-            admission_ins = admission.admission(item[0], item[2], item[3])
+            admission_ins = subject.admission(item[0], item[2], item[3])
 
             icd9 = self.icd9_in_admission(admission_ins.hadm_id)
             admission_ins.set_icd9(icd9)
@@ -65,7 +63,7 @@ class control_mimic2db:
         icustays = self.icustay_detail_in_admission(hadm_id)
         icustay_list = []
         for item in icustays:
-            icustay_ins = icustay.icustay(item[0],item[21],item[22])
+            icustay_ins = subject.icustay(item[0],item[21],item[22])
 
             medications = self.get_medications(icustay_ins.icustay_id)
             icustay_ins.set_medications(medications)
@@ -91,7 +89,7 @@ class control_mimic2db:
             unit = record[0][8]
             timestamp = [item[4] for item in record]
             values = [item[5] for item in record]
-            trend = series.series(itemid, description, unit, timestamp, values)
+            trend = subject.series(itemid, description, unit, timestamp, values)
             trends.append(trend)
         return trends
 
@@ -107,7 +105,7 @@ class control_mimic2db:
                 doseuom = record[0][10]
                 realtime = [item[5] for item in record]
                 dose = [item[9] for item in record]
-                trend = series.series(itemid, description, doseuom, realtime, dose)
+                trend = subject.series(itemid, description, doseuom, realtime, dose)
                 trends.append(trend)
         return trends
 
@@ -123,7 +121,7 @@ class control_mimic2db:
                 uom = record[0][10]
                 realtime = [item[5] for item in record]
                 value = [item[9] for item in record]
-                trend = series.series(itemid, description, uom, realtime, value)
+                trend = subject.series(itemid, description, uom, realtime, value)
                 trends.append(trend)
         return trends
 
@@ -139,7 +137,7 @@ class control_mimic2db:
                 uom = record[0][10]
                 realtime = [item[6] for item in record]
                 value = [item[9] for item in record]
-                trend = series.series(itemid, description, uom, realtime, value)
+                trend = subject.series(itemid, description, uom, realtime, value)
                 trends.append(trend)
         return trends
 
