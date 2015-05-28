@@ -15,7 +15,7 @@ import theano
 import theano.tensor as T
 
 
-def main():
+def main( max_id = 2000 ):
 
     mimic2db = control_mimic2db.control_mimic2db()
     graph = control_graph.control_graph()
@@ -33,7 +33,7 @@ def main():
         else:
             seq_cond = "=%d"%(index+1)
         subjects = mimic2db.subject_with_icd9(code,seq_cond, tmppath)
-        id_list = [item[0] for item in subjects]
+        id_list = [item[0] for item in subjects if item[0] <= max_id]
 
     subject_ids = id_list
 
@@ -101,7 +101,6 @@ def main():
 
     x = numpy.array([item[0] for item in data])
     y = numpy.array([item[1] for item in data])
-
 
     ## Classification ##
     shared_x = theano.shared(
