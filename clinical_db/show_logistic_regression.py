@@ -3,7 +3,7 @@ import theano
 import theano.tensor as T
 
 import random
-import logistic_regression
+import alg_logistic_regression
 import control_graph
 
 import matplotlib.pyplot as plt
@@ -43,7 +43,7 @@ def show_logistic_regression(train_set_x, train_set_y, learning_rate = 0.2, n_ep
     x = T.matrix('x') # design matrix
     y = T.ivectors('y') # answer
 
-    classifier = logistic_regression.BinaryClassifier(x,2)
+    classifier = alg_logistic_regression.BinaryClassifier(x,2)
     cost_function = classifier.negative_log_likelihood(y)
 
     g_W = T.grad(cost = cost_function, wrt = classifier.W)

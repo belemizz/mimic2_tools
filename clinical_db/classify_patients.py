@@ -14,7 +14,6 @@ import numpy
 import theano
 import theano.tensor as T
 
-
 def main( max_id = 2000 ):
 
     mimic2db = control_mimic2db.control_mimic2db()
