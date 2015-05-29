@@ -19,7 +19,7 @@ outfolder = '../data/'
 # 428.0_518.81 36
 
 target_codes = ['428.0', '518.81']
-target_codes = ['428.0']
+#target_codes = ['428.0']
 ignore_order = False
 add_icu_expire_flag = True
 
@@ -34,22 +34,15 @@ import control_csv as cc
 mimic2db = mimic2.control_mimic2db()
 id_lists = []
 
-# extract subjects who have each target code
-for index, code in enumerate(target_codes):
-    if ignore_order:
-        seq_cond = "<=%d"%len(target_codes)
-    else:
-        seq_cond = "=%d"%(index+1)
-    mimic2db.subject_with_icd9(code,seq_cond, tmppath)
-
-    tmp_csv = cc.control_csv(tmppath);
-    id_list = tmp_csv.read_first_column();
-    id_lists.append(id_list)
+# extract from ICD 9 codes
+id_lists.append(mimic2db.subject_with_icd9_codes(target_codes, ignore_order))
 
 # extract subjects who have matched waveform
 mimic2db.subject_matched_waveforms(tmppath)
-id_list = tmp_csv.read_first_column()
-id_lists.append(id_list)
+tmp_csv = cc.control_csv(tmppath);
+read_list = tmp_csv.read_first_column()
+id_lists.append([int(item) for item in read_list])
+print id_lists
 
 # find intersection of extracted subjects
 id_set = set(id_lists[0])
@@ -61,7 +54,9 @@ output_list = [id_list]
 # add expire flag
 if add_icu_expire_flag:
     mimic2db.subject_with_icu_expire_flg(tmppath)
-    expire_full_list = tmp_csv.read_first_column()
+    read_full_list = tmp_csv.read_first_column()
+    expire_full_list = [int(item) for item in read_full_list]
+
     expire_list = []
     for subject in id_list:
         if subject in expire_full_list:

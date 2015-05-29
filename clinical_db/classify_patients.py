@@ -22,19 +22,11 @@ def main( max_id = 2000 ):
     ## Get Subject ID ##
     #Parameters
     target_codes = ['428.0']
-    tmppath = '../data/tmp.csv'
-    ignore_order = True
 
-    # extract subjects who have each target code
-    for index, code in enumerate(target_codes):
-        if ignore_order:
-            seq_cond = "<=%d"%len(target_codes)
-        else:
-            seq_cond = "=%d"%(index+1)
-        subjects = mimic2db.subject_with_icd9(code,seq_cond, tmppath)
-        id_list = [item[0] for item in subjects if item[0] <= max_id]
+    target_codes = ['428.0']
+    id_list =  mimic2db.subject_with_icd9_codes(target_codes)
 
-    subject_ids = id_list
+    subject_ids = [item for item in id_list if item < max_id]
 
     ## Get Data ##
     days_before_discharge = [0]

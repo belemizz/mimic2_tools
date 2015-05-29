@@ -141,6 +141,23 @@ class control_mimic2db:
                 trends.append(trend)
         return trends
 
+    ## Search subject ID based on conditions ##
+    def subject_with_icd9_codes(self, target_codes, ignore_order = True):
+        id_lists = []
+        for index, code in enumerate(target_codes):
+            if ignore_order:
+                seq_cond = "<=%d"%len(target_codes)
+            else:
+                seq_cond = "=%d"%(index+1)
+            subjects = self.__subject_with_icd9(code,seq_cond)
+            id_lists.append([item[0] for item in subjects])
+
+        id_set = set(id_lists[0])
+        for index in range(1,len(id_lists)):
+            id_set = id_set.intersection(set(id_lists[index]))
+
+        return sorted(list(id_set))
+
     ##  Basic queries to get items for a patient ##
     def patent(self, patient_id, savepath = ""):
         if len(savepath) == 0:
@@ -336,13 +353,15 @@ class control_mimic2db:
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq, savepath)
 
-    def subject_with_icd9(self, code, seq_cond,savepath = ""):
+        
+    
+    def __subject_with_icd9(self, code, seq_cond):
         select_seq = "SELECT subject_id "+\
                      "FROM mimic2v26.icd9 "+\
                      "WHERE code='%s' AND sequence%s"%(code,seq_cond) +\
                      "GROUP BY subject_id " +\
                      "ORDER BY subject_id "
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
     def __cache_path(self, cache_name):
         return self.cache_dir + '/' + cache_name
