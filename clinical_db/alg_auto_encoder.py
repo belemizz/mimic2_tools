@@ -37,10 +37,10 @@ def main():
     batch_size = 1
     n_train_batches = training_set_x.get_value(borrow=True).shape[0] / batch_size
 
+    
+    ## model description
     index = T.lscalar()
     x = T.matrix('x')
-
-    ## model description
     numpy_rng = numpy.random.RandomState(123)
     theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
 
@@ -79,6 +79,8 @@ def main():
             # print 'Batch %d/%d, Cost %f'%(batch_index,n_train_batches, numpy.mean(c))
         print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, numpy.mean(c))
         
+
+    ## Evaluation
 
     
 

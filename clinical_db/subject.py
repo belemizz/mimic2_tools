@@ -69,10 +69,10 @@ class admission:
 
         return result
 
-    def display_available_lab(self):
-        available_labs = [(item[0],len(item[4]),item[1]) for item in self.labs]
-        for item in available_labs:
-            print item
+    ## def display_available_lab(self):
+    ##     available_labs = [(item[0],len(item[4]),item[1]) for item in self.labs]
+    ##     for item in available_labs:
+    ##         print item
 
 
 
