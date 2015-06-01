@@ -73,7 +73,7 @@ class control_graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
-    def plot_classification(self, positive, negative, line, title, filename = "", show_flag = True):
+    def plot_classification(self, positive, negative, line, title, filename = "", show_flag = True, x_label = "", y_label = ""):
         fig, ax = plt.subplots()
         ax.plot(positive[:,0], positive[:,1], 'ro')
         ax.plot(negative[:,0], negative[:,1], 'bo')
@@ -89,10 +89,29 @@ class control_graph:
         y_min = min(min(positive[:,1]), min(negative[:,1]))
         y_margin = (y_max - y_min) * margin_rate
         ax.set_ylim([y_min - y_margin, y_max + y_margin] )
-        
-        fig.show()
+
+        if len(x_label) > 0:
+            ax.set_xlabel(x_label)
+        if len(y_label) > 0:
+            ax.set_ylabel(y_label)
+
+#        fig.show()
         self.__show_and_save(fig, filename, show_flag)
 
+    def bar_feature_importance(self, entropy_reduction, labels, filename = "", show_flag = True):
+        fig, ax = plt.subplots()
+        Y = range( len(entropy_reduction))
+        Y.reverse()
+
+        ax.barh(Y, entropy_reduction, height = 0.4)
+        plt.yticks(Y, labels)
+        ax.set_xlabel("Entropy Reduction")
+        plt.tick_params(axis = 'both', which = 'major', labelsize = 8)
+        plt.tick_params(axis = 'both', which = 'minor', labelsize = 8)
+        plt.tight_layout()
+
+        self.__show_and_save(fig, filename, show_flag)
+        
     def normalize(self, value):
         max_val = max(abs(value))
         order = 10.0 ** int(math.log10(float(max_val)))

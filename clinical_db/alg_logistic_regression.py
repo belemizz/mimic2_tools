@@ -1,6 +1,10 @@
-import numpy as np
+import numpy
 import theano
 import theano.tensor as T
+import matplotlib.pyplot as plt
+
+import generate_sample
+import control_graph
 
 class BinaryClassifier():
     def __init__(self, input, n_dim):
@@ -14,13 +18,13 @@ class BinaryClassifier():
 
         ## Parameters 
         self.W = theano.shared(
-            value = np.ones(n_dim, dtype = theano.config.floatX),
+            value = numpy.ones(n_dim, dtype = theano.config.floatX),
             name = 'W',
             borrow = True
         )
 
         self.b = theano.shared(
-            value = np.ones(1, dtype = theano.config.floatX),
+            value = numpy.ones(1, dtype = theano.config.floatX),
             name = 'b',
             borrow = True,
             broadcastable = [True]
@@ -38,5 +42,83 @@ class BinaryClassifier():
             + T.log(1-self.p_y_given_x) * (1 - y)
             )
         
-#    def errors(self, y):
+
+### show the algorithms
+def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000, show_span = 500, show_flag=True, x_label="", y_label=""):
+    
+    train_set_x = theano.shared(
+        numpy.asarray(set_x, dtype=theano.config.floatX),
+                             borrow = True)
+    train_set_y = T.cast( theano.shared(
+                    numpy.asarray(set_y, dtype = theano.config.floatX),
+                    borrow = True
+                    ), 'int32')
+
+    gr = control_graph.control_graph()
+    
+    x = T.matrix('x') # design matrix
+    y = T.ivectors('y') # answer
+
+    classifier = BinaryClassifier(x,2)
+    cost_function = classifier.negative_log_likelihood(y)
+
+    g_W = T.grad(cost = cost_function, wrt = classifier.W)
+    g_b = T.grad(cost = cost_function, wrt = classifier.b)
+
+    updates = [(classifier.W, classifier.W -learning_rate * g_W),
+               (classifier.b, classifier.b -learning_rate * g_b)
+           ]
+
+    train_model = theano.function(
+        inputs = [x,y],
+        outputs = cost_function,
+        updates = updates,
+        )
+    func_cost = theano.function([x, y], cost_function)
+
+    epoch = 0
+
+    x =  train_set_x.get_value()
+    max_x = max(x[:,0])
+    min_x = min(x[:,0])
+    
+    y =  train_set_y.eval()
+    positive_x = x[y==1]
+    negative_x = x[y==0]
+
+
+    while epoch < n_epochs:
+        epoch = epoch +1
         
+        train_model(train_set_x.get_value(), train_set_y.eval())
+        print func_cost(train_set_x.get_value(), train_set_y.eval())
+
+        if epoch % show_span == 0:
+            a_0 = T.scalar()
+            a_1 = T.scalar()
+            x_all = [ a_0,
+                      a_1,
+                      (
+                          ( -classifier.W.get_value()[0] * a_0 -classifier.b.get_value() )
+                          /  classifier.W.get_value()[1]
+                      )[0],
+                      (
+                          ( -classifier.W.get_value()[0] * a_1 -classifier.b.get_value() )
+                          /  classifier.W.get_value()[1]
+                      )[0]
+                      ]
+            func_x_all = theano.function([a_0, a_1], x_all)
+            linev = func_x_all(min_x, max_x)
+
+            gr.plot_classification(positive_x, negative_x, linev, "Title", x_label = x_label, y_label = y_label, show_flag = show_flag)
+            plt.waitforbuttonpress()
+
+def main():
+    # generate_samples
+    [x, y] = generate_sample.normal_dist(2, 100, 100, [3, 8], seed = 1 )
+    show_logistic_regression(x, y)
+
+if __name__ == '__main__':
+    main()
+    
+    

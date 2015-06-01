@@ -25,7 +25,11 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_classification(self):
         import classify_patients
-        classify_patients.main()
+        classify_patients.main(max_id = 2000)
+
+    def test_evaluate_feature(self):
+        import evaluate_feature
+        evaluate_feature.main(max_id = 2000)
 
 if __name__ == '__main__':
     unittest.main()

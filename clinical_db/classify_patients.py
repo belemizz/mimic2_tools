@@ -14,19 +14,15 @@ import numpy
 import theano
 import theano.tensor as T
 
-def main( max_id = 2000 ):
+def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
 
     mimic2db = control_mimic2db.control_mimic2db()
     graph = control_graph.control_graph()
 
     ## Get Subject ID ##
-    #Parameters
-    target_codes = ['428.0']
-
-    target_codes = ['428.0']
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
-
     subject_ids = [item for item in id_list if item < max_id]
+    print "Number of Candidates : %d"%len(subject_ids)
 
     ## Get Data ##
     days_before_discharge = [0]
@@ -93,20 +89,9 @@ def main( max_id = 2000 ):
     x = numpy.array([item[0] for item in data])
     y = numpy.array([item[1] for item in data])
 
-    ## Classification ##
-    shared_x = theano.shared(
-        numpy.asarray(x, dtype=theano.config.floatX),
-                             borrow = True)
-    shared_y = T.cast( theano.shared(
-                    numpy.asarray(y, dtype = theano.config.floatX),
-                    borrow = True
-                    ), 'int32')
-
-    import show_logistic_regression
-    print shared_x.get_value()
-    print shared_y.eval()
-    show_logistic_regression.show_logistic_regression(shared_x, shared_y, 0.002, 100000, 50000)
-
+    ## classification
+    import alg_logistic_regression
+    alg_logistic_regression.show_logistic_regression(x, y, 0.002, 10000, 10000)
 
 if __name__ == '__main__':
     main()

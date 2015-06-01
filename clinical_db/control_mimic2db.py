@@ -18,7 +18,6 @@ class control_mimic2db:
         self.cur.close()
         self.conn.close()
 
-        
     ## get classes ##
     def get_subject(self, subject_id):
         cache_name = "subject_%d.pcl"%subject_id
@@ -141,6 +140,12 @@ class control_mimic2db:
                 trends.append(trend)
         return trends
 
+    def lab_items(self, item_id):
+        select_seq = "SELECT * "+\
+                     "FROM mimic2v26.D_LABITEMS "+\
+                     "WHERE itemid =%d "%(item_id)
+        return self.__select_and_save(select_seq)
+
     ## Search subject ID based on conditions ##
     def subject_with_icd9_codes(self, target_codes, ignore_order = True):
         id_lists = []
@@ -250,6 +255,7 @@ class control_mimic2db:
                      "ORDER BY ITEMID, CHARTTIME"
         return self.__select_and_save(select_seq, savepath)
 
+
     def io_events(self, patient_id, savepath = ""):
         if len(savepath) == 0:
             savepath = "../data/%d_io_events.csv"%patient_id
@@ -300,7 +306,6 @@ class control_mimic2db:
                      "AND L.ITEMID = T.ITEMID "+\
                      "ORDER BY ITEMID, CHARTTIME"
         return self.__select_and_save(select_seq)
-
         
     ## RETURN ELEMENTS WHICH BELONG TO ICUSTAY ##
     def med_events_in_icustay(self, icustay_id):
