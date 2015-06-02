@@ -16,7 +16,7 @@ import alg_logistic_regression
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
-def main( max_id = 200000, target_codes = ['428.0'], n_feature = 20, dbd = 0):
+def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
 
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
@@ -29,9 +29,36 @@ def main( max_id = 200000, target_codes = ['428.0'], n_feature = 20, dbd = 0):
     most_common_tests = [item[0] for item in counter.most_common(n_feature)]
     print most_common_tests
 
+    # Get values of most commom tests
     value_array, flag_array, ids = get_feature_values(patients, most_common_tests, dbd, n_feature)
     print "Number of Patients : %d"%len(ids)
 
+    # Normalize
+    from sklearn.preprocessing import normalize
+    n_value_array = normalize(value_array, axis = 0)
+
+    # Get PCA features
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components = 5)
+    pca_value = pca.fit(n_value_array).transform(n_value_array)
+
+    from sklearn.decomposition import FastICA
+    ica = FastICA(n_components = 5)
+    ica_value = ica.fit(n_value_array, flag_array).transform(n_value_array)
+
+    from sklearn.lda import LDA
+    lda = LDA(n_components = 1)
+    lda_value = lda.fit(n_value_array, flag_array).transform(n_value_array)
+
+    value_array = numpy.hstack([value_array, pca_value, ica_value, lda_value])
+    desc_labels = ['PCA1', 'PCA2', 'PCA3', 'PCA4', 'PCA5', 'ICA1', 'ICA2', 'ICA3','ICA4', 'ICA5', 'LDA']
+
+    for index, item in enumerate(desc_labels):
+        most_common_tests.append(-index)
+        units[-index] = 'None'
+        descs[-index] = desc_labels[index]
+
+    # Calc entropy reduction for all features 
     result = calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units)
     print numpy.array(result)
 
@@ -44,10 +71,9 @@ def main( max_id = 200000, target_codes = ['428.0'], n_feature = 20, dbd = 0):
     important_labs = [result[0][1], result[1][1]]
     x_label = "%s [%s]"%(result[0][3],result[0][4])
     y_label = "%s [%s]"%(result[1][3],result[1][4])
+
     x = value_array[:, important_labs]
-#    y = numpy.zeros(len(flag_array))
-#    y[flag_array == 'Y'] = 1
-    alg_logistic_regression.show_logistic_regression(x, flag_array, 0.001, 10000, 10000, x_label, y_label)
+    alg_logistic_regression.show_logistic_regression(x, flag_array, 0.001, 10000, 10000, x_label = x_label, y_label = y_label)
 
 # Get the data of the tests
 def get_feature_values(patients, lab_ids, days_before_discharge, n_feature):
