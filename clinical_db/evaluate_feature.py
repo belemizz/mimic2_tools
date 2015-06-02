@@ -11,48 +11,49 @@ import matplotlib.pyplot as plt
 
 import control_mimic2db
 import control_graph
+import alg_logistic_regression
+
+mimic2db = control_mimic2db.control_mimic2db()
+graphs = control_graph.control_graph()
 
 #def main( max_id = 200000, target_codes = ['518.81'], n_feature = 10):
-def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20):
+def main( max_id = 2000, target_codes = ['518.81'], n_feature = 20, dbd = 4):
 
-    mimic2db = control_mimic2db.control_mimic2db()
-    graphs = control_graph.control_graph()
 
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
     subject_ids = [item for item in id_list if item < max_id]
     print "Number of Candidates : %d"%len(subject_ids)
 
-    # Get subject info and lab_id info
-    patients = []
-    lab_ids = []
-    units = {}
-    descs = {}
-    lab_ids_dict = {}
-
-    for subject_id in subject_ids:
-        patient = mimic2db.get_subject(subject_id)
-        if patient:
-            final_adm = patient.get_final_admission()
-            if len(final_adm.icd9)>0 and final_adm.icd9[0][3] == target_codes[0]:
-                patients.append(patient)
-                lab_ids = lab_ids+[item.itemid for item in final_adm.labs]
-
-                for item in final_adm.labs:
-                    if item.itemid in lab_ids_dict:
-                        lab_ids_dict[item.itemid] = lab_ids_dict[item.itemid] + 1
-                    else:
-                        lab_ids_dict[item.itemid] = 1
-                        units[item.itemid] = item.unit
-                        descs[item.itemid] = item.description
-                        
+    patients, lab_ids_dict, units, descs = get_patient_and_lab_info(subject_ids, target_codes)
+    
     # Find most common lab tests
     counter =  collections.Counter(lab_ids_dict)
     most_common_tests = [item[0] for item in counter.most_common(n_feature)]
     print most_common_tests
 
-    # Get the data of the most common tests
-    dbd = 4
+    value_array, flag_array, ids = get_feature_values(patients, most_common_tests, dbd, n_feature)
+    print "Number of Patients : %d"%len(ids)
+
+    result = calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units)
+    print numpy.array(result)
+
+    # Graph
+    ent_reduction = [item[0] for item in result]
+    labels = [item[3] for item in result]
+    graphs.bar_feature_importance(ent_reduction, labels)
+    
+    # Classification by 2 most important features
+    important_labs = [result[0][1], result[1][1]]
+    x_label = "%s [%s]"%(result[0][3],result[0][4])
+    y_label = "%s [%s]"%(result[1][3],result[1][4])
+    x = value_array[:, important_labs]
+    y = numpy.zeros(len(flag_array))
+    y[flag_array == 'Y'] = 1
+    alg_logistic_regression.show_logistic_regression(x, y, 0.001, 10000, 10000, x_label, y_label)
+
+# Get the data of the tests
+def get_feature_values(patients, most_common_tests, dbd, n_feature):
     ids = []
     values = []
     flags = []
@@ -74,10 +75,11 @@ def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20):
 
     value_array = numpy.array(values)
     flag_array = numpy.array(flags)
-    print "Number of Patients : %d"%len(ids)
-    print value_array
-        
-    # Calcurate entorpy reduction by each feature
+    return value_array, flag_array, ids
+
+# Calcurate entorpy reduction by each feature
+def calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units):
+
     orig_entropy = entropy(flag_array)
     print "Original entropy: %f"%orig_entropy
     result = [];
@@ -90,23 +92,30 @@ def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20):
                        units[most_common_tests[index]],
                 ))
     result.sort(reverse = True)
-    print numpy.array(result)
+    return result
 
-    # Graph
-    ent_reduction = [item[0] for item in result]
-    labels = [item[3] for item in result]
-    graphs.bar_feature_importance(ent_reduction, labels)
-    
-    # Classification by 2 most important features
-    important_labs = [result[0][1], result[1][1]]
-    x_label = "%s [%s]"%(result[0][3],result[0][4])
-    y_label = "%s [%s]"%(result[1][3],result[1][4])
-    x = value_array[:, important_labs]
-    y = numpy.zeros(len(flags))
-    y[flag_array == 'Y'] = 1
-    
-    import alg_logistic_regression
-    alg_logistic_regression.show_logistic_regression(x, y, 0.001, 10000, 10000, x_label, y_label)
+# Get subject info and lab_id info
+def get_patient_and_lab_info(subject_ids, target_codes):
+    patients = []
+    units = {}
+    descs = {}
+    lab_ids_dict = {}
+
+    for subject_id in subject_ids:
+        patient = mimic2db.get_subject(subject_id)
+        if patient:
+            final_adm = patient.get_final_admission()
+            if len(final_adm.icd9)>0 and final_adm.icd9[0][3] == target_codes[0]:
+                patients.append(patient)
+
+                for item in final_adm.labs:
+                    if item.itemid in lab_ids_dict:
+                        lab_ids_dict[item.itemid] = lab_ids_dict[item.itemid] + 1
+                    else:
+                        lab_ids_dict[item.itemid] = 1
+                        units[item.itemid] = item.unit
+                        descs[item.itemid] = item.description
+    return patients, lab_ids_dict, units, descs
 
 def is_number(s):
     try:
