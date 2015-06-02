@@ -16,15 +16,12 @@ import alg_logistic_regression
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
-#def main( max_id = 200000, target_codes = ['518.81'], n_feature = 10):
-def main( max_id = 2000, target_codes = ['518.81'], n_feature = 20, dbd = 4):
-
+def main( max_id = 200000, target_codes = ['428.0'], n_feature = 20, dbd = 0):
 
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
     subject_ids = [item for item in id_list if item < max_id]
     print "Number of Candidates : %d"%len(subject_ids)
-
     patients, lab_ids_dict, units, descs = get_patient_and_lab_info(subject_ids, target_codes)
     
     # Find most common lab tests
@@ -38,48 +35,50 @@ def main( max_id = 2000, target_codes = ['518.81'], n_feature = 20, dbd = 4):
     result = calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units)
     print numpy.array(result)
 
-    # Graph
+    # Feature Importance Graph
     ent_reduction = [item[0] for item in result]
     labels = [item[3] for item in result]
     graphs.bar_feature_importance(ent_reduction, labels)
     
-    # Classification by 2 most important features
+    # Classification with 2 most important features
     important_labs = [result[0][1], result[1][1]]
     x_label = "%s [%s]"%(result[0][3],result[0][4])
     y_label = "%s [%s]"%(result[1][3],result[1][4])
     x = value_array[:, important_labs]
-    y = numpy.zeros(len(flag_array))
-    y[flag_array == 'Y'] = 1
-    alg_logistic_regression.show_logistic_regression(x, y, 0.001, 10000, 10000, x_label, y_label)
+#    y = numpy.zeros(len(flag_array))
+#    y[flag_array == 'Y'] = 1
+    alg_logistic_regression.show_logistic_regression(x, flag_array, 0.001, 10000, 10000, x_label, y_label)
 
 # Get the data of the tests
-def get_feature_values(patients, most_common_tests, dbd, n_feature):
+def get_feature_values(patients, lab_ids, days_before_discharge, n_feature):
     ids = []
     values = []
     flags = []
     for patient in patients:
         final_adm = patient.get_final_admission()
-        time_of_interest = final_adm.disch_dt + datetime.timedelta(1-dbd)
+        time_of_interest = final_adm.disch_dt + datetime.timedelta(1-days_before_discharge)
         lab_result =  final_adm.get_newest_lab_at_time(time_of_interest)
 
         value = [float('NaN')] * n_feature
         for item in lab_result:
-            if item[0] in most_common_tests and is_number(item[4]):
-                index = most_common_tests.index(item[0])
+            if item[0] in lab_ids and is_number(item[4]):
+                index = lab_ids.index(item[0])
                 value[index] = float(item[4])
 
-        if True not in numpy.isnan(value):
+        if True not in numpy.isnan(value) and patient.hospital_expire_flg in ['Y', 'N']:
             values.append(value)
             flags.append(patient.hospital_expire_flg)
             ids.append(patient.subject_id)
 
     value_array = numpy.array(values)
     flag_array = numpy.array(flags)
-    return value_array, flag_array, ids
+    y = numpy.zeros(len(flag_array))
+    y[flag_array == 'Y'] = 1
+
+    return value_array, y, ids
 
 # Calcurate entorpy reduction by each feature
 def calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units):
-
     orig_entropy = entropy(flag_array)
     print "Original entropy: %f"%orig_entropy
     result = [];
@@ -126,16 +125,14 @@ def is_number(s):
     
 def entropy(flags):
     counter =  collections.Counter(flags)
-    # check flags
-    proper_list= ['Y', 'N']
-    for item in counter.keys():
-        if item not in proper_list:
-            raise ValueError
 
-    if counter['N'] == 0 or counter['Y'] == 0:
+    if len(counter) > 2:
+        raise ValueError("Flags should be binary values")
+
+    if counter[0] == 0 or counter[1] == 0:
         entropy = 0.
     else:
-        pi = float(counter['N']) / float(counter['N'] + counter['Y'])
+        pi = float(counter[0]) / float(counter[0] + counter[1])
         entropy =  - 0.5 * (pi * math.log(pi,2) + (1. - pi) * math.log(1. - pi, 2))
     return entropy
 
@@ -153,8 +150,8 @@ def entropy_after_optimal_divide(flag, value):
             opt_th = item
             min_entropy = t_entropy
 
+            
     return min_entropy, opt_th
-
 
 if __name__ == '__main__':
     main()
