@@ -17,8 +17,8 @@ import alg_auto_encoder
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
-#def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
-def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20, dbd = 0):
+def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
+#def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20, dbd = 0):
 
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
@@ -35,27 +35,35 @@ def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20, dbd = 0):
     value_array, flag_array, ids = get_feature_values(patients, most_common_tests, dbd, n_feature)
     print "Number of Patients : %d"%len(ids)
 
-    # Normalize
+    # Normalization
     from sklearn.preprocessing import normalize
     n_value_array = normalize(value_array, axis = 0)
 
+    pca_components = 2
+    ica_components = 1
+    da_hidden = 50
+    desc_labels = []
+
     # Get PCA features
     from sklearn.decomposition import PCA
-    pca = PCA(n_components = 5)
+    pca = PCA(n_components = pca_components)
     pca_value = pca.fit(n_value_array).transform(n_value_array)
+    desc_labels.extend(["PCA%d"%item for item in range(1, pca_components+1)])
 
     from sklearn.decomposition import FastICA
-    ica = FastICA(n_components = 5)
+    ica = FastICA(n_components = ica_components)
     ica_value = ica.fit(n_value_array, flag_array).transform(n_value_array)
+    desc_labels.extend(["ICA%d"%item for item in range(1, ica_components+1)])
 
     from sklearn.lda import LDA
     lda = LDA(n_components = 1)
     lda_value = lda.fit(n_value_array, flag_array).transform(n_value_array)
+    desc_labels.append('LDA')
 
-    ae_value = alg_auto_encoder.demo(n_value_array, 0.001, 1000)
+    ae_value = alg_auto_encoder.demo(n_value_array, 0.001, 10000, n_hidden = da_hidden)
+    desc_labels.extend(["AE%d"%item for item in range(1, da_hidden+1)])
 
     value_array = numpy.hstack([value_array, pca_value, ica_value, lda_value, ae_value])
-    desc_labels = ['PCA1', 'PCA2', 'PCA3', 'PCA4', 'PCA5', 'ICA1', 'ICA2', 'ICA3','ICA4', 'ICA5', 'LDA', 'AE1', 'AE2']
 
     for index, item in enumerate(desc_labels):
         most_common_tests.append(-index)
@@ -180,7 +188,6 @@ def entropy_after_optimal_divide(flag, value):
         if t_entropy < min_entropy:
             opt_th = item
             min_entropy = t_entropy
-
 
     return min_entropy, opt_th
 

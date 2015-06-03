@@ -14,7 +14,7 @@ import generate_sample
 #class AutoEncoder():
 #    def __init__(self):
 
-def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 2, batch_size = 1):
+def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 100):
 
     ## Check type and convert to the shared valuable
     if type(set_x) is T.sharedvar.TensorSharedVariable:
@@ -27,8 +27,8 @@ def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 2, batch_size = 
         raise TypeError("Sample set, set_x should be Tensor shared valuable or numpy.ndarray")
 
     n_dim = training_x.shape.eval()[1]
-
     n_train_batches = training_x.get_value(borrow=True).shape[0] / batch_size
+    print (n_dim, n_train_batches)
 
     ## model description
     index = T.lscalar()
@@ -50,6 +50,7 @@ def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 2, batch_size = 
 
     train_da = theano.function(
         [index],
+        cost, 
         updates = updates,
         givens = {
             x:training_x[index * batch_size: (index + 1) * batch_size]
@@ -62,7 +63,6 @@ def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 2, batch_size = 
         c = []
         for batch_index in xrange(n_train_batches):
             c.append(train_da(batch_index))
-            # print 'Batch %d/%d, Cost %f'%(batch_index,n_train_batches, numpy.mean(c))
         print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, numpy.mean(c))
 
     # calc_hidden_value
@@ -72,7 +72,7 @@ def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 2, batch_size = 
 
 if __name__ == '__main__':
     ## get sample
-    sample_num = 0
+    sample_num = 1
     if sample_num == 0:
         # random
         n_dim = 80

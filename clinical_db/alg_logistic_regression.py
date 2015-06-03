@@ -91,7 +91,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
         epoch = epoch +1
         
         train_model(train_set_x.get_value(), train_set_y.eval())
-        print func_cost(train_set_x.get_value(), train_set_y.eval())
+#        print func_cost(train_set_x.get_value(), train_set_y.eval())
 
         if epoch % show_span == 0:
             a_0 = T.scalar()
