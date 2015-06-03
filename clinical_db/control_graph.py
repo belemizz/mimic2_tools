@@ -31,6 +31,13 @@ class control_graph:
         icu_io = self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
         self.__draw_series_with_legend(plot_list, [icu_io], title, filename, show_flag)
 
+    def draw_selected_chart_icu(self, icustay, itemid_list, base_time, title, filename="", show_flag = True):
+        selected_ids = itemid_list
+        data = [item for item in icustay.charts if item.itemid in selected_ids]
+        plot_list = self.__get_plot_list(base_time, data)
+        icu_io = self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
+        self.__draw_series_with_legend(plot_list, [icu_io], title, filename, show_flag)
+
     def draw_io_icu(self, icustay, base_time, title, filename="", show_flag = True):
         data = icustay.ios
         plot_list = self.__get_plot_list(base_time, data)
