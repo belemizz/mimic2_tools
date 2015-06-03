@@ -14,7 +14,7 @@ import generate_sample
 #class AutoEncoder():
 #    def __init__(self):
 
-def demo(set_x, n_dim, learning_rate = 0.1,  n_hidden = 2, batch_size = 1):
+def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 2, batch_size = 1):
 
     ## Check type and convert to the shared valuable
     if type(set_x) is T.sharedvar.TensorSharedVariable:
@@ -25,7 +25,9 @@ def demo(set_x, n_dim, learning_rate = 0.1,  n_hidden = 2, batch_size = 1):
             borrow = True)
     else:
         raise TypeError("Sample set, set_x should be Tensor shared valuable or numpy.ndarray")
-    
+
+    n_dim = training_x.shape.eval()[1]
+
     n_train_batches = training_x.get_value(borrow=True).shape[0] / batch_size
 
     ## model description
@@ -45,19 +47,17 @@ def demo(set_x, n_dim, learning_rate = 0.1,  n_hidden = 2, batch_size = 1):
         corruption_level = 0.3,
         learning_rate = learning_rate
     )
-    
+
     train_da = theano.function(
         [index],
-        cost,
         updates = updates,
         givens = {
             x:training_x[index * batch_size: (index + 1) * batch_size]
         }
     )
-    
+
     ## output_function
     func_cost = theano.function([x], cost)
-    n_epochs = 100
     for epoch in xrange(n_epochs):
         c = []
         for batch_index in xrange(n_train_batches):
@@ -68,23 +68,18 @@ def demo(set_x, n_dim, learning_rate = 0.1,  n_hidden = 2, batch_size = 1):
     # calc_hidden_value
     hidden_values = da.get_hidden_values(x)
     func_hidden_values = theano.function([x], hidden_values)
+    return func_hidden_values(training_x.get_value())
 
-    print func_hidden_values(training_x.get_value())
-
-        
 if __name__ == '__main__':
     ## get sample
-    used_sample = 0
-    if used_sample == 0:
+    sample_num = 0
+    if sample_num == 0:
         # random
-        n_dim = 10 * 10
-        x = generate_sample.uniform_dist(n_dim) 
+        n_dim = 80
+        x = generate_sample.uniform_dist(n_dim)
     else:
         dataset = 'mnist.pkl.gz'
         datasets = load_data(dataset)
         x, y = datasets[0]
-        n_dim = 28 * 28
-    demo(x, n_dim)
-
-
-
+#        n_dim = 28 * 28
+    demo(x)

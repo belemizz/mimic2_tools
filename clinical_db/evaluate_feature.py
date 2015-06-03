@@ -12,18 +12,20 @@ import matplotlib.pyplot as plt
 import control_mimic2db
 import control_graph
 import alg_logistic_regression
+import alg_auto_encoder
 
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
-def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
+#def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
+def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20, dbd = 0):
 
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
     subject_ids = [item for item in id_list if item < max_id]
     print "Number of Candidates : %d"%len(subject_ids)
     patients, lab_ids_dict, units, descs = get_patient_and_lab_info(subject_ids, target_codes)
-    
+
     # Find most common lab tests
     counter =  collections.Counter(lab_ids_dict)
     most_common_tests = [item[0] for item in counter.most_common(n_feature)]
@@ -50,15 +52,18 @@ def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
     lda = LDA(n_components = 1)
     lda_value = lda.fit(n_value_array, flag_array).transform(n_value_array)
 
-    value_array = numpy.hstack([value_array, pca_value, ica_value, lda_value])
-    desc_labels = ['PCA1', 'PCA2', 'PCA3', 'PCA4', 'PCA5', 'ICA1', 'ICA2', 'ICA3','ICA4', 'ICA5', 'LDA']
+    ae_value = alg_auto_encoder.demo(n_value_array, 0.001, 1000)
+
+    value_array = numpy.hstack([value_array, pca_value, ica_value, lda_value, ae_value])
+    desc_labels = ['PCA1', 'PCA2', 'PCA3', 'PCA4', 'PCA5', 'ICA1', 'ICA2', 'ICA3','ICA4', 'ICA5', 'LDA', 'AE1', 'AE2']
 
     for index, item in enumerate(desc_labels):
         most_common_tests.append(-index)
         units[-index] = 'None'
         descs[-index] = desc_labels[index]
 
-    # Calc entropy reduction for all features 
+
+    # Calc entropy reduction for all features
     result = calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units)
     print numpy.array(result)
 
@@ -66,7 +71,7 @@ def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
     ent_reduction = [item[0] for item in result]
     labels = [item[3] for item in result]
     graphs.bar_feature_importance(ent_reduction, labels)
-    
+
     # Classification with 2 most important features
     important_labs = [result[0][1], result[1][1]]
     x_label = "%s [%s]"%(result[0][3],result[0][4])
@@ -148,7 +153,7 @@ def is_number(s):
         return True
     except (ValueError, TypeError):
         return False
-    
+
 def entropy(flags):
     counter =  collections.Counter(flags)
 
@@ -176,7 +181,7 @@ def entropy_after_optimal_divide(flag, value):
             opt_th = item
             min_entropy = t_entropy
 
-            
+
     return min_entropy, opt_th
 
 if __name__ == '__main__':
