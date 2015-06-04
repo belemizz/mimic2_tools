@@ -11,10 +11,18 @@ from logistic_sgd import load_data
 
 import generate_sample
 
-#class AutoEncoder():
-#    def __init__(self):
+from sklearn.decomposition import PCA
+from sklearn.decomposition import FastICA
 
-def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 100):
+def pca(set_x, n_components):
+    pca = PCA(n_components = n_components)
+    return pca.fit(set_x).transform(set_x)
+
+def ica(set_x, n_components):
+    ica = FastICA(n_components = n_components)
+    return ica.fit(set_x).transform(set_x)
+
+def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 100, corruption_level = 0.0):
 
     ## Check type and convert to the shared valuable
     if type(set_x) is T.sharedvar.TensorSharedVariable:
@@ -44,7 +52,7 @@ def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size =
         n_hidden = n_hidden
     )
     cost, updates = da.get_cost_updates(
-        corruption_level = 0.3,
+        corruption_level = corruption_level,
         learning_rate = learning_rate
     )
 

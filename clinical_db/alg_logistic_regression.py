@@ -91,7 +91,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
         epoch = epoch +1
         
         train_model(train_set_x.get_value(), train_set_y.eval())
-#        print func_cost(train_set_x.get_value(), train_set_y.eval())
+        print func_cost(train_set_x.get_value(), train_set_y.eval())
 
         if epoch % show_span == 0:
             a_0 = T.scalar()
@@ -111,13 +111,14 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
             linev = func_x_all(min_x, max_x)
 
             gr.plot_classification(positive_x, negative_x, linev, "Title", x_label = x_label, y_label = y_label, show_flag = show_flag)
-            plt.waitforbuttonpress()
+
 
 def main():
     # generate_samples
     [x, y] = generate_sample.normal_dist(2, 100, 100, [3, 8], seed = 1 )
     show_logistic_regression(x, y)
-
+    plt.waitforbuttonpress()
+            
 if __name__ == '__main__':
     main()
     

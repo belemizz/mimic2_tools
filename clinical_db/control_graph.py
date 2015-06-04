@@ -105,6 +105,20 @@ class control_graph:
 #        fig.show()
         self.__show_and_save(fig, filename, show_flag)
 
+#    def plot_classification_with_contour(self, x0, x1, y, xx, yy, z):
+        
+    def plot_classification_with_contour(self, x, y, xx, yy, z, x_label, y_label, filename = "", show_flag = True):
+        fig, ax = plt.subplots()
+
+        ax.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha = 0.8)
+        ax.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.Paired)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_xlim(xx.min(), xx.max())
+        ax.set_ylim(yy.min(), yy.max())
+        self.__show_and_save(fig, filename, show_flag)
+        
+
     def bar_feature_importance(self, entropy_reduction, labels, filename = "", show_flag = True):
         fig, ax = plt.subplots()
         Y = range( len(entropy_reduction))
@@ -118,7 +132,9 @@ class control_graph:
         plt.tight_layout()
 
         self.__show_and_save(fig, filename, show_flag)
-        
+
+
+
     def normalize(self, value):
         max_val = max(abs(value))
         order = 10.0 ** int(math.log10(float(max_val)))

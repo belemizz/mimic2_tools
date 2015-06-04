@@ -52,11 +52,7 @@ for admission in subject.admissions:
         print "---------"
         for item in icustay.charts:
             if item.description in ['Heart Rate', 'Respiratory Rate', 'SpO2', 'NBP', 'NBP Mean']:
-                print (item.itemid, item.description, len(item.values))
-        print "---------"
-        for item in icustay.charts:
-            if len(item.values) > 30:
-                print (item.itemid, item.description, len(item.values))
+                print (item.itemid, item.description, item.unit, len(item.values))
 
 #        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
         graph.draw_selected_chart_icu(icustay, mimic2db.vital_charts, admission.admit_dt, title, filename)

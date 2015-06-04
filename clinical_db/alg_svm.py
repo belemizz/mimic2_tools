@@ -2,11 +2,13 @@
 import numpy
 import generate_sample
 import matplotlib.pyplot as plt
+from sklearn import svm
 
+import control_graph
+graph= control_graph.control_graph()
 
-def demo(x, y):
+def demo(x, y, x_label = "", y_label = "", filename = ""):
 
-    from sklearn import svm
     clf = svm.SVC(kernel = 'linear')
     clf.fit(x, y)
 
@@ -28,16 +30,13 @@ def demo(x, y):
     z = clf.predict(numpy.c_[xx.ravel(), yy.ravel()])
     z = z.reshape(xx.shape)
 
-    plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha = 0.8)
-    plt.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.Paired)
-
-    plt.waitforbuttonpress()
+    graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename)
 
 
 def main():
     [x,y] = generate_sample.normal_dist(2,100,100,[2,8], seed = 1)
     demo(x, y)
-
+    plt.waitforbuttonpress()
 
 if __name__ == '__main__':
     main()

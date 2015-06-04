@@ -17,107 +17,135 @@ import alg_auto_encoder
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
-def main( max_id = 200000, target_codes = ['428.0'], n_feature = 23, dbd = 0):
-#def main( max_id = 200000, target_codes = ['518.81'], n_feature = 20, dbd = 0):
+def main( max_id = 2000,
+          target_codes = ['428.0'],
+#          target_codes = ['518.0'],
+          n_feature = 20,
+          days_before_discharge = 0,
+          pca_components = 20,
+          ica_components = 40,
+          da_hidden = 40,
+          da_corruption = 0.5):
 
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
     subject_ids = [item for item in id_list if item < max_id]
-    print "Number of Candidates : %d"%len(subject_ids)
     patients, lab_ids_dict, units, descs = get_patient_and_lab_info(subject_ids, target_codes)
 
     # Find most common lab tests
     counter =  collections.Counter(lab_ids_dict)
     most_common_tests = [item[0] for item in counter.most_common(n_feature)]
-    print most_common_tests
-
     # Get values of most commom tests
-    value_array, flag_array, ids = get_feature_values(patients, most_common_tests, dbd, n_feature)
-    print "Number of Patients : %d"%len(ids)
+    lab_data, vital_data, flags, ids = get_lab_feature_values(patients,
+                                                          most_common_tests,
+                                                          mimic2db.vital_charts,
+                                                          days_before_discharge)
+    print "Number of Patients : %d / %d"%( len(ids),len(id_list))
 
-    # Normalization
+    # Data Normalization
     from sklearn.preprocessing import normalize
-    n_value_array = normalize(value_array, axis = 0)
+    norm_lab_data = normalize(lab_data, axis = 0)
+    norm_vital_data = normalize(vital_data, axis = 0)
 
-    pca_components = 2
-    ica_components = 1
-    da_hidden = 50
-    desc_labels = []
+    # feature descriptions
+    desc_labels = ["PCA%d"%item for item in range(1, pca_components+1)] + \
+      ["ICA%d"%item for item in range(1, ica_components+1)] + \
+      ["AE%d"%item for item in range(1, da_hidden+1)]
+      
 
-    # Get PCA features
-    from sklearn.decomposition import PCA
-    pca = PCA(n_components = pca_components)
-    pca_value = pca.fit(n_value_array).transform(n_value_array)
-    desc_labels.extend(["PCA%d"%item for item in range(1, pca_components+1)])
+    # Get features vectors
+    pca_value = alg_auto_encoder.pca(norm_lab_data, pca_components)
+    ica_value = alg_auto_encoder.ica(norm_lab_data, ica_components)
+    ae_value =  alg_auto_encoder.demo(norm_lab_data, 0.001, 2000, n_hidden = da_hidden)
+    feature_data = numpy.hstack([pca_value, ica_value, ae_value])
 
-    from sklearn.decomposition import FastICA
-    ica = FastICA(n_components = ica_components)
-    ica_value = ica.fit(n_value_array, flag_array).transform(n_value_array)
-    desc_labels.extend(["ICA%d"%item for item in range(1, ica_components+1)])
+    feature_ids = range(len(desc_labels))
+    feature_descs = {}
+    feature_units = {}
+    for index in feature_ids:
+        feature_descs[index] = desc_labels[index]
+        feature_units[index] = 'None'
 
-    from sklearn.lda import LDA
-    lda = LDA(n_components = 1)
-    lda_value = lda.fit(n_value_array, flag_array).transform(n_value_array)
-    desc_labels.append('LDA')
-
-    ae_value = alg_auto_encoder.demo(n_value_array, 0.001, 10000, n_hidden = da_hidden)
-    desc_labels.extend(["AE%d"%item for item in range(1, da_hidden+1)])
-
-    value_array = numpy.hstack([value_array, pca_value, ica_value, lda_value, ae_value])
-
-    for index, item in enumerate(desc_labels):
-        most_common_tests.append(-index)
-        units[-index] = 'None'
-        descs[-index] = desc_labels[index]
-
-
-    # Calc entropy reduction for all features
-    result = calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units)
-    print numpy.array(result)
+    # Calc feature importance based on entropy reduction for all features
+    lab_importance = calc_entropy_reduction(lab_data, flags, most_common_tests, descs, units)
+    vital_importance = calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
+    feature_importance = calc_entropy_reduction(feature_data, flags, feature_ids, feature_descs, feature_units)
+    
+    all_importance = lab_importance + vital_importance
+    all_importance.sort(reverse = True)
+    lab_feature_importance = lab_importance + feature_importance
+    lab_feature_importance.sort(reverse = True)
 
     # Feature Importance Graph
-    ent_reduction = [item[0] for item in result]
-    labels = [item[3] for item in result]
-    graphs.bar_feature_importance(ent_reduction, labels)
+    feature_importance_graph(all_importance[0:20])
+    feature_importance_graph(lab_feature_importance[0:20])
 
     # Classification with 2 most important features
-    important_labs = [result[0][1], result[1][1]]
-    x_label = "%s [%s]"%(result[0][3],result[0][4])
-    y_label = "%s [%s]"%(result[1][3],result[1][4])
+    classify_important_feature(lab_importance, lab_data, flags)
+    classify_important_feature(vital_importance, vital_data, flags)
+    classify_important_feature(feature_importance, feature_data, flags)
 
-    x = value_array[:, important_labs]
-    alg_logistic_regression.show_logistic_regression(x, flag_array, 0.001, 10000, 10000, x_label = x_label, y_label = y_label)
+    plt.waitforbuttonpress()
+    
+def classify_important_feature(lab_result, lab_data, flags):
+    important_labs = [lab_result[0][1], lab_result[1][1]]
+
+    x_label = "%s [%s]"%(lab_result[0][3],lab_result[0][4])
+    y_label = "%s [%s]"%(lab_result[1][3],lab_result[1][4])
+    x = lab_data[:, important_labs]
+
+    import alg_svm
+    alg_svm.demo(x, flags, x_label, y_label)
+#    alg_logistic_regression.show_logistic_regression(x, flags, 0.001, 10000, 10000, x_label = x_label, y_label = y_label)
+
+def feature_importance_graph(importance):
+    ent_reduction = [item[0] for item in importance]
+    labels = [item[3] for item in importance]
+    graphs.bar_feature_importance(ent_reduction, labels)
 
 # Get the data of the tests
-def get_feature_values(patients, lab_ids, days_before_discharge, n_feature):
+def get_lab_feature_values(patients, lab_ids, chart_ids, days_before_discharge):
     ids = []
-    values = []
+    lab_values = []
+    chart_values = []
     flags = []
     for patient in patients:
         final_adm = patient.get_final_admission()
         time_of_interest = final_adm.disch_dt + datetime.timedelta(1-days_before_discharge)
         lab_result =  final_adm.get_newest_lab_at_time(time_of_interest)
-
-        value = [float('NaN')] * n_feature
+        chart_result =  final_adm.get_newest_chart_at_time(time_of_interest)
+        
+        lab_value = [float('NaN')] * len(lab_ids)
         for item in lab_result:
             if item[0] in lab_ids and is_number(item[4]):
                 index = lab_ids.index(item[0])
-                value[index] = float(item[4])
+                lab_value[index] = float(item[4])
 
-        if True not in numpy.isnan(value) and patient.hospital_expire_flg in ['Y', 'N']:
-            values.append(value)
+        chart_value = [float('NaN')] * len(chart_ids)
+        for item in chart_result:
+            if item[0] in chart_ids and is_number(item[4]):
+                index = chart_ids.index(item[0])
+                chart_value[index] = float(item[4])
+
+        if True not in numpy.isnan(lab_value) and True not in numpy.isnan(chart_value) and patient.hospital_expire_flg in ['Y', 'N']:
+            lab_values.append(lab_value)
+            chart_values.append(chart_value)
             flags.append(patient.hospital_expire_flg)
             ids.append(patient.subject_id)
 
-    value_array = numpy.array(values)
+    lab_array = numpy.array(lab_values)
+    chart_array = numpy.array(chart_values)
     flag_array = numpy.array(flags)
+
     y = numpy.zeros(len(flag_array))
     y[flag_array == 'Y'] = 1
 
-    return value_array, y, ids
+    return lab_array, chart_array, y, ids
+
 
 # Calcurate entorpy reduction by each feature
 def calc_entropy_reduction(value_array, flag_array, most_common_tests, descs, units):
+    
     orig_entropy = entropy(flag_array)
     print "Original entropy: %f"%orig_entropy
     result = [];
@@ -172,13 +200,16 @@ def entropy(flags):
         entropy = 0.
     else:
         pi = float(counter[0]) / float(counter[0] + counter[1])
-        entropy =  - 0.5 * (pi * math.log(pi,2) + (1. - pi) * math.log(1. - pi, 2))
+        entropy =  - (pi * math.log(pi,2) + (1. - pi) * math.log(1. - pi, 2))
     return entropy
 
 def entropy_after_divide(flag, value, threshold):
     flag_r = flag[value <= threshold]
     flag_l = flag[value > threshold]
-    return entropy(flag_r) + entropy(flag_l)
+    p_r = float(len(flag_r)) / float(len(flag))
+    p_l = float(len(flag_l)) / float(len(flag))
+#    return 0.5*(entropy(flag_r) + entropy(flag_l))
+    return (p_r * entropy(flag_r)) + (p_l * entropy(flag_l))
 
 def entropy_after_optimal_divide(flag, value):
     min_entropy = numpy.inf

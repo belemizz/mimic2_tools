@@ -69,6 +69,33 @@ class admission:
 
         return result
 
+    def get_newest_chart_at_time(self, time_of_interest ):
+        
+        all_labs = []
+        for item in self.icustays:
+            all_labs.extend(item.charts)
+
+        result = []
+        for item in all_labs:
+            if item.timestamps[0] < time_of_interest:
+                
+                over = False
+                for i, t in enumerate(item.timestamps):
+                    if t > time_of_interest:
+                        over = True
+                        break
+                
+                if over:
+                    timestamp = item.timestamps[i-1]
+                    value = item.values[i-1]
+                else:
+                    timestamp = item.timestamps[i]
+                    value = item.values[i]
+                    
+                result.append([item.itemid, item.description, item.unit, timestamp, value])
+
+        return result
+
     ## def display_available_lab(self):
     ##     available_labs = [(item[0],len(item[4]),item[1]) for item in self.labs]
     ##     for item in available_labs:
