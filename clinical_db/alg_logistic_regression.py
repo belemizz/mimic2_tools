@@ -44,7 +44,7 @@ class BinaryClassifier():
         
 
 ### show the algorithms
-def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000, show_span = 500, show_flag=True, x_label="", y_label=""):
+def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000, show_span = 500, filename = "", show_flag=True, x_label="", y_label=""):
     
     train_set_x = theano.shared(
         numpy.asarray(set_x, dtype=theano.config.floatX),
@@ -86,12 +86,19 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
     positive_x = x[y==1]
     negative_x = x[y==0]
 
-
+    cost_prev = numpy.inf
+    improve_th = 0.001
+    
     while epoch < n_epochs:
         epoch = epoch +1
         
         train_model(train_set_x.get_value(), train_set_y.eval())
-        print func_cost(train_set_x.get_value(), train_set_y.eval())
+
+        cost_value = func_cost(train_set_x.get_value(), train_set_y.eval())
+        cost_improve = cost_prev - cost_value
+        cost_prev = cost_value
+
+        print "(%d/%d):%f improve:%f leaning_rate:%f"%(epoch, n_epochs, cost_value, cost_improve, learning_rate)
 
         if epoch % show_span == 0:
             a_0 = T.scalar()
@@ -110,7 +117,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
             func_x_all = theano.function([a_0, a_1], x_all)
             linev = func_x_all(min_x, max_x)
 
-            gr.plot_classification(positive_x, negative_x, linev, "Title", x_label = x_label, y_label = y_label, show_flag = show_flag)
+            gr.plot_classification(positive_x, negative_x, linev, "Title", x_label = x_label, y_label = y_label, show_flag = show_flag, filename = filename)
 
 
 def main():

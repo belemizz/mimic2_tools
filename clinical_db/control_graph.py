@@ -9,7 +9,7 @@ from more_itertools import chunked
 class control_graph:
     def __init__(self):
         self.limit_timeseries = 25
-
+        self.dir_to_save = "../data/"
 #    def __del__(self):
 
     def draw_lab_adm(self, admission, title, filename="", show_flag = True):
@@ -110,7 +110,9 @@ class control_graph:
     def plot_classification_with_contour(self, x, y, xx, yy, z, x_label, y_label, filename = "", show_flag = True):
         fig, ax = plt.subplots()
 
+        
         ax.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha = 0.8)
+
         ax.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.Paired)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)

@@ -22,11 +22,14 @@ def main( max_id = 2000,
 #          target_codes = ['518.0'],
           n_feature = 20,
           days_before_discharge = 0,
-          pca_components = 20,
+          pca_components = 0,
           ica_components = 40,
           da_hidden = 40,
           da_corruption = 0.5):
 
+    
+    file_code = "mid%d_tc%s_nf%d_dbd%d_pca%d_ica%d_da%d_%f"%(max_id, target_codes, n_feature, days_before_discharge, pca_components, ica_components, da_hidden, da_corruption)
+    
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
     subject_ids = [item for item in id_list if item < max_id]
@@ -40,7 +43,7 @@ def main( max_id = 2000,
                                                           most_common_tests,
                                                           mimic2db.vital_charts,
                                                           days_before_discharge)
-    print "Number of Patients : %d / %d"%( len(ids),len(id_list))
+    print "Number of Patients : %d / %d"%( len(ids),len(subject_ids))
 
     # Data Normalization
     from sklearn.preprocessing import normalize
@@ -52,11 +55,10 @@ def main( max_id = 2000,
       ["ICA%d"%item for item in range(1, ica_components+1)] + \
       ["AE%d"%item for item in range(1, da_hidden+1)]
       
-
     # Get features vectors
     pca_value = alg_auto_encoder.pca(norm_lab_data, pca_components)
     ica_value = alg_auto_encoder.ica(norm_lab_data, ica_components)
-    ae_value =  alg_auto_encoder.demo(norm_lab_data, 0.001, 2000, n_hidden = da_hidden)
+    ae_value =  alg_auto_encoder.dae(norm_lab_data, 0.001, 2000, n_hidden = da_hidden)
     feature_data = numpy.hstack([pca_value, ica_value, ae_value])
 
     feature_ids = range(len(desc_labels))
@@ -77,31 +79,31 @@ def main( max_id = 2000,
     lab_feature_importance.sort(reverse = True)
 
     # Feature Importance Graph
-    feature_importance_graph(all_importance[0:20])
-    feature_importance_graph(lab_feature_importance[0:20])
+    feature_importance_graph(all_importance[0:20], graphs.dir_to_save + file_code + "all.png")
+    feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + file_code + "lab_feature.png")
 
     # Classification with 2 most important features
-    classify_important_feature(lab_importance, lab_data, flags)
-    classify_important_feature(vital_importance, vital_data, flags)
-    classify_important_feature(feature_importance, feature_data, flags)
+#    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+file_code + "_lab_imp.png")
+    classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save+file_code + "_vital_imp.png")
+    classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+file_code + "_feature_imp.png")
 
     plt.waitforbuttonpress()
     
-def classify_important_feature(lab_result, lab_data, flags):
+def classify_important_feature(lab_result, lab_data, flags, filename):
     important_labs = [lab_result[0][1], lab_result[1][1]]
 
     x_label = "%s [%s]"%(lab_result[0][3],lab_result[0][4])
     y_label = "%s [%s]"%(lab_result[1][3],lab_result[1][4])
     x = lab_data[:, important_labs]
 
-    import alg_svm
-    alg_svm.demo(x, flags, x_label, y_label)
-#    alg_logistic_regression.show_logistic_regression(x, flags, 0.001, 10000, 10000, x_label = x_label, y_label = y_label)
+#    import alg_svm
+#    alg_svm.demo(x, flags, x_label, y_label)
+    alg_logistic_regression.show_logistic_regression(x, flags, 0.01, 1000, 1000, x_label = x_label, y_label = y_label, filename = filename)
 
-def feature_importance_graph(importance):
+def feature_importance_graph(importance, filename):
     ent_reduction = [item[0] for item in importance]
     labels = [item[3] for item in importance]
-    graphs.bar_feature_importance(ent_reduction, labels)
+    graphs.bar_feature_importance(ent_reduction, labels, filename)
 
 # Get the data of the tests
 def get_lab_feature_values(patients, lab_ids, chart_ids, days_before_discharge):

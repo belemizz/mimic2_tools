@@ -12,6 +12,9 @@ def demo(x, y, x_label = "", y_label = "", filename = ""):
     clf = svm.SVC(kernel = 'linear')
     clf.fit(x, y)
 
+    clf10 = svm.SVC(kernel = 'linear')
+    clf10.fit(10.0 * x, y)
+
     # mesh
     x_range = x[:,0].max() - x[:,0].min()
     y_range = x[:,1].max() - x[:,1].min()
@@ -20,7 +23,7 @@ def demo(x, y, x_label = "", y_label = "", filename = ""):
     x_min, x_max = x[:,0].min() - margin_ratio * x_range , x[:,0].max() + margin_ratio * x_range
     y_min, y_max = x[:,1].min() - margin_ratio * y_range , x[:,1].max() + margin_ratio * y_range
 
-    grid_num = 200.0
+    grid_num = 20.0
     h_x = x_range/grid_num
     h_y = y_range/grid_num
 

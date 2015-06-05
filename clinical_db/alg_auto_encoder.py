@@ -6,11 +6,14 @@ from theano.tensor.shared_randomstreams import RandomStreams
 
 import sys
 sys.path.append('../../deep_tutorial/sample_codes/')
-import dA
-from logistic_sgd import load_data
 
+from logistic_sgd import load_data
 import generate_sample
 
+import cPickle
+import os
+
+import dA
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
 
@@ -22,8 +25,29 @@ def ica(set_x, n_components):
     ica = FastICA(n_components = n_components)
     return ica.fit(set_x).transform(set_x)
 
-def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 100, corruption_level = 0.0):
+def dae(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 10, corruption_level = 0.0):
 
+    import copy
+    parameters = copy.copy(locals())
+    del parameters['copy']
+
+    input_cache_path = "../data/dae_in.pkl"
+    output_cache_path = "../data/dae_out.pkl"
+
+    if os.path.isfile(input_cache_path) and os.path.isfile(output_cache_path):
+        f = open(input_cache_path, 'r')
+        ret = cPickle.load(f)
+        if ret == parameters:
+            print "Cache exists for this params"
+            g = open(output_cache_path, 'r')
+            ret_val = cPicle.load(g)
+            g.close()
+            return ret_val
+        else:
+            print "Cache exists but params don't much"
+    else:
+        print "There are no cache"
+    
     ## Check type and convert to the shared valuable
     if type(set_x) is T.sharedvar.TensorSharedVariable:
         training_x = set_x
@@ -76,18 +100,27 @@ def demo(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size =
     # calc_hidden_value
     hidden_values = da.get_hidden_values(x)
     func_hidden_values = theano.function([x], hidden_values)
+    ret_val = func_hidden_values(training_x.get_value())
+
+
+    f = open(input_cache_path, 'w')
+    cPickle.dump(parameters, f)
+    f.close()
+    
+    g = open(output_cache_path, 'w')
+    cPickle.dump(ret_val, g)
+    g.close()
+
+    
     return func_hidden_values(training_x.get_value())
 
 if __name__ == '__main__':
     ## get sample
     sample_num = 1
     if sample_num == 0:
-        # random
-        n_dim = 80
-        x = generate_sample.uniform_dist(n_dim)
+        x = generate_sample.uniform_dist(80)
     else:
         dataset = 'mnist.pkl.gz'
         datasets = load_data(dataset)
         x, y = datasets[0]
-#        n_dim = 28 * 28
-    demo(x)
+    dae(x)
