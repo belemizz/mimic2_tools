@@ -6,6 +6,7 @@ from theano.tensor.shared_randomstreams import RandomStreams
 
 import sys
 sys.path.append('../../deep_tutorial/sample_codes/')
+sys.path.append('../../DeepLearningTutorials/code/')
 
 from logistic_sgd import load_data
 import generate_sample
@@ -25,6 +26,20 @@ def ica(set_x, n_components):
     ica = FastICA(n_components = n_components)
     return ica.fit(set_x).transform(set_x)
 
+def is_parameters_eq(param1, param2):
+    if set(param1.keys()) != set(param2.keys()):
+        return False
+
+    for key in param1.keys():
+        try:
+            if param1[key] != param2[key]:
+                return False
+        except ValueError:
+            if (param1[key] == param2[key]).all() == False:
+                return False
+    return True
+
+
 def dae(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 10, corruption_level = 0.0):
 
     import copy
@@ -37,16 +52,17 @@ def dae(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 
     if os.path.isfile(input_cache_path) and os.path.isfile(output_cache_path):
         f = open(input_cache_path, 'r')
         ret = cPickle.load(f)
-        if ret == parameters:
-            print "Cache exists for this params"
+
+        if is_parameters_eq(ret, parameters):
+            print "[AE]Cache exists for this params"
             g = open(output_cache_path, 'r')
-            ret_val = cPicle.load(g)
+            ret_val = cPickle.load(g)
             g.close()
             return ret_val
         else:
-            print "Cache exists but params don't much"
+            print "[AE]Cache exists but params don't much"
     else:
-        print "There are no cache"
+        print "[AE]There are no cache"
     
     ## Check type and convert to the shared valuable
     if type(set_x) is T.sharedvar.TensorSharedVariable:
@@ -116,7 +132,7 @@ def dae(set_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 10, batch_size = 
 
 if __name__ == '__main__':
     ## get sample
-    sample_num = 1
+    sample_num = 0
     if sample_num == 0:
         x = generate_sample.uniform_dist(80)
     else:
