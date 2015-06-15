@@ -111,9 +111,13 @@ class control_graph:
         fig, ax = plt.subplots()
 
         
-        ax.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha = 0.8)
+        ax.contourf(xx, yy, z, cmap=plt.cm.rainbow, alpha = 0.8)
 
-        ax.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.Paired)
+        ax.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.rainbow)
+
+        import ipdb
+        ipdb.set_trace()
+        
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
         ax.set_xlim(xx.min(), xx.max())
