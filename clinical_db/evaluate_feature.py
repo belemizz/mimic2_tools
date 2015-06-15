@@ -2,7 +2,6 @@
 Evaluate the importance of the feature
 """
 
-
 import numpy
 import collections
 import datetime
@@ -17,14 +16,14 @@ import alg_auto_encoder
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
-def main( max_id = 2000,
+def main( max_id = 4000,
           target_codes = ['428.0'],
 #          target_codes = ['518.0'],
           n_feature = 20,
           days_before_discharge = 0,
-          pca_components = 0,
-          ica_components = 40,
-          da_hidden = 40,
+          pca_components = 20,
+          ica_components = 30,
+          da_hidden = 10,
           da_corruption = 0.5):
 
     

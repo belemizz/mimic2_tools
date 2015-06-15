@@ -98,7 +98,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
         cost_improve = cost_prev - cost_value
         cost_prev = cost_value
 
-        print "(%d/%d):%f improve:%f leaning_rate:%f"%(epoch, n_epochs, cost_value, cost_improve, learning_rate)
+#        print "(%d/%d):%f improve:%f leaning_rate:%f"%(epoch, n_epochs, cost_value, cost_improve, learning_rate)
 
         if epoch % show_span == 0:
             a_0 = T.scalar()

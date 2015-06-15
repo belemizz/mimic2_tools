@@ -28,7 +28,7 @@ class cache:
                 g = open(self.data_path,'r')
                 cache_data = cPickle.load(g)
                 g.close()
-                print "[INFO] Cache are used: %s"%self.data_path
+                print "[INFO] Cache is used: %s"%self.data_path
                 return cache_data
 
         raise ValueError
