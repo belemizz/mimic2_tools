@@ -23,7 +23,7 @@ def main( max_id = 200000,
 #          target_codes = ['518.0'],
           n_feature = 20,
           days_before_discharge = 2,
-          pca_components = 10,
+          pca_components = 20,
           ica_components = 10,
           da_hidden = 10,
           da_corruption = 0.3,
@@ -48,7 +48,7 @@ def main( max_id = 200000,
     print "Number of Patients : %d / %d"%( len(ids),len(subject_ids))
 
     # feature descriptions
-    evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data)
+    # evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data)
 
     # cross validation
     kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 0)
@@ -65,8 +65,9 @@ def main( max_id = 200000,
         # feature descriptions
         desc_labels = ["PCA%d"%item for item in range(1, pca_components+1)] + \
           ["ICA%d"%item for item in range(1, ica_components+1)] + \
-          ["AE%d"%item for item in range(1, da_hidden+1)]
-
+          ["AE%d"%item for item in range(1, da_hidden+1)] +\
+          ["PCA_SELECTED", "ICA_SELECTED", "AE_SELECTED"]
+          
         feature_ids = range(len(desc_labels))
         feature_descs = {}
         feature_units = {}
@@ -75,10 +76,17 @@ def main( max_id = 200000,
             feature_units[index] = 'None'
 
         ## Training
+
         pca_value = alg_auto_encoder.pca(set_train_lab, set_test_lab, pca_components)
+
+
         ica_value = alg_auto_encoder.ica(set_train_lab, set_test_lab, ica_components)
         ae_value = alg_auto_encoder.dae(set_train_lab, set_test_lab, 0.001, 2000, n_hidden = da_hidden)
-        feature_data = numpy.hstack([pca_value, ica_value, ae_value])
+
+        pca_sel = alg_auto_encoder.pca_selected(set_train_lab, flag_train, set_test_lab, pca_components, 1)
+        ica_sel = alg_auto_encoder.ica_selected(set_train_lab, flag_train, set_test_lab, pca_components, 1)
+        da_sel = alg_auto_encoder.dae_selected(set_train_lab, flag_train, set_test_lab, 0.001, 2000, n_hidden = da_hidden, n_select = 1)
+        feature_data = numpy.hstack([pca_value, ica_value, ae_value, pca_sel, ica_sel, da_sel])
         
         ## Testing
         lab_descs = []

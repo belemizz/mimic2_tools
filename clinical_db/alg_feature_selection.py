@@ -3,19 +3,27 @@ import collections
 import math
 
 # Calcurate entorpy reduction by each feature
-def calc_entropy_reduction(value_array, flag_array, item_ids, descs, units):
+def calc_entropy_reduction(value_array, flag_array, item_ids=[], descs=[], units=[]):
     
     orig_entropy = entropy(flag_array)
     print "Original entropy: %f"%orig_entropy
     result = [];
     for index in xrange(value_array.shape[1]):
         opt_entropy, threshold =  entropy_after_optimal_divide(flag_array, value_array[:,index])
-        result.append((orig_entropy - opt_entropy,
-                       index,
-                       item_ids[index],
-                       descs[index],
-                       units[index],
-                ))
+
+        if len(item_ids) > 0 and len(descs) > 0 and len(units) > 0:
+            reduction = ( orig_entropy - opt_entropy,
+                          index,
+                          item_ids[index],
+                          descs[index],
+                          units[index]
+                          )
+        else:
+            reduction = ( orig_entropy - opt_entropy,
+                          index
+                          )
+        result.append(reduction)
+        
     result.sort(reverse = True)
     return result
 
