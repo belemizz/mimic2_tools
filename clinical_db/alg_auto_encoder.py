@@ -14,9 +14,28 @@ import generate_sample
 import dA
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
+from sklearn.preprocessing import normalize
 
 import mutil
 
+
+
+
+def pca_selected(set_train, flag_train, set_test, n_all, n_select, cache_key = 'pca_selected'):
+    params = locals()
+    cache = mutil.cache(cache_key)
+
+    try:
+        return cache.load(params)
+    except ValueError:
+        pca = PCA(n_components = n_components).fit(set_train)
+        pca_train = pca.transform(set_train)
+        pca_test = pca.transform(set_test)
+        
+        
+    
+
+    
 def pca(set_train, set_test, n_components, cache_key = 'pca'):
     params = locals()
     cache = mutil.cache(cache_key)
@@ -46,10 +65,13 @@ def dae(set_train, set_test, learning_rate = 0.1, n_epochs = 100, n_hidden = 20,
     try:
         return cache.load( params)
     except ValueError:
-        
+
+        norm_set_train = normalize(set_train)
+        norm_set_test = normalize(set_test)
+
         ## Check type and convert to the shared valuable
-        shared_train = convert_to_tensor_shared_variable(set_train)
-        shared_test = convert_to_tensor_shared_variable(set_test)
+        shared_train = convert_to_tensor_shared_variable(norm_set_train)
+        shared_test = convert_to_tensor_shared_variable(norm_set_test)
 
         n_dim = shared_train.shape.eval()[1]
         n_train_batches = shared_train.get_value(borrow=True).shape[0] / batch_size
