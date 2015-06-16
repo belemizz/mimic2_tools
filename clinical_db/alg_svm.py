@@ -69,4 +69,3 @@ if __name__ == '__main__':
         demo(x,y)
     except ValueError:
         print "Error"
-            

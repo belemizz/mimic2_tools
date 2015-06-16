@@ -13,22 +13,26 @@ import control_graph
 import alg_logistic_regression
 import alg_auto_encoder
 
+from sklearn.preprocessing import normalize
+from sklearn import cross_validation
+
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
-def main( max_id = 4000,
+def main( max_id = 200000,
           target_codes = ['428.0'],
 #          target_codes = ['518.0'],
           n_feature = 20,
-          days_before_discharge = 0,
-          pca_components = 20,
-          ica_components = 30,
+          days_before_discharge = 2,
+          pca_components = 10,
+          ica_components = 10,
           da_hidden = 10,
-          da_corruption = 0.5):
+          da_corruption = 0.3,
+          n_cv_folds = 4):
 
     
     file_code = "mid%d_tc%s_nf%d_dbd%d_pca%d_ica%d_da%d_%f"%(max_id, target_codes, n_feature, days_before_discharge, pca_components, ica_components, da_hidden, da_corruption)
-    
+
     # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
     subject_ids = [item for item in id_list if item < max_id]
@@ -44,21 +48,60 @@ def main( max_id = 4000,
                                                           days_before_discharge)
     print "Number of Patients : %d / %d"%( len(ids),len(subject_ids))
 
-    # Data Normalization
-    from sklearn.preprocessing import normalize
     norm_lab_data = normalize(lab_data, axis = 0)
     norm_vital_data = normalize(vital_data, axis = 0)
 
+    kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 0)
+    for train, test in kf:
+
+        set_train_lab = norm_lab_data[train, :]
+        set_train_vital = norm_vital_data[train, :]
+        flag_train = flags[train]
+
+        set_test_lab = norm_lab_data[test, :]
+        set_test_vital = norm_vital_data[test, :]
+        flags_test = flags[test]
+
+        # feature descriptions
+        desc_labels = ["PCA%d"%item for item in range(1, pca_components+1)] + \
+          ["ICA%d"%item for item in range(1, ica_components+1)] + \
+          ["AE%d"%item for item in range(1, da_hidden+1)]
+
+        feature_ids = range(len(desc_labels))
+        feature_descs = {}
+        feature_units = {}
+        for index in feature_ids:
+            feature_descs[index] = desc_labels[index]
+            feature_units[index] = 'None'
+
+        ## Training
+#        norm_train_lab = normalize(set_train_lab, axis = 0)
+#        norm_vital_data = normalize(set_train_vital, axis = 0)
+        
+        pca_value = alg_auto_encoder.pca(set_train_lab, set_test_lab, pca_components)
+        ica_value = alg_auto_encoder.ica(set_train_lab, set_test_lab, ica_components)
+        ae_value = alg_auto_encoder.dae(set_train_lab, set_test_lab, 0.001, 2000, n_hidden = da_hidden)
+        feature_data = numpy.hstack([pca_value, ica_value, ae_value])
+        
+        ## Testing
+        lab_importance = calc_entropy_reduction(set_test_lab, flags_test, most_common_tests, descs, units)
+
+        vital_importance = calc_entropy_reduction(set_test_vital, flags_test, most_common_tests, descs, units)
+
+        feature_importance = calc_entropy_reduction(feature_data, flags_test, feature_ids, feature_descs, feature_units)
+
+        print  numpy.array(feature_importance)
+
+
+    # feature descriptions
+    #evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data)
+
+
+def evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data):
     # feature descriptions
     desc_labels = ["PCA%d"%item for item in range(1, pca_components+1)] + \
       ["ICA%d"%item for item in range(1, ica_components+1)] + \
       ["AE%d"%item for item in range(1, da_hidden+1)]
-      
-    # Get features vectors
-    pca_value = alg_auto_encoder.pca(norm_lab_data, pca_components)
-    ica_value = alg_auto_encoder.ica(norm_lab_data, ica_components)
-    ae_value =  alg_auto_encoder.dae(norm_lab_data, 0.001, 2000, n_hidden = da_hidden)
-    feature_data = numpy.hstack([pca_value, ica_value, ae_value])
 
     feature_ids = range(len(desc_labels))
     feature_descs = {}
@@ -67,11 +110,22 @@ def main( max_id = 4000,
         feature_descs[index] = desc_labels[index]
         feature_units[index] = 'None'
 
+    # Data Normalization
+    norm_lab_data = normalize(lab_data, axis = 0)
+    norm_vital_data = normalize(vital_data, axis = 0)
+
+    # Get features vectors
+    pca_value = alg_auto_encoder.pca(norm_lab_data, norm_lab_data, pca_components)
+    ica_value = alg_auto_encoder.ica(norm_lab_data, norm_lab_data, ica_components)
+    ae_value =  alg_auto_encoder.dae(norm_lab_data, norm_lab_data, 0.001, 2000, n_hidden = da_hidden)
+    feature_data = numpy.hstack([pca_value, ica_value, ae_value])
+
+
     # Calc feature importance based on entropy reduction for all features
     lab_importance = calc_entropy_reduction(lab_data, flags, most_common_tests, descs, units)
     vital_importance = calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
     feature_importance = calc_entropy_reduction(feature_data, flags, feature_ids, feature_descs, feature_units)
-    
+
     all_importance = lab_importance + vital_importance
     all_importance.sort(reverse = True)
     lab_feature_importance = lab_importance + feature_importance
@@ -82,7 +136,7 @@ def main( max_id = 4000,
     feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + file_code + "lab_feature.png")
 
     # Classification with 2 most important features
-#    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+file_code + "_lab_imp.png")
+    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+file_code + "_lab_imp.png")
     classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save+file_code + "_vital_imp.png")
     classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+file_code + "_feature_imp.png")
 
