@@ -19,10 +19,7 @@ from sklearn.preprocessing import normalize
 import mutil
 import alg_feature_selection
 
-
-
-    
-def pca(set_train, set_test, n_components, cache_key = 'pca'):
+def pca(train_x, test_x, n_components, cache_key = 'pca'):
     params = locals()
     cache = mutil.cache(cache_key)
 
@@ -30,10 +27,26 @@ def pca(set_train, set_test, n_components, cache_key = 'pca'):
         return cache.load(params)
     except ValueError:
         pca = PCA(n_components = n_components)
-        ret_val = pca.fit(set_train).transform(set_test)
+        ret_val = pca.fit(train_x).transform(test_x)
         return cache.save( params, ret_val)
 
-def ica(set_train, set_test, n_components, cache_key = 'ica'):
+def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'pca_selected'):
+    params = locals()
+    cache = mutil.cache(cache_key)
+
+    try:
+        return cache.load(params)
+    except ValueError:
+        pca = PCA(n_components = n_components).fit(train_x)
+        pca_train = pca.transform(train_x)
+        pca_test = pca.transform(test_x)
+
+        entropy_reduction = alg_feature_selection.calc_entropy_reduction(pca_train, train_y)
+        select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
+        return pca_test[:,select_feature_index]
+        
+
+def ica(train_x, test_x, n_components, cache_key = 'ica'):
     params = locals()
     cache = mutil.cache(cache_key)
     
@@ -41,83 +54,66 @@ def ica(set_train, set_test, n_components, cache_key = 'ica'):
         return cache.load( params)
     except ValueError:
         ica = FastICA(n_components = n_components)
-        ret_val = ica.fit(set_train).transform(set_test)
+        ret_val = ica.fit(train_x).transform(test_x)
         return cache.save( params, ret_val)
 
-def pca_selected(set_train, flag_train, set_test, n_components, n_select, cache_key = 'pca_selected'):
+def ica_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'ica_selected'):
     params = locals()
     cache = mutil.cache(cache_key)
 
     try:
         return cache.load(params)
     except ValueError:
-        pca = PCA(n_components = n_components).fit(set_train)
-        pca_train = pca.transform(set_train)
-        pca_test = pca.transform(set_test)
+        ica = FastICA(n_components = n_components).fit(train_x)
+        ica_train = ica.transform(train_x)
+        ica_test = ica.transform(test_x)
 
-        entropy_reduction = alg_feature_selection.calc_entropy_reduction(pca_train, flag_train)
-        select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
-        return pca_test[:,select_feature_index]
-        
-def ica_selected(set_train, flag_train, set_test, n_components, n_select, cache_key = 'ica_selected'):
-    params = locals()
-    cache = mutil.cache(cache_key)
-
-    try:
-        return cache.load(params)
-    except ValueError:
-        ica = FastICA(n_components = n_components).fit(set_train)
-        ica_train = ica.transform(set_train)
-        ica_test = ica.transform(set_test)
-
-        entropy_reduction = alg_feature_selection.calc_entropy_reduction(ica_train, flag_train)
+        entropy_reduction = alg_feature_selection.calc_entropy_reduction(ica_train, train_y)
         select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
         return ica_test[:,select_feature_index]
 
-def dae_selected(set_train, flag_train, set_test, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
+def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, batch_size = 10, corruption_level = 0.0, cache_key = 'dae'):
+
     params = locals()
     cache = mutil.cache(cache_key)
     try:
         return cache.load( params)
     except ValueError:
-        func_hidden_values = da_fit(set_train, learning_rate, n_epochs, n_hidden, batch_size, corruption_level)
 
-        norm_set_test = normalize(set_test)
-        norm_set_train = normalize(set_train)
-        shared_test = convert_to_tensor_shared_variable(norm_set_test)
-        shared_train = convert_to_tensor_shared_variable(norm_set_train)
+        func_hidden_values = da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_level)
+
+        # calc_hidden_value
+        norm_test_x = normalize(test_x)
+        shared_test = convert_to_tensor_shared_variable(norm_test_x)
+        ret_val = func_hidden_values(shared_test.get_value())
+        return cache.save(params, ret_val)
+
+
+def dae_selected(train_x, train_y, test_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
+    params = locals()
+    cache = mutil.cache(cache_key)
+    try:
+        return cache.load( params)
+    except ValueError:
+        func_hidden_values = da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_level)
+
+        norm_test_x = normalize(test_x)
+        norm_train_x = normalize(train_x)
+        shared_test = convert_to_tensor_shared_variable(norm_test_x)
+        shared_train = convert_to_tensor_shared_variable(norm_train_x)
 
         da_train = func_hidden_values(shared_train.get_value())
         da_test = func_hidden_values(shared_test.get_value())
 
-        entropy_reduction = alg_feature_selection.calc_entropy_reduction(da_train, flag_train)
+        entropy_reduction = alg_feature_selection.calc_entropy_reduction(da_train, train_y)
         select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
         return da_test[:,select_feature_index]
         
 
-        
-    
-
-def dae(set_train, set_test, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, batch_size = 10, corruption_level = 0.0, cache_key = 'dae'):
-
-    params = locals()
-    cache = mutil.cache(cache_key)
-    try:
-        return cache.load( params)
-    except ValueError:
-
-        func_hidden_values = da_fit(set_train, learning_rate, n_epochs, n_hidden, batch_size, corruption_level)
-
-        # calc_hidden_value
-        norm_set_test = normalize(set_test)
-        shared_test = convert_to_tensor_shared_variable(norm_set_test)
-        ret_val = func_hidden_values(shared_test.get_value())
-        return cache.save(params, ret_val)
-
-def da_fit(set_train, learning_rate, n_epochs, n_hidden, batch_size, corruption_level):
+def da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_level):
     ## Check type and convert to the shared valuable
-    norm_set_train = normalize(set_train)
-    shared_train = convert_to_tensor_shared_variable(norm_set_train)
+    norm_train_x = normalize(train_x)
+    shared_train = convert_to_tensor_shared_variable(norm_train_x)
 
     n_dim = shared_train.shape.eval()[1]
     n_train_batches = shared_train.get_value(borrow=True).shape[0] / batch_size
@@ -175,13 +171,41 @@ def convert_to_tensor_shared_variable(set_x):
         raise TypeError("Sample set, set_x should be TensorSharedValuable or numpy.ndarray")
     return shared_x
 
+def get_encoded_values(train_x, train_y, test_x,
+                       pca_components, pca_select,
+                       ica_components, ica_select,
+                       dae_hidden, dae_select):
+    
+    encoded_values = {}
+    if pca_components > 0 and pca_select == 0:
+        encoded_values['pca'] =  pca(train_x, test_x, pca_components)
+
+    if pca_components > 0 and pca_select > 0:
+        encoded_values['pca_select'] = pca_selected(train_x, train_y, test_x, pca_components, pca_select)
+
+    if ica_components > 0 and ica_select == 0:
+        encoded_values['ica'] = ica(train_x, test_x, ica_components)
+
+    if ica_components > 0 and ica_select > 0:
+        encoded_values['ica_select'] = ica_selected(train_x, train_y, test_x, ica_components, ica_select)
+    
+    if dae_hidden > 0 and dae_select == 0:
+        encoded_values['dae'] = dae(train_x, test_x, n_hidden = dae_hidden)
+
+    if dae_hidden > 0 and dae_select > 0:
+        encoded_values['dae_selected'] = dae_selected(train_x, train_y, test_x, n_hidden = dae_hidden, n_select = dae_select)
+
+    return encoded_values
+
 if __name__ == '__main__':
     ## get sample
     sample_num = 0
     if sample_num == 0:
-        x = generate_sample.uniform_dist(80)
+        x, y = generate_sample.normal_dist(4)
     else:
         dataset = 'mnist.pkl.gz'
         datasets = load_data(dataset)
         x, y = datasets[0]
-    dae(x, x)
+
+    encoded_values = get_encoded_values(x, y, x, 3, 2, 3, 2, 3, 2)
+    print encoded_values
