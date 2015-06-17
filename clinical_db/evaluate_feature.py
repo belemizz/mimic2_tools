@@ -22,13 +22,12 @@ def main( max_id = 200000,
           target_codes = ['428.0'],
 #          target_codes = ['518.0'],
           n_feature = 20,
-          days_before_discharge = 2,
+          days_before_discharge = 0,
           pca_components = 20,
           ica_components = 10,
           da_hidden = 10,
           da_corruption = 0.3,
           n_cv_folds = 4):
-
     
     file_code = "mid%d_tc%s_nf%d_dbd%d_pca%d_ica%d_da%d_%f"%(max_id, target_codes, n_feature, days_before_discharge, pca_components, ica_components, da_hidden, da_corruption)
 
@@ -48,45 +47,30 @@ def main( max_id = 200000,
     print "Number of Patients : %d / %d"%( len(ids),len(subject_ids))
 
     # feature descriptions
-    # evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data)
+    evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data)
 
     # cross validation
-    kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 0)
+    kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 2)
+
+    feature_desc = []
+    scores = []
+    
     for train, test in kf:
 
+        # datasets
         set_train_lab = lab_data[train, :]
-        set_train_vital = vital_data[train, :]
+        set_train_vital = vital_data[test, :]
         flag_train = flags[train]
 
         set_test_lab = lab_data[test, :]
         set_test_vital = vital_data[test, :]
         flags_test = flags[test]
 
-        # feature descriptions
-        desc_labels = ["PCA%d"%item for item in range(1, pca_components+1)] + \
-          ["ICA%d"%item for item in range(1, ica_components+1)] + \
-          ["AE%d"%item for item in range(1, da_hidden+1)] +\
-          ["PCA_SELECTED", "ICA_SELECTED", "AE_SELECTED"]
-          
-        feature_ids = range(len(desc_labels))
-        feature_descs = {}
-        feature_units = {}
-        for index in feature_ids:
-            feature_descs[index] = desc_labels[index]
-            feature_units[index] = 'None'
-
-        ## Training
-
-        pca_value = alg_auto_encoder.pca(set_train_lab, set_test_lab, pca_components)
-
-
-        ica_value = alg_auto_encoder.ica(set_train_lab, set_test_lab, ica_components)
-        ae_value = alg_auto_encoder.dae(set_train_lab, set_test_lab, 0.001, 2000, n_hidden = da_hidden)
-
-        pca_sel = alg_auto_encoder.pca_selected(set_train_lab, flag_train, set_test_lab, pca_components, 1)
-        ica_sel = alg_auto_encoder.ica_selected(set_train_lab, flag_train, set_test_lab, pca_components, 1)
-        da_sel = alg_auto_encoder.dae_selected(set_train_lab, flag_train, set_test_lab, 0.001, 2000, n_hidden = da_hidden, n_select = 1)
-        feature_data = numpy.hstack([pca_value, ica_value, ae_value, pca_sel, ica_sel, da_sel])
+        encoded_values = alg_auto_encoder.get_encoded_values(set_train_lab, flag_train, set_test_lab, 20, 1, 20, 1, 20, 1)
+        feature_desc = encoded_values.keys()
+        feature_id = range( len(feature_desc))
+        feature_unit = ['None'] * len(feature_desc)
+        feature_data = numpy.hstack(encoded_values.viewvalues())
         
         ## Testing
         lab_descs = []
@@ -96,13 +80,17 @@ def main( max_id = 200000,
             lab_units.append(units[item_id])
 
         lab_importance = alg_feature_selection.calc_entropy_reduction(set_test_lab, flags_test, most_common_tests, lab_descs, lab_units)
-        feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags_test, feature_ids, feature_descs, feature_units)
+        feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags_test, feature_id, feature_desc, feature_unit)
 
-        lab_feature_importance = lab_importance + feature_importance
-        lab_feature_importance.sort(reverse = True)
+        lab_feature_importance = sorted(lab_importance + feature_importance, key = lambda item:item[2])
+        
+        scores.append([item[0] for item in lab_feature_importance])
+        feature_descs = [item[3] for item in lab_feature_importance]
 
-        print  numpy.array(lab_feature_importance)
+    mean_scores = numpy.mean(numpy.array(scores),0)
 
+    for idx in range( len(mean_scores)):
+        print "%s %f"%(feature_descs[idx], mean_scores[idx])
 
 
 def evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data):
@@ -117,7 +105,6 @@ def evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_compo
     for index in feature_ids:
         feature_descs[index] = desc_labels[index]
         feature_units[index] = 'None'
-
 
     # Get features vectors
     pca_value = alg_auto_encoder.pca(lab_data, lab_data, pca_components)
