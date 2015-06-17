@@ -23,7 +23,7 @@ def main( max_id = 200000,
 #          target_codes = ['518.0'],
           n_feature = 20,
           days_before_discharge = 2,
-          pca_components = 10,
+          pca_components = 5,
           ica_components = 5,
           dae_hidden = 40,
           dae_corruption = 0.0,
@@ -60,12 +60,12 @@ def main( max_id = 200000,
     eval_cross_validation(lab_data, vital_data, flags, experiment_code,
                                most_common_tests, lab_descs, lab_units,
                                pca_components, ica_components, dae_hidden, dae_corruption, n_cv_folds)
-    plt.waitforbuttonpress()
+#    plt.waitforbuttonpress()
 
 def eval_cross_validation(lab_data, vital_data, flags, experiment_code, most_common_tests, lab_descs, lab_units, pca_components, ica_components, dae_hidden, dae_corruption, n_cv_folds):
     
     # cross validation
-    kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 5)
+    kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 0)
 
 
     results = []
@@ -102,8 +102,7 @@ def eval_cross_validation(lab_data, vital_data, flags, experiment_code, most_com
     mean_reduction = alg_feature_selection.mean_entropy_reduction(results)
 
     print numpy.array(mean_reduction)
-    feature_importance_graph(mean_reduction[0:20], graphs.dir_to_save + experiment_code + "cv_lab_feature.png")
-
+    feature_importance_graph(mean_reduction[0:20], graphs.dir_to_save + experiment_code + "_cv_lab_feature.png")
 
 
 def eval_as_single_set(lab_data, vital_data, flags, experiment_code,
@@ -130,13 +129,13 @@ def eval_as_single_set(lab_data, vital_data, flags, experiment_code,
     lab_feature_importance = lab_importance + feature_importance
     lab_feature_importance.sort(reverse = True)
 
-    feature_importance_graph(all_importance[0:20], graphs.dir_to_save + experiment_code + "all.png")
-    feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + experiment_code + "lab_feature.png")
+    feature_importance_graph(all_importance[0:20], graphs.dir_to_save + experiment_code + "_all.png")
+    feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + experiment_code + "_lab_feature.png")
 
     # Classification with 2 most important features
     classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+experiment_code + "_lab_imp.png")
     classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save+experiment_code + "_vital_imp.png")
-    classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+experiment_code + "_feature_imp.png")
+#    classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+experiment_code + "_feature_imp.png")
     
 #    lab_vs_feature = lab_importance[0:1] + feature_importance[0:1]
 #    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+experiment_code + "_vs.png")
@@ -173,7 +172,7 @@ def classify_important_feature(lab_result, lab_data, flags, filename):
 
 #    import alg_svm
 #    alg_svm.demo(x, flags, x_label, y_label)
-    alg_logistic_regression.show_logistic_regression(x, flags, 0.01, 1000, 1000, x_label = x_label, y_label = y_label, filename = filename)
+    alg_logistic_regression.show_logistic_regression(x, flags, 0.01, 10000, 10000, x_label = x_label, y_label = y_label, filename = filename)
 
 def feature_importance_graph(importance, filename):
     ent_reduction = [item[0] for item in importance]
@@ -252,4 +251,5 @@ def is_number(s):
 
 
 if __name__ == '__main__':
-    main()
+    main(days_before_discharge = 0)
+    main(days_before_discharge = 2)

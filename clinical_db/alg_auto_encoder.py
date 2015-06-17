@@ -89,7 +89,7 @@ def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, bat
         return cache.save(params, ret_val)
 
 
-def dae_selected(train_x, train_y, test_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
+def dae_selected(train_x, train_y, test_x, learning_rate = 0.05, n_epochs = 4000, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
     params = locals()
     cache = mutil.cache(cache_key)
     try:
