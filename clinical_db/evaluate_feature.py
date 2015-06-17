@@ -22,16 +22,16 @@ def main( max_id = 200000,
           target_codes = ['428.0'],
 #          target_codes = ['518.0'],
           n_feature = 20,
-          days_before_discharge = 0,
-          pca_components = 20,
-          ica_components = 10,
-          da_hidden = 10,
-          da_corruption = 0.3,
+          days_before_discharge = 2,
+          pca_components = 10,
+          ica_components = 5,
+          dae_hidden = 40,
+          dae_corruption = 0.0,
           n_cv_folds = 4):
     
-    file_code = "mid%d_tc%s_nf%d_dbd%d_pca%d_ica%d_da%d_%f"%(max_id, target_codes, n_feature, days_before_discharge, pca_components, ica_components, da_hidden, da_corruption)
+    experiment_code = "mid%d_tc%s_nf%d_dbd%d_pca%d_ica%d_da%d_%f"%(max_id, target_codes, n_feature, days_before_discharge, pca_components, ica_components, dae_hidden, dae_corruption)
 
-    # Get candidate ids
+        # Get candidate ids
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
     subject_ids = [item for item in id_list if item < max_id]
     patients, lab_ids_dict, units, descs = get_patient_and_lab_info(subject_ids, target_codes)
@@ -39,6 +39,13 @@ def main( max_id = 200000,
     # Find most common lab tests
     counter =  collections.Counter(lab_ids_dict)
     most_common_tests = [item[0] for item in counter.most_common(n_feature)]
+
+    lab_descs = []
+    lab_units = []
+    for item_id in most_common_tests:
+        lab_descs.append(descs[item_id])
+        lab_units.append(units[item_id])
+
     # Get values of most commom tests
     lab_data, vital_data, flags, ids = get_lab_feature_values(patients,
                                                           most_common_tests,
@@ -47,13 +54,21 @@ def main( max_id = 200000,
     print "Number of Patients : %d / %d"%( len(ids),len(subject_ids))
 
     # feature descriptions
-    evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data)
+    eval_as_single_set(lab_data, vital_data, flags, experiment_code,
+                            most_common_tests, lab_descs, lab_units,
+                            pca_components, ica_components, dae_hidden, dae_corruption)
+    eval_cross_validation(lab_data, vital_data, flags, experiment_code,
+                               most_common_tests, lab_descs, lab_units,
+                               pca_components, ica_components, dae_hidden, dae_corruption, n_cv_folds)
+    plt.waitforbuttonpress()
 
+def eval_cross_validation(lab_data, vital_data, flags, experiment_code, most_common_tests, lab_descs, lab_units, pca_components, ica_components, dae_hidden, dae_corruption, n_cv_folds):
+    
     # cross validation
-    kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 2)
+    kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 5)
 
-    feature_desc = []
-    scores = []
+
+    results = []
     
     for train, test in kf:
 
@@ -66,78 +81,88 @@ def main( max_id = 200000,
         set_test_vital = vital_data[test, :]
         flags_test = flags[test]
 
-        encoded_values = alg_auto_encoder.get_encoded_values(set_train_lab, flag_train, set_test_lab, 20, 1, 20, 1, 20, 1)
+        encoded_values = alg_auto_encoder.get_encoded_values(
+            set_train_lab, flag_train, set_test_lab,
+            pca_components, 1,
+            ica_components, 1,
+            dae_hidden, 1, dae_corruption)
+        
         feature_desc = encoded_values.keys()
         feature_id = range( len(feature_desc))
         feature_unit = ['None'] * len(feature_desc)
         feature_data = numpy.hstack(encoded_values.viewvalues())
         
-        ## Testing
-        lab_descs = []
-        lab_units = []
-        for item_id in most_common_tests:
-            lab_descs.append(descs[item_id])
-            lab_units.append(units[item_id])
-
         lab_importance = alg_feature_selection.calc_entropy_reduction(set_test_lab, flags_test, most_common_tests, lab_descs, lab_units)
         feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags_test, feature_id, feature_desc, feature_unit)
 
         lab_feature_importance = sorted(lab_importance + feature_importance, key = lambda item:item[2])
-        
-        scores.append([item[0] for item in lab_feature_importance])
-        feature_descs = [item[3] for item in lab_feature_importance]
 
-    mean_scores = numpy.mean(numpy.array(scores),0)
+        results.append(lab_feature_importance)
 
-    for idx in range( len(mean_scores)):
-        print "%s %f"%(feature_descs[idx], mean_scores[idx])
+    mean_reduction = alg_feature_selection.mean_entropy_reduction(results)
+
+    print numpy.array(mean_reduction)
+    feature_importance_graph(mean_reduction[0:20], graphs.dir_to_save + experiment_code + "cv_lab_feature.png")
 
 
-def evalueate_as_single_set(most_common_tests, descs, item, da_hidden, pca_components, lab_data, flags, ica_components, units, file_code, vital_data):
-    # feature descriptions
-    desc_labels = ["PCA%d"%item for item in range(1, pca_components+1)] + \
-      ["ICA%d"%item for item in range(1, ica_components+1)] + \
-      ["AE%d"%item for item in range(1, da_hidden+1)]
 
-    feature_ids = range(len(desc_labels))
-    feature_descs = {}
-    feature_units = {}
-    for index in feature_ids:
-        feature_descs[index] = desc_labels[index]
-        feature_units[index] = 'None'
+def eval_as_single_set(lab_data, vital_data, flags, experiment_code,
+                            most_common_tests, lab_descs, lab_units,
+                            pca_components, ica_components, dae_hidden, dae_corruption):
 
-    # Get features vectors
-    pca_value = alg_auto_encoder.pca(lab_data, lab_data, pca_components)
-    ica_value = alg_auto_encoder.ica(lab_data, lab_data, ica_components)
-    ae_value =  alg_auto_encoder.dae(lab_data, lab_data, 0.001, 2000, n_hidden = da_hidden)
-    feature_data = numpy.hstack([pca_value, ica_value, ae_value])
+    encoded_values = alg_auto_encoder.get_encoded_values(
+        lab_data, flags, lab_data,
+        pca_components, 1,
+        ica_components, 1,
+        dae_hidden, 1,  dae_corruption)
+    
+    feature_desc = encoded_values.keys()
+    feature_id = range( len(feature_desc))
+    feature_unit = ['None'] * len(feature_desc)
+    feature_data = numpy.hstack(encoded_values.viewvalues())
 
-    lab_descs = []
-    lab_units = []
-    for item_id in most_common_tests:
-        lab_descs.append(descs[item_id])
-        lab_units.append(units[item_id])
-
-    # Calc feature importance based on entropy reduction for all features
     lab_importance = alg_feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
     vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
-    feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags, feature_ids, feature_descs, feature_units)
+    feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags, feature_id, feature_desc, feature_unit)
 
     all_importance = lab_importance + vital_importance
     all_importance.sort(reverse = True)
     lab_feature_importance = lab_importance + feature_importance
     lab_feature_importance.sort(reverse = True)
 
-    # Feature Importance Graph
-    feature_importance_graph(all_importance[0:20], graphs.dir_to_save + file_code + "all.png")
-    feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + file_code + "lab_feature.png")
+    feature_importance_graph(all_importance[0:20], graphs.dir_to_save + experiment_code + "all.png")
+    feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + experiment_code + "lab_feature.png")
 
     # Classification with 2 most important features
-    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+file_code + "_lab_imp.png")
-    classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save+file_code + "_vital_imp.png")
-    classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+file_code + "_feature_imp.png")
+    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+experiment_code + "_lab_imp.png")
+    classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save+experiment_code + "_vital_imp.png")
+    classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+experiment_code + "_feature_imp.png")
+    
+#    lab_vs_feature = lab_importance[0:1] + feature_importance[0:1]
+#    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+experiment_code + "_vs.png")
+ 
+    ## # feature descriptions
+    ## desc_labels = ["PCA%d"%item for item in range(1, pca_components+1)] + \
+    ##   ["ICA%d"%item for item in range(1, ica_components+1)] + \
+    ##   ["AE%d"%item for item in range(1, dae_hidden+1)]
 
-    plt.waitforbuttonpress()
+    ## feature_ids = range(len(desc_labels))
+    ## feature_descs = {}
+    ## feature_units = {}
+    ## for index in feature_ids:
+    ##     feature_descs[index] = desc_labels[index]
+    ##     feature_units[index] = 'None'
+
+    ## # Get features vectors
+    ## pca_value = alg_auto_encoder.pca(lab_data, lab_data, pca_components)
+    ## ica_value = alg_auto_encoder.ica(lab_data, lab_data, ica_components)
+    ## ae_value =  alg_auto_encoder.dae(lab_data, lab_data, 0.001, 2000, n_hidden = dae_hidden, corruption_level = dae_corruption)
+    ## feature_data = numpy.hstack([pca_value, ica_value, ae_value])
+
+    # Calc feature importance based on entropy reduction for all features
+
+    
+    # Feature Importance Graph
     
 def classify_important_feature(lab_result, lab_data, flags, filename):
     important_labs = [lab_result[0][1], lab_result[1][1]]

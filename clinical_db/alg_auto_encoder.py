@@ -174,26 +174,26 @@ def convert_to_tensor_shared_variable(set_x):
 def get_encoded_values(train_x, train_y, test_x,
                        pca_components, pca_select,
                        ica_components, ica_select,
-                       dae_hidden, dae_select):
+                       dae_hidden, dae_select, dae_corruption):
     
     encoded_values = {}
     if pca_components > 0 and pca_select == 0:
         encoded_values['pca'] =  pca(train_x, test_x, pca_components)
 
     if pca_components > 0 and pca_select > 0:
-        encoded_values['pca_select'] = pca_selected(train_x, train_y, test_x, pca_components, pca_select)
+        encoded_values['pca_selected'] = pca_selected(train_x, train_y, test_x, pca_components, pca_select)
 
     if ica_components > 0 and ica_select == 0:
         encoded_values['ica'] = ica(train_x, test_x, ica_components)
 
     if ica_components > 0 and ica_select > 0:
-        encoded_values['ica_select'] = ica_selected(train_x, train_y, test_x, ica_components, ica_select)
+        encoded_values['ica_selected'] = ica_selected(train_x, train_y, test_x, ica_components, ica_select)
     
     if dae_hidden > 0 and dae_select == 0:
         encoded_values['dae'] = dae(train_x, test_x, n_hidden = dae_hidden)
 
     if dae_hidden > 0 and dae_select > 0:
-        encoded_values['dae_selected'] = dae_selected(train_x, train_y, test_x, n_hidden = dae_hidden, n_select = dae_select)
+        encoded_values['dae_selected'] = dae_selected(train_x, train_y, test_x, n_hidden = dae_hidden, n_select = dae_select, corruption_level = dae_corruption)
 
     return encoded_values
 

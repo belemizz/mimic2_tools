@@ -2,6 +2,37 @@ import numpy
 import collections
 import math
 
+
+def mean_entropy_reduction(reduction_results):
+    base_result = reduction_results[0]
+    mean_ids = [item[2] for item in base_result]
+    mean_scores = []
+    
+    for result in reduction_results:
+        item_ids = [item[2] for item in result]
+        
+        if mean_ids == item_ids:
+            mean_scores.append([item[0] for item in result])
+        else:
+            raise ValueError
+
+    mean_score = numpy.mean(numpy.array(mean_scores),0)
+
+    mean_result = []
+    for index in range(len(base_result)):
+        mean_reduction = (mean_score[index],
+                          base_result[index][1],
+                          base_result[index][2],
+                          base_result[index][3],
+                          base_result[index][4],
+                          )
+        mean_result.append(mean_reduction)
+
+    mean_result.sort(reverse = True)
+    return mean_result
+
+    
+
 # Calcurate entorpy reduction by each feature
 def calc_entropy_reduction(value_array, flag_array, item_ids=[], descs=[], units=[]):
     
