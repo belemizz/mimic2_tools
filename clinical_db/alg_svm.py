@@ -13,10 +13,11 @@ def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
 
     if x.shape[1] is not 2:
         raise ValueError("Feature Dimension is not 2")
-        
-    clf = svm.SVC(kernel = 'linear')
-    clf.fit(x, y)
 
+
+    clf = svm.LinearSVC()
+    clf.fit(x, y)
+    
     # mesh
     x_range = x[:,0].max() - x[:,0].min()
     y_range = x[:,1].max() - x[:,1].min()
@@ -37,8 +38,6 @@ def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
 
     graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
 
-    if show_flag: plt.waitforbuttonpress()
-
     return clf
 
 
@@ -48,7 +47,7 @@ def cross_validate(x, y, cross_validation_num = 5):
     print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
     
 if __name__ == '__main__':
-    source_num = 1
+    source_num = 0
     [x,y]= generate_sample.get_samples_with_target(source_num)
 
     cross_validation_num = 5
@@ -58,3 +57,5 @@ if __name__ == '__main__':
         demo(x,y)
     except ValueError:
         print "Error"
+
+    plt.waitforbuttonpress()

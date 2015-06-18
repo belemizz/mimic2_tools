@@ -41,6 +41,3 @@ def uniform_dist(n_dim = 2, n_sample = 100, minimum = 0.0, maximum = 1.0, seed =
 
     numpy.random.seed(seed)
     return numpy.random.uniform(minimum, maximum, (n_sample, n_dim))
-
-    
- 

@@ -107,7 +107,7 @@ class control_graph:
     def plot_classification_with_contour(self, x, y, xx, yy, z, x_label, y_label, filename = "", show_flag = True):
         fig, ax = plt.subplots()
 
-        ax.contourf(xx, yy, z, cmap=plt.cm.rainbow, alpha = 0.8)
+        ax.contourf(xx, yy, z, cmap=plt.cm.rainbow, alpha = 0.2)
         ax.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.rainbow)
         
         ax.set_xlabel(x_label)
