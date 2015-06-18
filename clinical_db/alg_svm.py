@@ -2,7 +2,6 @@ import numpy
 import matplotlib.pyplot as plt
 
 from sklearn import svm
-from sklearn import datasets
 from sklearn import cross_validation
 
 import generate_sample
@@ -10,7 +9,7 @@ import control_graph
 
 graph= control_graph.control_graph()
 
-def demo(x, y, x_label = "", y_label = "", filename = ""):
+def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
 
     if x.shape[1] is not 2:
         raise ValueError("Feature Dimension is not 2")
@@ -36,22 +35,12 @@ def demo(x, y, x_label = "", y_label = "", filename = ""):
     z = clf.predict(numpy.c_[xx.ravel(), yy.ravel()])
     z = z.reshape(xx.shape)
 
-    graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename)
-    plt.waitforbuttonpress()
+    graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
 
+    if show_flag: plt.waitforbuttonpress()
 
-def get_sample(source_num = 0):
-    if source_num is 0:
-        [x,y] = generate_sample.normal_dist(2,100,100,[2,8], seed = 1)
-    elif source_num is 1:
-        iris = datasets.load_iris()
-        [x,y] = [iris.data, iris.target]
-    elif source_num is 2:
-        iris = datasets.load_iris()
-        [x,y] = [iris.data[:,0:2], iris.target]
-    else:
-        raise ValueError
-    return [x,y]
+    return clf
+
 
 def cross_validate(x, y, cross_validation_num = 5):
     clf = svm.SVC(kernel = 'linear')
@@ -59,8 +48,8 @@ def cross_validate(x, y, cross_validation_num = 5):
     print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
     
 if __name__ == '__main__':
-    source_num = 0
-    [x,y]= get_sample(source_num)
+    source_num = 1
+    [x,y]= generate_sample.get_samples_with_target(source_num)
 
     cross_validation_num = 5
     cross_validate(x, y, cross_validation_num)

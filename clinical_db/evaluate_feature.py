@@ -249,7 +249,6 @@ def is_number(s):
     except (ValueError, TypeError):
         return False
 
-
 if __name__ == '__main__':
     main(days_before_discharge = 0)
     main(days_before_discharge = 2)

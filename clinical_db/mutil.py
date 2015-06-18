@@ -3,36 +3,42 @@ import os
 import time
 
 class cache:
+    """ cache class """
 
     def __init__(self, cache_key, cache_dir = '../data/cache/'):
+        """ This class does nothing when cache_key is '' """
+        
         self.dir = cache_dir
         self.key = cache_key
         self.param_path = self.dir + self.key + '_param.pkl'
         self.data_path = self.dir + self.key + '_data.pkl'
 
     def save(self, current_param, current_data):
-        f = open(self.param_path, 'w')
-        cPickle.dump(current_param, f)
-        f.close()
-        g = open(self.data_path, 'w')
-        cPickle.dump(current_data, g)
-        g.close()
-        return current_data
+        if self.key is not '':
+            f = open(self.param_path, 'w')
+            cPickle.dump(current_param, f)
+            f.close()
+            g = open(self.data_path, 'w')
+            cPickle.dump(current_data, g)
+            g.close()
+            return current_data
 
     def load(self, current_param):
-        if os.path.isfile(self.param_path) and os.path.isfile(self.data_path):
-            f = open(self.param_path, 'r')
-            cache_param = cPickle.load(f)
-            f.close()
-            
-            if self.__is_param_eq(cache_param, current_param):
-                g = open(self.data_path,'r')
-                cache_data = cPickle.load(g)
-                g.close()
-                print "[INFO] Cache is used: %s"%self.data_path
-                return cache_data
+        if self.key is not '':
+            if os.path.isfile(self.param_path) and os.path.isfile(self.data_path):
+                f = open(self.param_path, 'r')
+                cache_param = cPickle.load(f)
+                f.close()
 
-        raise ValueError
+                if self.__is_param_eq(cache_param, current_param):
+                    g = open(self.data_path,'r')
+                    cache_data = cPickle.load(g)
+                    g.close()
+                    print "[INFO] Cache is used: %s"%self.data_path
+                    return cache_data
+            raise IOError
+        else:
+            raise IOError
 
     def __is_param_eq(self, param1, param2):
         if set(param1.keys()) != set(param2.keys()):
@@ -78,7 +84,7 @@ def sample_func(a,b,c = 5):
 
     try:
         return cache_.load( params)
-    except ValueError:
+    except IOError:
         ret_val = a + b + c
         return cache_.save(params, ret_val)
     

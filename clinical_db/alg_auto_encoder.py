@@ -25,7 +25,7 @@ def pca(train_x, test_x, n_components, cache_key = 'pca'):
 
     try:
         return cache.load(params)
-    except ValueError:
+    except IOError:
         pca = PCA(n_components = n_components)
         ret_val = pca.fit(train_x).transform(test_x)
         return cache.save( params, ret_val)
@@ -36,7 +36,7 @@ def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = '
 
     try:
         return cache.load(params)
-    except ValueError:
+    except IOError:
         pca = PCA(n_components = n_components).fit(train_x)
         pca_train = pca.transform(train_x)
         pca_test = pca.transform(test_x)
@@ -52,7 +52,7 @@ def ica(train_x, test_x, n_components, cache_key = 'ica'):
     
     try:
         return cache.load( params)
-    except ValueError:
+    except IOError:
         ica = FastICA(n_components = n_components)
         ret_val = ica.fit(train_x).transform(test_x)
         return cache.save( params, ret_val)
@@ -63,7 +63,7 @@ def ica_selected(train_x, train_y, test_x, n_components, n_select, cache_key = '
 
     try:
         return cache.load(params)
-    except ValueError:
+    except IOError:
         ica = FastICA(n_components = n_components).fit(train_x)
         ica_train = ica.transform(train_x)
         ica_test = ica.transform(test_x)
@@ -78,7 +78,7 @@ def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, bat
     cache = mutil.cache(cache_key)
     try:
         return cache.load( params)
-    except ValueError:
+    except IOError:
 
         func_hidden_values = da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_level)
 
@@ -94,7 +94,7 @@ def dae_selected(train_x, train_y, test_x, learning_rate = 0.05, n_epochs = 4000
     cache = mutil.cache(cache_key)
     try:
         return cache.load( params)
-    except ValueError:
+    except IOError:
         func_hidden_values = da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_level)
 
         norm_test_x = normalize(test_x)
@@ -197,9 +197,9 @@ def get_encoded_values(train_x, train_y, test_x,
 
     return encoded_values
 
-if __name__ == '__main__':
+
+def main(sample_num = 0, test_mode = False):
     ## get sample
-    sample_num = 0
     if sample_num == 0:
         x, y = generate_sample.normal_dist(4)
     else:
@@ -207,5 +207,19 @@ if __name__ == '__main__':
         datasets = load_data(dataset)
         x, y = datasets[0]
 
+    
+
+    if test_mode:
+        original = get_encoded_values(x,y,x,3,0,4,0,5,0)
+        selected = get_encoded_values(x,y,x,3,1,4,2,5,3)
+        return [original, test_mode]
+    
+
     encoded_values = get_encoded_values(x, y, x, 3, 2, 3, 2, 3, 2)
     print encoded_values
+    
+    
+
+if __name__ == '__main__':
+    main()
+    

@@ -102,21 +102,13 @@ class control_graph:
         if len(y_label) > 0:
             ax.set_ylabel(y_label)
 
-#        fig.show()
         self.__show_and_save(fig, filename, show_flag)
 
-#    def plot_classification_with_contour(self, x0, x1, y, xx, yy, z):
-        
     def plot_classification_with_contour(self, x, y, xx, yy, z, x_label, y_label, filename = "", show_flag = True):
         fig, ax = plt.subplots()
 
-        
         ax.contourf(xx, yy, z, cmap=plt.cm.rainbow, alpha = 0.8)
-
         ax.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.rainbow)
-
-        import ipdb
-        ipdb.set_trace()
         
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
@@ -138,8 +130,6 @@ class control_graph:
         plt.tight_layout()
 
         self.__show_and_save(fig, filename, show_flag)
-
-
 
     def normalize(self, value):
         max_val = max(abs(value))
