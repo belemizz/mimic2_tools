@@ -5,13 +5,11 @@ import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 
 import sys
-sys.path.append('../../deep_tutorial/sample_codes/')
 sys.path.append('../../DeepLearningTutorials/code/')
-
-from logistic_sgd import load_data
-import generate_sample
-
 import dA
+from logistic_sgd import load_data
+
+import generate_sample
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
 from sklearn.preprocessing import normalize
@@ -117,7 +115,6 @@ def da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_le
 
     n_dim = shared_train.shape.eval()[1]
     n_train_batches = shared_train.get_value(borrow=True).shape[0] / batch_size
-#        print (n_dim, n_train_batches)
 
     ## model description
     index = T.lscalar()
@@ -152,7 +149,7 @@ def da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_le
         c = []
         for batch_index in xrange(n_train_batches):
             c.append(train_da(batch_index))
-#            print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, numpy.mean(c))
+        print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, numpy.mean(c))
 
     hidden_values = da.get_hidden_values(x)
     func_hidden_values = theano.function([x], hidden_values)
@@ -177,49 +174,41 @@ def get_encoded_values(train_x, train_y, test_x,
                        dae_hidden, dae_select, dae_corruption):
     
     encoded_values = {}
-    if pca_components > 0 and pca_select == 0:
-        encoded_values['pca'] =  pca(train_x, test_x, pca_components)
+    if pca_components > 0:
+        if pca_select > 0:
+            encoded_values['pca_selected'] = pca_selected(train_x, train_y, test_x, pca_components, pca_select)
+        else:
+            encoded_values['pca'] =  pca(train_x, test_x, pca_components)
 
-    if pca_components > 0 and pca_select > 0:
-        encoded_values['pca_selected'] = pca_selected(train_x, train_y, test_x, pca_components, pca_select)
+    if ica_components > 0:
+        if ica_select > 0:
+            encoded_values['ica_selected'] = ica_selected(train_x, train_y, test_x, ica_components, ica_select)
+        else:
+            encoded_values['ica'] = ica(train_x, test_x, ica_components)
 
-    if ica_components > 0 and ica_select == 0:
-        encoded_values['ica'] = ica(train_x, test_x, ica_components)
-
-    if ica_components > 0 and ica_select > 0:
-        encoded_values['ica_selected'] = ica_selected(train_x, train_y, test_x, ica_components, ica_select)
-    
-    if dae_hidden > 0 and dae_select == 0:
-        encoded_values['dae'] = dae(train_x, test_x, n_hidden = dae_hidden)
-
-    if dae_hidden > 0 and dae_select > 0:
-        encoded_values['dae_selected'] = dae_selected(train_x, train_y, test_x, n_hidden = dae_hidden, n_select = dae_select, corruption_level = dae_corruption)
+    if dae_hidden > 0:
+        if dae_select > 0:
+            encoded_values['dae_selected'] = dae_selected(train_x, train_y, test_x, n_hidden = dae_hidden, n_select = dae_select, corruption_level = dae_corruption)
+        else:
+            encoded_values['dae'] = dae(train_x, test_x, n_hidden = dae_hidden)
 
     return encoded_values
 
 
-def main(sample_num = 0, test_mode = False):
+def main(sample_num = 1):
     ## get sample
     if sample_num == 0:
         x, y = generate_sample.normal_dist(4)
     else:
         dataset = 'mnist.pkl.gz'
         datasets = load_data(dataset)
-        x, y = datasets[0]
+        shared_x, shared_y = datasets[0]
+        x = shared_x.get_value()
+        y = shared_y.eval()
 
-    
-
-    if test_mode:
-        original = get_encoded_values(x,y,x,3,0,4,0,5,0)
-        selected = get_encoded_values(x,y,x,3,1,4,2,5,3)
-        return [original, test_mode]
-    
-
-    encoded_values = get_encoded_values(x, y, x, 3, 2, 3, 2, 3, 2)
+    encoded_values = get_encoded_values(x, y, x, 3, 0, 3, 0, 10, 0, 0.3)
     print encoded_values
     
-    
-
 if __name__ == '__main__':
     main()
     
