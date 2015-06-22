@@ -20,10 +20,8 @@ class TestSequenceFunctions(unittest.TestCase):
         alg_auto_encoder.dae_selected(x, y, x, n_epochs = 100)
 
     def test_classification(self):
-        x, y = generate_sample.get_samples_with_target(0)
+        x, y = generate_sample.get_samples_with_target(0, 2)
         alg_svm.demo(x, y, show_flag = False)
-        
 
 if __name__ == '__main__':
     unittest.main()
-    
