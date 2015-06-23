@@ -7,7 +7,7 @@ import control_graph
 import control_csv
 
 import matplotlib.pyplot as plt
-subject_id = 1924
+subject_id = 2987
 #subject_id = 1855
 
 mimic2db = control_mimic2db.control_mimic2db()

@@ -13,33 +13,42 @@ class cache:
         self.param_path = self.dir + self.key + '_param.pkl'
         self.data_path = self.dir + self.key + '_data.pkl'
 
-    def save(self, current_param, current_data):
+    def save(self, current_data, current_param = {} ):
         if self.key is not '':
-            f = open(self.param_path, 'w')
-            cPickle.dump(current_param, f)
-            f.close()
+
+            if len(current_param) is not 0:
+                f = open(self.param_path, 'w')
+                cPickle.dump(current_param, f)
+                f.close()
+                
             g = open(self.data_path, 'w')
             cPickle.dump(current_data, g)
             g.close()
             return current_data
 
-    def load(self, current_param):
+    def load(self, current_param = {}):
         if self.key is not '':
-            if os.path.isfile(self.param_path) and os.path.isfile(self.data_path):
-                f = open(self.param_path, 'r')
-                cache_param = cPickle.load(f)
-                f.close()
 
-                if self.__is_param_eq(cache_param, current_param):
-                    g = open(self.data_path,'r')
+            if len(current_param) is 0:
+                if os.path.isfile(self.data_path):
+                    g = open(self.data_path, 'r')
                     cache_data = cPickle.load(g)
                     g.close()
                     print "[INFO] Cache is used: %s"%self.data_path
                     return cache_data
-            raise IOError
-        else:
-            raise IOError
-
+            else:
+                if os.path.isfile(self.param_path):
+                    f = open(self.param_path, 'r')
+                    cache_param = cPickle.load(f)
+                    f.close()
+                    if self.__is_param_eq(cache_param, current_param) and os.path.isfile(self.data_path):
+                        g = open(self.data_path,'r')
+                        cache_data = cPickle.load(g)
+                        g.close()
+                        print "[INFO] Cache is used: %s"%self.data_path
+                        return cache_data
+            raise IOError("Cache was not loaded")
+        
     def __is_param_eq(self, param1, param2):
         if set(param1.keys()) != set(param2.keys()):
             return False
@@ -71,11 +80,14 @@ class stopwatch:
     def real_elapsed(self):
         return self.end_real - self.base_real
 
-    def print_cpu_elapsed(self):
-        print "CPU Elapsed:{0}".format(self.cpu_elapsed()) + '[sec]'
+    def print_cpu_elapsed(self, stop = False):
+        if stop: self.stop()
+        print "CPU Elapsed:%0.4f[sec]"%self.cpu_elapsed()
 
-    def print_real_elapsed(self):
-        print "Real Elapsed:{0}".format(self.real_elapsed()) + '[sec]'
+    def print_real_elapsed(self, stop = False):
+        if stop: self.stop()
+        print "Real Elapsed:%0.4f[sec]"%self.real_elapsed()
+
 
 
 def sample_func(a,b,c = 5):
@@ -86,10 +98,20 @@ def sample_func(a,b,c = 5):
         return cache_.load( params)
     except IOError:
         ret_val = a + b + c
-        return cache_.save(params, ret_val)
+        return cache_.save( ret_val, params)
+    
+def sample_func2(message):
+    cache_ = cache('sample_func2')
+
+    try:
+        return cache_.load()
+    except IOError:
+        ret_val = message
+        return cache_.save( ret_val)
     
 if __name__ == '__main__':
-    print sample_func(1,2)
+    print sample_func(1,4)
+    print sample_func2('Message')
 
     stopwatch_ = stopwatch()
     time.sleep(0.01)

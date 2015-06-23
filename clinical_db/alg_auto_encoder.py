@@ -9,12 +9,12 @@ sys.path.append('../../DeepLearningTutorials/code/')
 import dA
 from logistic_sgd import load_data
 
-import generate_sample
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
 from sklearn.preprocessing import normalize
 
 import mutil
+import generate_sample
 import alg_feature_selection
 
 def pca(train_x, test_x, n_components, cache_key = 'pca'):
@@ -26,7 +26,7 @@ def pca(train_x, test_x, n_components, cache_key = 'pca'):
     except IOError:
         pca = PCA(n_components = n_components)
         ret_val = pca.fit(train_x).transform(test_x)
-        return cache.save( params, ret_val)
+        return cache.save( ret_val, params)
 
 def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'pca_selected'):
     params = locals()
@@ -53,7 +53,7 @@ def ica(train_x, test_x, n_components, cache_key = 'ica'):
     except IOError:
         ica = FastICA(n_components = n_components)
         ret_val = ica.fit(train_x).transform(test_x)
-        return cache.save( params, ret_val)
+        return cache.save( ret_val, params)
 
 def ica_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'ica_selected'):
     params = locals()
@@ -84,7 +84,7 @@ def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 100, n_hidden = 20, bat
         norm_test_x = normalize(test_x)
         shared_test = convert_to_tensor_shared_variable(norm_test_x)
         ret_val = func_hidden_values(shared_test.get_value())
-        return cache.save(params, ret_val)
+        return cache.save(ret_val, params )
 
 
 def dae_selected(train_x, train_y, test_x, learning_rate = 0.05, n_epochs = 4000, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
@@ -195,7 +195,7 @@ def get_encoded_values(train_x, train_y, test_x,
     return encoded_values
 
 
-def main(sample_num = 1):
+def main(sample_num = 0):
     ## get sample
     if sample_num == 0:
         x, y = generate_sample.normal_dist(4)
