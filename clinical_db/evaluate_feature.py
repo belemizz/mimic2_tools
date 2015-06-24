@@ -49,6 +49,7 @@ class evaluate_fetaure:
 
     def compare_dbd(self, dbd_list):
         dbd_temp = self.days_before_discharge
+
         result = []
         for dbd in dbd_list:
             self.days_before_discharge = dbd
@@ -56,12 +57,29 @@ class evaluate_fetaure:
             
         self.days_before_discharge = dbd_temp
 
-
         return result
-        
-    
 
-        
+    def compare_dae_hidden(self, n_list):
+        dae_hidden_temp = self.dae_hidden
+        result = []
+        for dae_hidden in n_list:
+            self.dae_hidden = dae_hidden
+            result.append(self.point_eval())
+        self.dae_hidden = dae_hidden_temp
+        import ipdb
+        ipdb.set_trace()
+        return result
+
+    def compare_dae_corruption(self, n_list):
+        dae_corruption_temp = self.dae_corruption
+        result = []
+        for dae_corruption in n_list:
+            self.dae_corruption = dae_corruption
+            result.append(self.point_eval())
+        self.dae_corruption = dae_corruption_temp
+        import ipdb
+        ipdb.set_trace()
+        return result
         
     def point_eval(self):
         [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
@@ -84,11 +102,19 @@ class evaluate_fetaure:
             print 'n_cv_fold is not valid'
 
     def __point_data_preperation(self, cache_key = '__point_data_preperation'):
-        params = self.__dict__
+
+        param = self.__dict__.copy()
+        del param['rp_learn_flag']
+        del param['pca_components']
+        del param['ica_components']
+        del param['dae_hidden']
+        del param['dae_corruption']
+        del param['n_cv_folds']
+
         cache = mutil.cache(cache_key)
 
         try:
-            return cache.load( params)
+            return cache.load( param)
         except IOError:
             # Get candidate ids
             print "[INFO] Getting candidate IDs and their data"
@@ -102,7 +128,7 @@ class evaluate_fetaure:
                                                                 most_common_tests,
                                                                 mimic2db.vital_charts)
             ret_val =  [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags]
-            return cache.save(ret_val, params)
+            return cache.save(ret_val, param)
 
     def __eval_as_single_set(self, lab_data, vital_data, flags,
                            most_common_tests, lab_descs, lab_units):
@@ -148,7 +174,6 @@ class evaluate_fetaure:
         kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
 
         results = []
-
         for train, test in kf:
 
             # datasets
@@ -182,7 +207,6 @@ class evaluate_fetaure:
 
         print numpy.array(mean_reduction)
         self.__feature_importance_graph(mean_reduction[0:20], graphs.dir_to_save + self.__param_code() + "_cv_lab_feature.png")
-
         return mean_reduction
 
     def __ts_eval(self):
@@ -216,7 +240,6 @@ class evaluate_fetaure:
                             units[item.itemid] = item.unit
                             descs[item.itemid] = item.description
         return patients, lab_ids_dict, units, descs
-
 
     def __find_most_common_lab_tests(self, lab_ids_dict, descs,units):
         counter =  collections.Counter(lab_ids_dict)
@@ -331,7 +354,6 @@ class evaluate_fetaure:
                     valid = False
                     break
 
-
             if valid:
                 lab_values.append(lab_value)
                 chart_values.append(chart_value)
@@ -383,185 +405,4 @@ def float_list(l):
     return numpy.array(f_list)
 
 
-if __name__ == '__main__':
-    result = []
-    
-# corruption 0.4 is good so far
-    result.append( main(days_before_discharge = 2, dae_corruption = 0.1, dae_hidden = 20))
-    result.append( main(days_before_discharge = 2, dae_corruption = 0.1, dae_hidden = 30))
-
-    result.append( main(days_before_discharge = 2, dae_corruption = 0.0, dae_hidden = 10))
-    result.append( main(days_before_discharge = 2, dae_corruption = 0.0, dae_hidden = 20))
-    result.append( main(days_before_discharge = 2, dae_corruption = 0.0, dae_hidden = 30))
-
-    print [item[0]/item[1] for item in result]
-
-    
-
-
-## def main( max_id = 200000,
-##           target_codes = ['428.0'],
-##           n_lab = 20,
-##           days_before_discharge = 2,
-##           rp_learn_flag = True,
-##           pca_components = 5,
-##           ica_components = 5,
-##           dae_hidden = 20,
-##           dae_corruption = 0.0,
-##           n_cv_folds = 4):
-
-##     experiment_code = "mid%d_tc%s_nf%d_dbd%d_pca%d_ica%d_da%d_%f"%(max_id, target_codes, n_lab, days_before_discharge, pca_components, ica_components, dae_hidden, dae_corruption)
-
-##     # Get candidate ids
-##     most_common_tests, lab_descs, lab_units, flags, lab_data, vital_data = data_preparation(n_lab, target_codes, max_id, days_before_discharge)
-
-
-##     ## print "[INFO] Getting timeseries of lab and vital"
-##     ## lab_ts, vital_ts, flags_ts = get_lab_chart_timeseries(
-##     ##                                         patients,
-##     ##                                         most_common_tests,
-##     ##                                         mimic2db.vital_charts,
-##     ##                                         days_before_discharge,
-##     ##                                         3)
-
-##     if n_cv_folds is 1:
-##         # feature descriptions
-##         print "[INFO] eval_as_single_set"
-##         return eval_as_single_set(
-##             lab_data, vital_data, flags, experiment_code,
-##             most_common_tests, lab_descs, lab_units,
-##             rp_learn_flag, pca_components, ica_components,
-##             dae_hidden, dae_corruption
-##             )
-
-##         ## eval_as_single_set_ts(lab_ts, vital_ts, flags_ts, experiment_code,
-##         ##                       most_common_tests, lab_descs, lab_units,
-##         ##                       pca_compnents, ica_components,
-##         ##                       dae_hidden, dae_corruption)
-        
-##     elif n_cv_folds > 1:
-##         print "[INFO] eval cross validation"
-##         result =  eval_cross_validation(lab_data, vital_data, flags, experiment_code,
-##                           most_common_tests, lab_descs, lab_units,
-##                           pca_components, ica_components,
-##                           dae_hidden, dae_corruption, n_cv_folds)
-
-##         dae_score = [item[0] for item in result if item[2] == 1][0]
-##         bun_score = [item[0] for item in result if item[2] == 50177][0]
-##         return [dae_score, bun_score]
-##     else:
-##         print "n_cv_fold is not valid"
-
-## def data_preparation(n_feature, target_codes, max_id, days_before_discharge, cache_key = 'data_preparation'):
-##     params = locals()
-##     cache = mutil.cache(cache_key)
-
-##     try:
-##         return cache.load( params)
-##     except IOError:
-        
-##         # Get candidate ids
-##         print "[INFO] Getting candidate IDs and their data"
-##         subject_ids, lab_ids_dict, patients, units, descs = get_patient_data_form_codes(target_codes, max_id)
-
-##         # Find most common lab tests
-##         print "[INFO] Finding most common lab tests"
-##         most_common_tests, lab_descs, lab_units = find_most_common_lab_tests(n_feature, lab_ids_dict, descs, units)
-
-##         # Get values of most commom tests
-##         print "[INFO] Getting values of lab and vital"
-##         lab_data, vital_data, flags = get_lab_chart_values( patients,
-##                                                             most_common_tests,
-##                                                             mimic2db.vital_charts,
-##                                                             days_before_discharge)
-        
-##         ret_val =  [most_common_tests, lab_descs, lab_units, flags, lab_data, vital_data]
-##         return cache.save(ret_val, params)
-
-
-
-## def eval_cross_validation(lab_data, vital_data, flags, experiment_code, most_common_tests, lab_descs, lab_units, pca_components, ica_components, dae_hidden, dae_corruption, n_cv_folds):
-    
-##     # cross validation
-##     kf = cross_validation.KFold(lab_data.shape[0], n_folds = n_cv_folds, shuffle = True, random_state = 0)
-
-
-##     results = []
-    
-##     for train, test in kf:
-
-##         # datasets
-##         set_train_lab = lab_data[train, :]
-##         set_train_vital = vital_data[test, :]
-##         flag_train = flags[train]
-
-##         set_test_lab = lab_data[test, :]
-##         set_test_vital = vital_data[test, :]
-##         flags_test = flags[test]
-
-##         encoded_values = alg_auto_encoder.get_encoded_values(
-##             set_train_lab, flag_train, set_test_lab,
-##             pca_components, 1,
-##             ica_components, 1,
-##             dae_hidden, 1, dae_corruption)
-        
-##         feature_desc = encoded_values.keys()
-##         feature_id = range( len(feature_desc))
-##         feature_unit = ['None'] * len(feature_desc)
-##         feature_data = numpy.hstack(encoded_values.viewvalues())
-        
-##         lab_importance = alg_feature_selection.calc_entropy_reduction(set_test_lab, flags_test, most_common_tests, lab_descs, lab_units)
-##         feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags_test, feature_id, feature_desc, feature_unit)
-
-##         lab_feature_importance = sorted(lab_importance + feature_importance, key = lambda item:item[2])
-
-##         results.append(lab_feature_importance)
-
-##     mean_reduction = alg_feature_selection.mean_entropy_reduction(results)
-
-##     print numpy.array(mean_reduction)
-##     feature_importance_graph(mean_reduction[0:20], graphs.dir_to_save + experiment_code + "_cv_lab_feature.png")
-
-##     return mean_reduction
-    
-
-    
-
-## def eval_as_single_set(lab_data, vital_data, flags, experiment_code,
-##                        most_common_tests, lab_descs, lab_units,
-##                        rp_learn_flag, pca_components, ica_components,
-##                        dae_hidden, dae_corruption):
-
-##     ## Raw Data Evaluation
-##     lab_importance = alg_feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
-##     vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
-##     all_importance = lab_importance + vital_importance
-##     all_importance.sort(reverse = True)
-##     feature_importance_graph(all_importance[0:20], graphs.dir_to_save + experiment_code + "_all.png")
-## #    classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+experiment_code + "_lab_imp.png")
-## #    classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save+experiment_code + "_vital_imp.png")
-##     return all_importance
-
-##     if rp_learn_flag:
-##         ## Encoded Feature Evalation
-##         encoded_values = alg_auto_encoder.get_encoded_values(
-##             lab_data, flags, lab_data,
-##             pca_components, 1,
-##             ica_components, 1,
-##             dae_hidden, 1,  dae_corruption)
-
-##         feature_desc = encoded_values.keys()
-##         feature_id = range( len(feature_desc))
-##         feature_unit = ['None'] * len(feature_desc)
-##         feature_data = numpy.hstack(encoded_values.viewvalues())
-##         feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags, feature_id, feature_desc, feature_unit)
-
-##         lab_feature_importance = lab_importance + feature_importance
-##         lab_feature_importance.sort(reverse = True)
-
-##         feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + experiment_code + "_lab_feature.png")
-##         classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+experiment_code + "_feature_imp.png")
-    
-    
-
-
+#if __name__ == '__main__':
