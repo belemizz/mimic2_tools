@@ -22,9 +22,10 @@ def compare_lab_tests_and_vitals():
                                              dae_hidden = 40,
                                              dae_corruption = 0.3)
                                              
-    print efo.compare_dbd([0,1,2,3])
+    efo.compare_dbd([0., 0.25, 0.5, 1., 2., 3.])
 
     efo.rp_learn_flag = True
+    
     efo.n_cv_folds = 4
     efo.point_eval()
 

@@ -48,6 +48,7 @@ class evaluate_fetaure:
 
 
     def compare_dbd(self, dbd_list):
+
         dbd_temp = self.days_before_discharge
 
         result = []
@@ -57,6 +58,23 @@ class evaluate_fetaure:
             
         self.days_before_discharge = dbd_temp
 
+        data = []
+        for i, item_id in enumerate(mimic2db.vital_charts):
+            scores = []
+            for r in result:
+                scores.append([item[0] for item in r if item[2] == item_id][0])
+            data.append(scores)
+        
+        bun_score = []
+        for r in result:
+            bun_score.append([item[0] for item in r if item[2] == 50177][0])
+        data.append(bun_score)
+
+        label = mimic2db.vital_descs + ['BUN']
+
+        graphs.line_series(data, dbd_list, label,
+                           x_label = "Days before discharge", y_label = "Entropy Reduction",
+                           filename = graphs.dir_to_save + self.__param_code() + '_time.png' )
         return result
 
     def compare_dae_hidden(self, n_list):
@@ -66,8 +84,6 @@ class evaluate_fetaure:
             self.dae_hidden = dae_hidden
             result.append(self.point_eval())
         self.dae_hidden = dae_hidden_temp
-        import ipdb
-        ipdb.set_trace()
         return result
 
     def compare_dae_corruption(self, n_list):
@@ -77,8 +93,6 @@ class evaluate_fetaure:
             self.dae_corruption = dae_corruption
             result.append(self.point_eval())
         self.dae_corruption = dae_corruption_temp
-        import ipdb
-        ipdb.set_trace()
         return result
         
     def point_eval(self):
@@ -91,13 +105,10 @@ class evaluate_fetaure:
                 )
         elif self.n_cv_folds > 1:
             print "[INFO] eval cross validation"
-            result =  self.__eval_cross_validation(
+            return  self.__eval_cross_validation(
                 lab_data, vital_data, flags, 
                 most_common_tests, lab_descs, lab_units)
 
-            dae_score = [item[0] for item in result if item[2] == 1][0]
-            bun_score = [item[0] for item in result if item[2] == 50177][0]
-            return [dae_score, bun_score]
         else:
             print 'n_cv_fold is not valid'
 
@@ -139,8 +150,8 @@ class evaluate_fetaure:
         all_importance = lab_importance + vital_importance
         all_importance.sort(reverse = True)
         self.__feature_importance_graph(all_importance[0:20], graphs.dir_to_save + self.__param_code() + "_all.png")
-    #    self.__classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+experiment_code + "_lab_imp.png")
-    #    self.__classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save+experiment_code + "_vital_imp.png")
+        self.__classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+self.__param_code() + "_lab_imp.png")
+        self.__classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save + self.__param_code() + "_vital_imp.png")
 
         if self.rp_learn_flag:
             ## Encoded Feature Evalation
@@ -259,13 +270,9 @@ class evaluate_fetaure:
         flags = []
         for patient in patients:
             final_adm = patient.get_final_admission()
-            estimated_disch_time = max([final_adm.final_labs_time,
-                                        final_adm.final_chart_time,
-                                        final_adm.final_ios_time,
-                                        final_adm.final_medication_time
-                                        ])
-
-            time_of_interest = estimated_disch_time + datetime.timedelta(1-self.days_before_discharge)
+            estimated_disch_time = final_adm.get_estimated_disch_time()
+            
+            time_of_interest = estimated_disch_time - datetime.timedelta(self.days_before_discharge)
             lab_result =  final_adm.get_newest_lab_at_time(time_of_interest)
             chart_result =  final_adm.get_newest_chart_at_time(time_of_interest)
 
@@ -308,7 +315,7 @@ class evaluate_fetaure:
         y_label = "%s [%s]"%(lab_result[1][3],lab_result[1][4])
         x = lab_data[:, important_labs]
 
-        alg_svm.demo(x, flags, x_label, y_label)
+        alg_svm.demo(x, flags, x_label, y_label, filename = filename)
 
     # Get the data of the tests
     def __get_lab_chart_timeseries(self, patients, lab_ids, chart_ids):
@@ -371,18 +378,16 @@ class evaluate_fetaure:
 
 
     def __param_code(self):
-        return "mid%d_tc%s_nf%d_dbd%d_pca%d_ica%d_da%d_%f"%(self.max_id,
+        return "mid%d_tc%s_nf%d_dbd%0.2f_pca%d_ica%d_da%d_%f_%d"%(self.max_id,
                                                             self.target_codes,
                                                             self.n_lab,
                                                             self.days_before_discharge,
                                                             self.pca_components,
                                                             self.ica_components,
                                                             self.dae_hidden,
-                                                            self.dae_corruption)
+                                                            self.dae_corruption,
+                                                               self.n_cv_folds)
 
-
-
-    
 
 ############ UTILITY ###################
 def is_number(s):
@@ -405,4 +410,4 @@ def float_list(l):
     return numpy.array(f_list)
 
 
-#if __name__ == '__main__':
+    

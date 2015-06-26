@@ -14,9 +14,9 @@ class control_mimic2db:
         self.conn = psycopg2.connect("dbname=MIMIC2 user=%s"%getpass.getuser())
         self.cur = self.conn.cursor()
         self.cache_dir = "../data/cache/"
-        self.vital_charts = [211, 618, 646, 455, 456 ]
-        self.vital_descs =  ['Heart Rate','Respiratory Rate','SpO2','NBP','NBP Mean']
-        self.vital_units =  ['BPM','BPM','%','mmHg','mmHg']
+        self.vital_charts = [211, 618, 646, 455 ]
+        self.vital_descs =  ['Heart Rate','Respiratory Rate','SpO2','NBP']
+        self.vital_units =  ['BPM','BPM','%','mmHg']
     
     def __del__(self):
         self.cur.close()

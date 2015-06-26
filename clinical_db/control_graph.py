@@ -80,6 +80,28 @@ class control_graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
+    def line_series(self, data, timestamp, label, x_label="", y_label="", title="", markersize = 10, filename = "", show_flag = True):
+
+        fig, ax = plt.subplots()
+        for item in data:
+            if markersize is 0:
+                ax.plot(timestamp, item, '-')
+            else:
+                ax.plot(timestamp, item, 'o--', markersize = markersize)
+        ax.legend(label)
+
+        ax.set_xlim(self.__calc_lim(timestamp, 0.05))
+        
+        if x_label is not "": ax.set_xlabel(x_label)
+        if y_label is not "": ax.set_ylabel(y_label)
+                
+        self.__show_and_save(fig, filename, show_flag)
+
+    def __calc_lim(self,values, margin_ratio):
+        margin = (max(values) - min(values)) * margin_ratio
+        return [min(values) - margin, max(values) + margin]
+
+
     def plot_classification(self, positive, negative, line, title, filename = "", show_flag = True, x_label = "", y_label = ""):
         fig, ax = plt.subplots()
         ax.plot(positive[:,0], positive[:,1], 'ro')
@@ -116,7 +138,6 @@ class control_graph:
         ax.set_ylim(yy.min(), yy.max())
         self.__show_and_save(fig, filename, show_flag)
         
-
     def bar_feature_importance(self, entropy_reduction, labels, filename = "", show_flag = True):
         fig, ax = plt.subplots()
         Y = range( len(entropy_reduction))

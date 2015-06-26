@@ -147,7 +147,7 @@ class admission:
                     
         return result
 
-    def get_estimeted_disch_time(self):
+    def get_estimated_disch_time(self):
         return max( [self.final_labs_time,
                      self.final_ios_time,
                      self.final_medication_time,

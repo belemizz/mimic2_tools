@@ -14,7 +14,8 @@ def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
     if x.shape[1] is not 2:
         raise ValueError("Feature Dimension is not 2")
 
-    clf = svm.LinearSVC()
+    clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
+#    clf = svm.SVC(kernel = 'linear', max_iter = 200000, random_state = 0)
     clf.fit(x, y)
     
     # mesh
