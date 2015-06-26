@@ -12,10 +12,9 @@ graph= control_graph.control_graph()
 def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
 
     if x.shape[1] is not 2:
-        raise ValueError("Feature Dimension is not 2")
+        raise ValueError("Can't show: x dimension is not 2")
 
     clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
-#    clf = svm.SVC(kernel = 'linear', max_iter = 200000, random_state = 0)
     clf.fit(x, y)
     
     # mesh
@@ -40,22 +39,39 @@ def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
 
     return clf
 
+def cross_validate(x, y, n_cv_fold = 10):
+    #    clf = svm.SVC(kernel = 'linear', iter_)
+    clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
+    scores = cross_validation.cross_val_score(clf, x, y, cv = n_cv_fold)
+    predicted = cross_validation.cross_val_predict(clf, x, y, cv = n_cv_fold)
 
-def cross_validate(x, y, cross_validation_num = 5):
-    clf = svm.SVC(kernel = 'linear')
-    scores = cross_validation.cross_val_score(clf, x, y, cv = cross_validation_num)
-    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    recall = float(sum(predicted[y == 1])) / sum(y)
+    precision = float(sum(predicted[y == 1])) / sum(predicted)
+    f_measure = 2 * precision * recall / (precision + recall)
+
+    print "----------cross_varidation_result_____________"
+    for idx, score in enumerate(scores):
+        print "E%d: %f"%(idx, score)
+    print("Accuracy:  %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
+    print "Recall:    %0.4f"%recall
+    print "Precision: %0.4f"%precision
+    print "F-measure: %0.4f"%f_measure
     
+    print "______________________________________________"
+
+        
 if __name__ == '__main__':
-    source_num = 0
-    [x,y]= generate_sample.get_samples_with_target(source_num)
+    source_num = 2
+    n_dim = 500
+    n_flag = 2
 
-    cross_validation_num = 5
+    [x,y]= generate_sample.get_samples_with_target(source_num, n_dim, n_flag)
+
+    cross_validation_num = 2
     cross_validate(x, y, cross_validation_num)
-
+    
     try:
         demo(x,y)
-    except ValueError:
-        print "Error"
-
-    plt.waitforbuttonpress()
+        plt.waitforbuttonpress()
+    except ValueError, detail:
+        print detail

@@ -22,6 +22,7 @@ class TestSequenceFunctions(unittest.TestCase):
     def test_classification(self):
         x, y = generate_sample.get_samples_with_target(0, 2)
         alg_svm.demo(x, y, show_flag = False)
+        alg_svm.cross_validate(x,y,4)
 
 if __name__ == '__main__':
     unittest.main()

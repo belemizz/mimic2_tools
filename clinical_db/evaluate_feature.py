@@ -33,19 +33,23 @@ class evaluate_fetaure:
                   ica_components = 5,
                   dae_hidden = 20,
                   dae_corruption = 0.0,
-                  n_cv_folds = 4):
+                  n_cv_folds = 4,
+                  classification = True):
+        # params for data retrieval
         self.max_id = max_id
         self.target_codes = target_codes
         self.n_lab = n_lab
         self.days_before_discharge = days_before_discharge
         self.span = span
+        
+        # params for evaluation
         self.rp_learn_flag = rp_learn_flag
         self.pca_components = pca_components
         self.ica_components = ica_components
         self.dae_hidden = dae_hidden
         self.dae_corruption = dae_corruption
         self.n_cv_folds = n_cv_folds
-
+        self.classification = classification
 
     def compare_dbd(self, dbd_list):
 
@@ -97,20 +101,30 @@ class evaluate_fetaure:
         
     def point_eval(self):
         [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
-        if self.n_cv_folds == 1:
-            print "[INFO] eval_as_single_set"
-            return self.__eval_as_single_set(
-                lab_data, vital_data, flags,
-                most_common_tests, lab_descs, lab_units,
-                )
-        elif self.n_cv_folds > 1:
-            print "[INFO] eval cross validation"
-            return  self.__eval_cross_validation(
-                lab_data, vital_data, flags, 
-                most_common_tests, lab_descs, lab_units)
 
+        if self.classification:
+            if self.n_cv_folds > 1:
+                print "[INFO] eval cross validation"
+                self.__eval_with_classification(lab_data, flags)
+            else:
+                raise ValueError("n_cv_fold should be 2 or larger")
         else:
-            print 'n_cv_fold is not valid'
+            if self.n_cv_folds == 1:
+                print "[INFO] eval_as_single_set"
+                return self.__eval_as_single_set(
+                    lab_data, vital_data, flags,
+                    most_common_tests, lab_descs, lab_units,
+                    )
+            elif self.n_cv_folds > 1:
+                print "[INFO] eval cross validation"
+                return  self.__eval_cross_validation(
+                    lab_data, vital_data, flags, 
+                    most_common_tests, lab_descs, lab_units)
+            else:
+                raise ValueError("n_cv_fold should be 1 or larger")
+
+    def __eval_with_classification(self, data, flags):
+        alg_svm.cross_validate(data, flags, self.n_cv_folds)
 
     def __point_data_preperation(self, cache_key = '__point_data_preperation'):
 
@@ -178,7 +192,6 @@ class evaluate_fetaure:
 
         return all_importance
 
-        
     def __eval_cross_validation(self, lab_data, vital_data, flags, most_common_tests, lab_descs, lab_units):
 
         # cross validation
@@ -219,6 +232,7 @@ class evaluate_fetaure:
         print numpy.array(mean_reduction)
         self.__feature_importance_graph(mean_reduction[0:20], graphs.dir_to_save + self.__param_code() + "_cv_lab_feature.png")
         return mean_reduction
+
 
     def __ts_eval(self):
         print 'not implemented'
@@ -411,3 +425,6 @@ def float_list(l):
 
 
     
+if __name__ == '__main__':
+    ef = evaluate_fetaure(max_id = 2000, days_before_discharge = 0)
+    ef.point_eval()

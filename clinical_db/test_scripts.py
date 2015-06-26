@@ -29,7 +29,7 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_evaluate_feature(self):
         import evaluate_feature
-        ins = evaluate_feature.evaluate_fetaure(max_id = 2000)
+        ins = evaluate_feature.evaluate_fetaure(max_id = 200000, days_before_discharge = 3)
         ins.point_eval()
 
 

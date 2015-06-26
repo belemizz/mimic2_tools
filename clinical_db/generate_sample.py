@@ -8,8 +8,7 @@ import theano.tensor as T
 import random
 
 
-
-def get_samples_with_target(source_num = 0, data_dim = 0):
+def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
     
     if source_num is 0:
         [x, y] = normal_dist(data_dim, 100, 100, [2,8], seed = 1)
@@ -17,32 +16,36 @@ def get_samples_with_target(source_num = 0, data_dim = 0):
     elif source_num is 1:
         from sklearn import datasets
         iris = datasets.load_iris()
-        
-        if data_dim > 0:
-            x = iris.data[:, 0:data_dim]
-        else:
-            x = iris.data
-
-        y = iris.target
+        x, y = chop_data(iris.data, iris.target, data_dim, n_flag)
 
     elif source_num is 2:
         from logistic_sgd import load_data
-        
         datasets = load_data('mnist.pkl.gz')
         [shared_x, shared_y] = datasets[0]
-        
-        data_x = shared_x.get_value()
+        x, y = chop_data(shared_x.get_value(), shared_y.eval(), data_dim, n_flag)
 
-        if data_dim > 0:
-            x = data_x[:, 0:data_dim]
-        else:
-            x = data_x
-        y = shared_y.eval()
     else:
         raise ValueError
 
-    return [x, y]
+    return x, y
 
+def chop_data(all_data, all_target, data_dim, n_flag):
+    all_flag = numpy.unique(all_target)
+    flags = all_flag[0: min(all_flag.shape[0], n_flag)]
+
+    x_list = []
+    y_list = []
+    for flag in flags:
+        x_list.append(all_data[all_target == flag])
+        y_list.append(all_target[all_target == flag])
+
+    x = numpy.vstack(x_list)
+    y = numpy.hstack(y_list)
+
+    if data_dim > 0:
+        x = x[:, 0:data_dim]
+
+    return x,y
 
 def split_to_three_sets(x, y, valid_ratio = 1./3, test_ratio = 1./3, r_seed = 1):
     n_valid = int(valid_ratio * x.shape[0])
