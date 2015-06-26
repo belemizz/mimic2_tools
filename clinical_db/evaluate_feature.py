@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 import control_mimic2db
 import control_graph
-import alg_svm
+import alg_classification
 import alg_logistic_regression
 import alg_auto_encoder
 import alg_feature_selection
@@ -124,7 +124,7 @@ class evaluate_fetaure:
                 raise ValueError("n_cv_fold should be 1 or larger")
 
     def __eval_with_classification(self, data, flags):
-        alg_svm.cross_validate(data, flags, self.n_cv_folds)
+        alg_classification.cross_validate(data, flags, self.n_cv_folds)
 
     def __point_data_preperation(self, cache_key = '__point_data_preperation'):
 
@@ -329,7 +329,7 @@ class evaluate_fetaure:
         y_label = "%s [%s]"%(lab_result[1][3],lab_result[1][4])
         x = lab_data[:, important_labs]
 
-        alg_svm.demo(x, flags, x_label, y_label, filename = filename)
+        alg_classification.plot_2d(x, flags, x_label, y_label, filename = filename)
 
     # Get the data of the tests
     def __get_lab_chart_timeseries(self, patients, lab_ids, chart_ids):
@@ -426,5 +426,5 @@ def float_list(l):
 
     
 if __name__ == '__main__':
-    ef = evaluate_fetaure(max_id = 2000, days_before_discharge = 0)
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge = 0)
     ef.point_eval()

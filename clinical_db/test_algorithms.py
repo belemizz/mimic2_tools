@@ -4,7 +4,7 @@ Test code for algorithm codes
 
 import unittest
 import alg_auto_encoder
-import alg_svm
+import alg_classification
 
 import generate_sample
 
@@ -21,8 +21,8 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_classification(self):
         x, y = generate_sample.get_samples_with_target(0, 2)
-        alg_svm.demo(x, y, show_flag = False)
-        alg_svm.cross_validate(x,y,4)
+        alg_classification.plot_2d(x, y, show_flag = False)
+        alg_classification.cross_validate(x,y,4)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,7 +1,7 @@
 import numpy
 import matplotlib.pyplot as plt
 
-from sklearn import svm
+from sklearn import svm, tree, linear_model
 from sklearn import cross_validation
 
 import generate_sample
@@ -9,12 +9,13 @@ import control_graph
 
 graph= control_graph.control_graph()
 
-def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
+def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, algorithm = 'svm'):
 
+    clf = get_algorithm(algorithm)
+        
     if x.shape[1] is not 2:
         raise ValueError("Can't show: x dimension is not 2")
 
-    clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
     clf.fit(x, y)
     
     # mesh
@@ -39,9 +40,10 @@ def demo(x, y, x_label = "", y_label = "", filename = "", show_flag = True):
 
     return clf
 
-def cross_validate(x, y, n_cv_fold = 10):
+def cross_validate(x, y, n_cv_fold = 10, algorithm = 'svm'):
     #    clf = svm.SVC(kernel = 'linear', iter_)
-    clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
+
+    clf = get_algorithm(algorithm)
     scores = cross_validation.cross_val_score(clf, x, y, cv = n_cv_fold)
     predicted = cross_validation.cross_val_predict(clf, x, y, cv = n_cv_fold)
 
@@ -59,19 +61,29 @@ def cross_validate(x, y, n_cv_fold = 10):
     
     print "______________________________________________"
 
+def get_algorithm(algorithm):
+    if algorithm == 'svm':
+        clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
+    elif algorithm == 'dt':
+        clf = tree.DecisionTreeClassifier()
+    elif algorithm == 'lr':
+        clf = linear_model.LogisticRegression()
+    else:
+        raise ValueError("algorithm is svm, dt or lr")
+    return clf
         
 if __name__ == '__main__':
     source_num = 2
-    n_dim = 500
+    n_dim = 300
     n_flag = 2
-
     [x,y]= generate_sample.get_samples_with_target(source_num, n_dim, n_flag)
 
-    cross_validation_num = 2
-    cross_validate(x, y, cross_validation_num)
-    
+    algorithm = 'svm'
     try:
-        demo(x,y)
+        plot_2d(x,y, algorithm)
         plt.waitforbuttonpress()
     except ValueError, detail:
         print detail
+    
+    cross_validation_num = 2
+    cross_validate(x, y, cross_validation_num, algorithm)
