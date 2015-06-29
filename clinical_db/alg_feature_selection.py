@@ -30,9 +30,7 @@ def mean_entropy_reduction(reduction_results):
 
     mean_result.sort(reverse = True)
     return mean_result
-
     
-
 # Calcurate entorpy reduction by each feature
 def calc_entropy_reduction(value_array, flag_array, item_ids=[], descs=[], units=[]):
     

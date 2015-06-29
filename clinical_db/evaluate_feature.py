@@ -34,7 +34,8 @@ class evaluate_fetaure:
                   dae_corruption = 0.3,
                   n_cv_folds = 4,
                   classification = True,
-                  class_alg = 'dt'):
+                  class_alg = 'lr'):
+        
         # params for data retrieval
         self.max_id = max_id
         self.target_codes = target_codes
@@ -130,33 +131,89 @@ class evaluate_fetaure:
             ret_val =  [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags]
             return cache.save(ret_val, param)
 
+
     def point_eval(self):
         """ Basic evaluation method """
         [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
 
-        if self.classification:
-            if self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                self.__eval_with_classification(
-                    lab_data, vital_data, flags,
-                    most_common_tests, lab_descs, lab_units)
-            else:
-                raise ValueError("n_cv_fold should be 2 or larger")
-        else:
-            if self.n_cv_folds == 1:
-                print "[INFO] eval_as_single_set"
-                return self.__eval_as_single_set(
-                    lab_data, vital_data, flags,
-                    most_common_tests, lab_descs, lab_units,
-                    )
-            elif self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                return  self.__eval_cross_validation(
-                    lab_data, vital_data, flags, 
-                    most_common_tests, lab_descs, lab_units)
-            else:
-                raise ValueError("n_cv_fold should be 1 or larger")
+        ## importance of each metrics
+        lab_importance = alg_feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
+        vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
+        all_importance = lab_importance + vital_importance
+        all_importance.sort(reverse = True)
+        self.__feature_importance_graph(all_importance[0:20], graphs.dir_to_save + self.__param_code() + "_all.png")
 
+        lab_priority = [item[1] for item in lab_importance]
+
+        ## multiple metric combination
+        recalls = []
+        precisions = []
+        f_measures = []
+        for n_items in range(1, self.n_lab+1):
+            lab_sel_data = lab_data[:, lab_priority[0:n_items]]
+            result = alg_classification.cross_validate(lab_sel_data, flags, self.n_cv_folds, self.class_alg)
+            precisions.append(result.prec)
+            recalls.append(result.rec)
+            f_measures.append(result.f)
+
+        graphs.line_series(numpy.array([recalls, precisions, f_measures]), range(1, self.n_lab+1) ,
+                           ['recall', 'precision', 'f_measure'],
+                           x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                           filename = graphs.dir_to_save + self.__param_code() + '_n_metric.png' )
+
+        if self.rp_learn_flag:
+            n_input = 10
+            lab_sel_data = lab_data[:, lab_priority[0:n_input]]
+
+            # cross validation
+            kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
+            result_list = []
+            for train, test in kf:
+                # datasets
+                set_train_lab = lab_data[train, :]
+                flags_train = flags[train]
+                set_test_lab = lab_data[test, :]
+                flags_test = flags[test]
+                
+                encoded_values = alg_auto_encoder.get_encoded_values(
+                    set_train_lab, flags_train, set_test_lab,
+                    self.pca_components, 2,
+                    self.ica_components, 2,
+                    self.dae_hidden, 2,  self.dae_corruption )
+
+                result_list.append(alg_classification.fit_and_test(set_train_lab, flags_train, set_test_lab, flags_test, self.class_alg))
+
+            all_result = alg_classification.sumup_classification_result(result_list)
+            print all_result
+                
+        ## use feature learing
+
+
+        ## using feature learning
+
+
+        ## if self.classification:
+        ##     if self.n_cv_folds > 1:
+        ##         print "[INFO] eval cross validation"
+        ##         self.__eval_with_classification(
+        ##             lab_data, vital_data, flags,
+        ##             most_common_tests, lab_descs, lab_units)
+        ##     else:
+        ##         raise ValueError("n_cv_fold should be 2 or larger")
+        ## else:
+        ##     if self.n_cv_folds == 1:
+        ##         print "[INFO] eval_as_single_set"
+        ##         return self.__eval_as_single_set(
+        ##             lab_data, vital_data, flags,
+        ##             most_common_tests, lab_descs, lab_units,
+        ##             )
+        ##     elif self.n_cv_folds > 1:
+        ##         print "[INFO] eval cross validation"
+        ##         return  self.__eval_cross_validation(
+        ##             lab_data, vital_data, flags, 
+        ##             most_common_tests, lab_descs, lab_units)
+        ##     else:
+        ##         raise ValueError("n_cv_fold should be 1 or larger")
 
     def __eval_with_classification(self, lab_data, vital_data, flags, most_common_tests, lab_descs, lab_units):
         # lab test only
@@ -196,12 +253,6 @@ class evaluate_fetaure:
     def __eval_as_single_set(self, lab_data, vital_data, flags,
                            most_common_tests, lab_descs, lab_units):
 
-        ## Raw Data Evaluation
-        lab_importance = alg_feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
-        vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
-        all_importance = lab_importance + vital_importance
-        all_importance.sort(reverse = True)
-        self.__feature_importance_graph(all_importance[0:20], graphs.dir_to_save + self.__param_code() + "_all.png")
         self.__classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+self.__param_code() + "_lab_imp.png")
         self.__classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save + self.__param_code() + "_vital_imp.png")
 
@@ -464,6 +515,7 @@ def float_list(l):
 
     
 if __name__ == '__main__':
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0)
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2)
     ef.point_eval()
+    plt.waitforbuttonpress()
 
