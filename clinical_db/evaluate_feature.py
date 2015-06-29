@@ -3,7 +3,7 @@ Evaluate the importance of the feature
 """
 
 import numpy
-import collections
+import collections 
 import datetime
 import matplotlib.pyplot as plt
 
@@ -17,7 +17,6 @@ import mutil
 
 from sklearn import cross_validation
 
-
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
@@ -26,15 +25,16 @@ class evaluate_fetaure:
                   max_id = 200000,
                   target_codes = ['428.0'],
                   n_lab = 20,
-                  days_before_discharge = 2,
+                  days_before_discharge = 0,
                   span = 2,
                   rp_learn_flag = True,
                   pca_components = 5,
                   ica_components = 5,
-                  dae_hidden = 20,
-                  dae_corruption = 0.0,
+                  dae_hidden = 40,
+                  dae_corruption = 0.3,
                   n_cv_folds = 4,
-                  classification = True):
+                  classification = True,
+                  class_alg = 'dt'):
         # params for data retrieval
         self.max_id = max_id
         self.target_codes = target_codes
@@ -50,6 +50,15 @@ class evaluate_fetaure:
         self.dae_corruption = dae_corruption
         self.n_cv_folds = n_cv_folds
         self.classification = classification
+        self.class_alg = class_alg
+
+    def __get_param_data_retrieval(self):
+        return {'max_id' : self.max_id,
+                'target_codes' : self.target_codes,
+                'n_lab' : self.n_lab,
+                'days_before_discharge' : self.days_before_discharge,
+                'span' : self.span
+                }
 
     def compare_dbd(self, dbd_list):
 
@@ -98,44 +107,10 @@ class evaluate_fetaure:
             result.append(self.point_eval())
         self.dae_corruption = dae_corruption_temp
         return result
-        
-    def point_eval(self):
-        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
-
-        if self.classification:
-            if self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                self.__eval_with_classification(lab_data, flags)
-            else:
-                raise ValueError("n_cv_fold should be 2 or larger")
-        else:
-            if self.n_cv_folds == 1:
-                print "[INFO] eval_as_single_set"
-                return self.__eval_as_single_set(
-                    lab_data, vital_data, flags,
-                    most_common_tests, lab_descs, lab_units,
-                    )
-            elif self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                return  self.__eval_cross_validation(
-                    lab_data, vital_data, flags, 
-                    most_common_tests, lab_descs, lab_units)
-            else:
-                raise ValueError("n_cv_fold should be 1 or larger")
-
-    def __eval_with_classification(self, data, flags):
-        alg_classification.cross_validate(data, flags, self.n_cv_folds)
 
     def __point_data_preperation(self, cache_key = '__point_data_preperation'):
 
-        param = self.__dict__.copy()
-        del param['rp_learn_flag']
-        del param['pca_components']
-        del param['ica_components']
-        del param['dae_hidden']
-        del param['dae_corruption']
-        del param['n_cv_folds']
-
+        param = self.__get_param_data_retrieval()
         cache = mutil.cache(cache_key)
 
         try:
@@ -155,6 +130,69 @@ class evaluate_fetaure:
             ret_val =  [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags]
             return cache.save(ret_val, param)
 
+    def point_eval(self):
+        """ Basic evaluation method """
+        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
+
+        if self.classification:
+            if self.n_cv_folds > 1:
+                print "[INFO] eval cross validation"
+                self.__eval_with_classification(
+                    lab_data, vital_data, flags,
+                    most_common_tests, lab_descs, lab_units)
+            else:
+                raise ValueError("n_cv_fold should be 2 or larger")
+        else:
+            if self.n_cv_folds == 1:
+                print "[INFO] eval_as_single_set"
+                return self.__eval_as_single_set(
+                    lab_data, vital_data, flags,
+                    most_common_tests, lab_descs, lab_units,
+                    )
+            elif self.n_cv_folds > 1:
+                print "[INFO] eval cross validation"
+                return  self.__eval_cross_validation(
+                    lab_data, vital_data, flags, 
+                    most_common_tests, lab_descs, lab_units)
+            else:
+                raise ValueError("n_cv_fold should be 1 or larger")
+
+
+    def __eval_with_classification(self, lab_data, vital_data, flags, most_common_tests, lab_descs, lab_units):
+        # lab test only
+        alg_classification.cross_validate(lab_data, flags, self.n_cv_folds, self.class_alg)
+        # vital only
+        alg_classification.cross_validate(vital_data, flags, self.n_cv_folds, self.class_alg)
+        # Using both
+        all_data= numpy.hstack([lab_data, vital_data])
+        alg_classification.cross_validate(all_data, flags, self.n_cv_folds, self.class_alg)
+
+        if self.rp_learn_flag:
+
+            # cross validation
+            kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
+            result_list = []
+            for train, test in kf:
+                # datasets
+                set_train_lab = lab_data[train, :]
+                set_train_vital = vital_data[test, :]
+                flags_train = flags[train]
+
+                set_test_lab = lab_data[test, :]
+                set_test_vital = vital_data[test, :]
+                flags_test = flags[test]
+
+                encoded_values = alg_auto_encoder.get_encoded_values(
+                    set_train_lab, flags_train, set_test_lab,
+                    self.pca_components, 2,
+                    self.ica_components, 2,
+                    self.dae_hidden, 2,  self.dae_corruption )
+
+                result_list.append(alg_classification.fit_and_test(set_train_lab, flags_train, set_test_lab, flags_test, self.class_alg))
+
+            all_result = alg_classification.sumup_classification_result(result_list)
+            print all_result
+                
     def __eval_as_single_set(self, lab_data, vital_data, flags,
                            most_common_tests, lab_descs, lab_units):
 
@@ -426,5 +464,6 @@ def float_list(l):
 
     
 if __name__ == '__main__':
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge = 0)
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0)
     ef.point_eval()
+

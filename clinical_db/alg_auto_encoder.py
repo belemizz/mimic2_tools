@@ -149,7 +149,7 @@ def da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_le
         c = []
         for batch_index in xrange(n_train_batches):
             c.append(train_da(batch_index))
-        print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, numpy.mean(c))
+#        print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, numpy.mean(c))
 
     hidden_values = da.get_hidden_values(x)
     func_hidden_values = theano.function([x], hidden_values)
