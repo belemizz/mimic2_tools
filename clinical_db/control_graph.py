@@ -10,7 +10,6 @@ class control_graph:
     def __init__(self):
         self.limit_timeseries = 25
         self.dir_to_save = "../data/"
-#    def __del__(self):
 
     def draw_lab_adm(self, admission, title, filename="", show_flag = True):
         base_time = admission.admit_dt
