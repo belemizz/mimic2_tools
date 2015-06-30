@@ -159,7 +159,8 @@ class control_graph:
 
     def __show_and_save(self, fig, filename, show_flag):
         if len(filename) > 0:
-            fig.savefig(filename)
+            path = self.dir_to_save + filename
+            fig.savefig(path)
         if show_flag:
             fig.show()
 
