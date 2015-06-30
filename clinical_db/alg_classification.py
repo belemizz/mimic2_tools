@@ -63,9 +63,7 @@ def fit_and_test(train_x, train_y, test_x, test_y, algorithm = 'dt'):
     n_false_positive = sum(predict_y[test_y == 0])
     recall, precision, f, acc = recall_precision(n_positive, n_negative, n_true_positive, n_false_positive)
 
-    result = ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
-    
-    return result
+    return ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
 
 def sumup_classification_result(result_list):
     n_p = 0
