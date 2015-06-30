@@ -3,7 +3,7 @@ Evaluate the importance of the feature
 """
 
 import numpy
-import collections
+import collections 
 import datetime
 import matplotlib.pyplot as plt
 
@@ -17,7 +17,6 @@ import mutil
 
 from sklearn import cross_validation
 
-
 mimic2db = control_mimic2db.control_mimic2db()
 graphs = control_graph.control_graph()
 
@@ -26,15 +25,17 @@ class evaluate_fetaure:
                   max_id = 200000,
                   target_codes = ['428.0'],
                   n_lab = 20,
-                  days_before_discharge = 2,
+                  days_before_discharge = 0,
                   span = 2,
                   rp_learn_flag = True,
                   pca_components = 5,
                   ica_components = 5,
-                  dae_hidden = 20,
-                  dae_corruption = 0.0,
+                  dae_hidden = 40,
+                  dae_corruption = 0.3,
                   n_cv_folds = 4,
-                  classification = True):
+                  classification = False,
+                  class_alg = 'lr'):
+        
         # params for data retrieval
         self.max_id = max_id
         self.target_codes = target_codes
@@ -50,6 +51,15 @@ class evaluate_fetaure:
         self.dae_corruption = dae_corruption
         self.n_cv_folds = n_cv_folds
         self.classification = classification
+        self.class_alg = class_alg
+
+    def __get_param_data_retrieval(self):
+        return {'max_id' : self.max_id,
+                'target_codes' : self.target_codes,
+                'n_lab' : self.n_lab,
+                'days_before_discharge' : self.days_before_discharge,
+                'span' : self.span
+                }
 
     def compare_dbd(self, dbd_list):
 
@@ -98,44 +108,10 @@ class evaluate_fetaure:
             result.append(self.point_eval())
         self.dae_corruption = dae_corruption_temp
         return result
-        
-    def point_eval(self):
-        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
-
-        if self.classification:
-            if self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                self.__eval_with_classification(lab_data, flags)
-            else:
-                raise ValueError("n_cv_fold should be 2 or larger")
-        else:
-            if self.n_cv_folds == 1:
-                print "[INFO] eval_as_single_set"
-                return self.__eval_as_single_set(
-                    lab_data, vital_data, flags,
-                    most_common_tests, lab_descs, lab_units,
-                    )
-            elif self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                return  self.__eval_cross_validation(
-                    lab_data, vital_data, flags, 
-                    most_common_tests, lab_descs, lab_units)
-            else:
-                raise ValueError("n_cv_fold should be 1 or larger")
-
-    def __eval_with_classification(self, data, flags):
-        alg_classification.cross_validate(data, flags, self.n_cv_folds)
 
     def __point_data_preperation(self, cache_key = '__point_data_preperation'):
 
-        param = self.__dict__.copy()
-        del param['rp_learn_flag']
-        del param['pca_components']
-        del param['ica_components']
-        del param['dae_hidden']
-        del param['dae_corruption']
-        del param['n_cv_folds']
-
+        param = self.__get_param_data_retrieval()
         cache = mutil.cache(cache_key)
 
         try:
@@ -155,15 +131,173 @@ class evaluate_fetaure:
             ret_val =  [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags]
             return cache.save(ret_val, param)
 
-    def __eval_as_single_set(self, lab_data, vital_data, flags,
-                           most_common_tests, lab_descs, lab_units):
+    def point_eval(self):
+        """ Basic evaluation method """
+        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
 
-        ## Raw Data Evaluation
+        ## importance of each metrics
         lab_importance = alg_feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
         vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
         all_importance = lab_importance + vital_importance
         all_importance.sort(reverse = True)
         self.__feature_importance_graph(all_importance[0:20], graphs.dir_to_save + self.__param_code() + "_all.png")
+
+        lab_priority = [item[1] for item in lab_importance]
+
+        ## multiple metric combination
+        recalls = []
+        precisions = []
+        f_measures = []
+        for n_items in range(1, self.n_lab+1):
+            pri_lab = lab_data[:, lab_priority[0:n_items]]
+            result = alg_classification.cross_validate(pri_lab, flags, self.n_cv_folds, self.class_alg)
+            precisions.append(result.prec)
+            recalls.append(result.rec)
+            f_measures.append(result.f)
+
+        graphs.line_series(numpy.array([recalls, precisions, f_measures]), range(1, self.n_lab+1) ,
+                           ['recall', 'precision', 'f_measure'],
+                           x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                           filename = graphs.dir_to_save + self.__param_code() + '_n_metric.png' )
+
+        ## representation learning
+        if self.rp_learn_flag:
+            
+            recalls = []
+            precisions = []
+            f_measures = []
+
+            selected_feature_importance = []
+            top_lab_importance = []
+
+            eval_n_input = range(1,self.n_lab + 1);
+            
+            for n_input in eval_n_input:
+
+                print "---------stage%d----------"%n_input
+                self.dae_hidden = 2 * n_input
+                pri_lab = lab_data[:, lab_priority[0:n_input]]
+
+                # cross validation
+                kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
+                result_list = []
+                importance_list = []
+                importance_list2 = []
+                lab_importance_list = []
+                for train, test in kf:
+                    # datasets
+                    train_lab = pri_lab[train, :]
+                    train_y = flags[train]
+                    test_lab = pri_lab[test, :]
+                    test_y = flags[test]
+
+                    orig_train_lab = lab_data[train, :]
+                    orig_test_lab = lab_data[test,:]
+
+                    # encoding
+                    enc_test_x, enc_train_x = alg_auto_encoder.dae(
+                        train_lab, test_lab,
+                        n_hidden = self.dae_hidden,
+                        corruption_level = self.dae_corruption,
+                        return_train = True,
+                        n_epochs = 4000
+                        )
+
+                    # classification
+                    result_list.append(alg_classification.fit_and_test(enc_train_x, train_y, enc_test_x, test_y, self.class_alg))
+
+                    # feature_importance
+                    i_index = alg_feature_selection.select_feature_index(enc_train_x, train_y, 1)
+                    feature_data = enc_test_x[:, i_index]
+                    feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, test_y)                    
+                    importance_list.append(feature_importance[0][0])
+
+                    # importance of each lab_test for comparison
+                    test_all_lab = lab_data[test, :]
+                    lab_importance = alg_feature_selection.calc_entropy_reduction(test_all_lab, test_y)
+                    sorted(lab_importance)
+                    lab_importance_list.append(lab_importance[0][0])
+
+                selected_feature_importance.append(numpy.mean(importance_list))
+                top_lab_importance.append(numpy.mean(lab_importance_list))
+                all_result = alg_classification.sumup_classification_result(result_list)
+                precisions.append(all_result.prec)
+                recalls.append(all_result.rec)
+                f_measures.append(all_result.f)
+
+            graphs.line_series(numpy.array([recalls, precisions, f_measures]), eval_n_input ,
+                           ['recall', 'precision', 'f_measure'],
+                           x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                           filename = graphs.dir_to_save + self.__param_code() + '_n_metric_dae.png' )
+
+            graphs.line_series(numpy.array([selected_feature_importance, top_lab_importance]), eval_n_input ,
+                           ['selected', 'lab_test'],
+                           x_label = "Number of Metrics Used", y_label = "Entropy Reduction",
+                           filename = graphs.dir_to_save + self.__param_code() + '_top_dae_importance.png' )
+            
+    def point_eval_orig(self):
+        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
+        if self.classification:
+            if self.n_cv_folds > 1:
+                print "[INFO] eval cross validation"
+                self.__eval_with_classification(
+                    lab_data, vital_data, flags,
+                    most_common_tests, lab_descs, lab_units)
+            else:
+                raise ValueError("n_cv_fold should be 2 or larger")
+        else:
+            if self.n_cv_folds == 1:
+                print "[INFO] eval_as_single_set"
+                return self.__eval_as_single_set(
+                    lab_data, vital_data, flags,
+                    most_common_tests, lab_descs, lab_units,
+                    )
+            elif self.n_cv_folds > 1:
+                print "[INFO] eval cross validation"
+                return  self.__eval_cross_validation(
+                    lab_data, vital_data, flags, 
+                    most_common_tests, lab_descs, lab_units)
+            else:
+                raise ValueError("n_cv_fold should be 1 or larger")
+
+    def __eval_with_classification(self, lab_data, vital_data, flags, most_common_tests, lab_descs, lab_units):
+        # lab test only
+        alg_classification.cross_validate(lab_data, flags, self.n_cv_folds, self.class_alg)
+        # vital only
+        alg_classification.cross_validate(vital_data, flags, self.n_cv_folds, self.class_alg)
+        # Using both
+        all_data= numpy.hstack([lab_data, vital_data])
+        alg_classification.cross_validate(all_data, flags, self.n_cv_folds, self.class_alg)
+
+        if self.rp_learn_flag:
+
+            # cross validation
+            kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
+            result_list = []
+            for train, test in kf:
+                # datasets
+                set_train_lab = lab_data[train, :]
+                set_train_vital = vital_data[test, :]
+                flags_train = flags[train]
+
+                set_test_lab = lab_data[test, :]
+                set_test_vital = vital_data[test, :]
+                flags_test = flags[test]
+
+                encoded_values = alg_auto_encoder.get_encoded_values(
+                    set_train_lab, flags_train, set_test_lab,
+                    self.pca_components, 2,
+                    self.ica_components, 2,
+                    self.dae_hidden, 2,  self.dae_corruption )
+
+                result_list.append(alg_classification.fit_and_test(set_train_lab, flags_train, set_test_lab, flags_test, self.class_alg))
+
+            all_result = alg_classification.sumup_classification_result(result_list)
+            print all_result
+                
+    def __eval_as_single_set(self, lab_data, vital_data, flags,
+                           most_common_tests, lab_descs, lab_units):
+
         self.__classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+self.__param_code() + "_lab_imp.png")
         self.__classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save + self.__param_code() + "_vital_imp.png")
 
@@ -201,7 +335,7 @@ class evaluate_fetaure:
         for train, test in kf:
 
             # datasets
-            set_train_lab = lab_data[train, :]
+            train_lab = lab_data[train, :]
             set_train_vital = vital_data[test, :]
             flag_train = flags[train]
 
@@ -210,7 +344,7 @@ class evaluate_fetaure:
             flags_test = flags[test]
 
             encoded_values = alg_auto_encoder.get_encoded_values(
-                set_train_lab, flag_train, set_test_lab,
+                train_lab, flag_train, set_test_lab,
                 self.pca_components, 1,
                 self.ica_components, 1,
                 self.dae_hidden, 1, self.dae_corruption)
@@ -426,5 +560,7 @@ def float_list(l):
 
     
 if __name__ == '__main__':
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge = 0)
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20)
     ef.point_eval()
+    plt.waitforbuttonpress()
+

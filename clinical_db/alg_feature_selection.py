@@ -3,6 +3,11 @@ import collections
 import math
 
 
+def select_feature_index(data_x, data_y, n_select):
+    entropy_reduction = calc_entropy_reduction(data_x, data_y)
+    select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
+    return select_feature_index
+    
 def mean_entropy_reduction(reduction_results):
     base_result = reduction_results[0]
     mean_ids = [item[2] for item in base_result]
@@ -30,14 +35,12 @@ def mean_entropy_reduction(reduction_results):
 
     mean_result.sort(reverse = True)
     return mean_result
-
     
-
 # Calcurate entorpy reduction by each feature
 def calc_entropy_reduction(value_array, flag_array, item_ids=[], descs=[], units=[]):
     
     orig_entropy = entropy(flag_array)
-    print "Original entropy: %f"%orig_entropy
+#    print "Original entropy: %f"%orig_entropy
     result = [];
     for index in xrange(value_array.shape[1]):
         opt_entropy, threshold =  entropy_after_optimal_divide(flag_array, value_array[:,index])
@@ -57,6 +60,7 @@ def calc_entropy_reduction(value_array, flag_array, item_ids=[], descs=[], units
         
     result.sort(reverse = True)
     return result
+
 
 def entropy(flags):
     counter =  collections.Counter(flags)

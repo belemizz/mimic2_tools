@@ -3,11 +3,13 @@ import matplotlib.pyplot as plt
 
 from sklearn import svm, tree, linear_model
 from sklearn import cross_validation
+from collections import namedtuple
 
 import generate_sample
 import control_graph
 
 graph= control_graph.control_graph()
+ClassificationResult = namedtuple('ClassificationResult' , 'P N TP FP rec prec f acc')
 
 def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, algorithm = 'svm'):
 
@@ -40,34 +42,65 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
 
     return clf
 
-def cross_validate(x, y, n_cv_fold = 10, algorithm = 'svm'):
-    #    clf = svm.SVC(kernel = 'linear', iter_)
-
-    clf = get_algorithm(algorithm)
-    scores = cross_validation.cross_val_score(clf, x, y, cv = n_cv_fold)
-    predicted = cross_validation.cross_val_predict(clf, x, y, cv = n_cv_fold)
-
-    recall = float(sum(predicted[y == 1])) / sum(y)
-    precision = float(sum(predicted[y == 1])) / sum(predicted)
+def recall_precision(n_positive, n_negative, n_true_positive, n_false_positive):
+    recall = float(n_true_positive) / n_positive
+    precision = float(n_true_positive) / (n_true_positive + n_false_positive)
     f_measure = 2 * precision * recall / (precision + recall)
 
-    print "----------cross_varidation_result_____________"
-    for idx, score in enumerate(scores):
-        print "E%d: %f"%(idx, score)
-    print("Accuracy:  %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
-    print "Recall:    %0.4f"%recall
-    print "Precision: %0.4f"%precision
-    print "F-measure: %0.4f"%f_measure
+    n_true_negative = n_negative - n_false_positive
     
-    print "______________________________________________"
+    accuracy = float(n_true_positive + n_true_negative) / (n_positive + n_negative)
+    return recall, precision, f_measure, accuracy
+
+def fit_and_test(train_x, train_y, test_x, test_y, algorithm = 'dt'):
+    clf = get_algorithm(algorithm)
+    clf.fit(train_x, train_y)
+    predict_y = clf.predict(test_x)
+
+    n_positive = sum(test_y == 1)
+    n_negative = sum(test_y == 0)
+    n_true_positive = sum(predict_y[test_y == 1])
+    n_false_positive = sum(predict_y[test_y == 0])
+    recall, precision, f, acc = recall_precision(n_positive, n_negative, n_true_positive, n_false_positive)
+
+    return ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
+
+def sumup_classification_result(result_list):
+    n_p = 0
+    n_n = 0
+    n_tp = 0
+    n_fp = 0
+
+    for result in result_list:
+        n_p = n_p + result.P
+        n_n = n_n + result.N
+        n_tp = n_tp + result.TP
+        n_fp = n_fp + result.FP
+
+    recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
+    return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
+
+
+def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
+    clf = get_algorithm(algorithm)
+
+    scores = cross_validation.cross_val_score(clf, x, y, cv = n_cv_fold)
+    predicted = cross_validation.cross_val_predict(clf, x, y, cv = n_cv_fold)
+    n_p = sum(y == 1)
+    n_n = sum(y == 0)
+    n_tp = sum(predicted[y == 1])
+    n_fp = sum(predicted[y == 0])
+    recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
+    return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
+
 
 def get_algorithm(algorithm):
     if algorithm == 'svm':
         clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
     elif algorithm == 'dt':
-        clf = tree.DecisionTreeClassifier()
+        clf = tree.DecisionTreeClassifier(random_state = 0)
     elif algorithm == 'lr':
-        clf = linear_model.LogisticRegression()
+        clf = linear_model.LogisticRegression(random_state = 0)
     else:
         raise ValueError("algorithm is svm, dt or lr")
     return clf
@@ -86,4 +119,23 @@ if __name__ == '__main__':
         print detail
     
     cross_validation_num = 2
-    cross_validate(x, y, cross_validation_num, algorithm)
+
+    print '----using library for cross validation---'
+    print cross_validate(x, y, cross_validation_num, algorithm)
+
+    print '----own library for cross validation---'
+    kf = cross_validation.KFold(x.shape[0], n_folds = 4, shuffle = True, random_state = 0)
+    result_list = []
+    for train, test in kf:
+        train_x = x[train, :]
+        train_y = y[train]
+        
+        test_x = x[test, :]
+        test_y = y[test]
+
+        result = fit_and_test(train_x, train_y, test_x, test_y, 'lr')
+        print result
+        result_list.append(result)
+
+    print sumup_classification_result(result_list)
+    

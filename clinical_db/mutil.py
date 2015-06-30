@@ -15,16 +15,16 @@ class cache:
 
     def save(self, current_data, current_param = {} ):
         if self.key is not '':
-
+            
             if len(current_param) is not 0:
                 f = open(self.param_path, 'w')
                 cPickle.dump(current_param, f)
                 f.close()
-                
             g = open(self.data_path, 'w')
             cPickle.dump(current_data, g)
             g.close()
-            return current_data
+            
+        return current_data
 
     def load(self, current_param = {}):
         if self.key is not '':
@@ -47,7 +47,7 @@ class cache:
                         g.close()
                         print "[INFO] Cache is used: %s"%self.data_path
                         return cache_data
-            raise IOError("Cache was not loaded")
+        raise IOError("Cache was not loaded")
         
     def __is_param_eq(self, param1, param2):
         if set(param1.keys()) != set(param2.keys()):
