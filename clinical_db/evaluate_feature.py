@@ -88,7 +88,7 @@ class evaluate_fetaure:
 
         graphs.line_series(data, dbd_list, label,
                            x_label = "Days before discharge", y_label = "Entropy Reduction",
-                           filename = graphs.dir_to_save + self.__param_code() + '_time.png' )
+                           filename = self.__param_code() + '_time.png' )
         return result
 
     def compare_dae_hidden(self, n_list):
@@ -140,7 +140,7 @@ class evaluate_fetaure:
         vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
         all_importance = lab_importance + vital_importance
         all_importance.sort(reverse = True)
-        self.__feature_importance_graph(all_importance[0:20], graphs.dir_to_save + self.__param_code() + "_all.png")
+        self.__feature_importance_graph(all_importance[0:20], self.__param_code() + "_all.png")
 
         lab_priority = [item[1] for item in lab_importance]
 
@@ -158,7 +158,7 @@ class evaluate_fetaure:
         graphs.line_series(numpy.array([recalls, precisions, f_measures]), range(1, self.n_lab+1) ,
                            ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
-                           filename = graphs.dir_to_save + self.__param_code() + '_n_metric.png' )
+                           filename = self.__param_code() + '_n_metric.png' )
 
         ## representation learning
         if self.rp_learn_flag:
@@ -228,12 +228,12 @@ class evaluate_fetaure:
             graphs.line_series(numpy.array([recalls, precisions, f_measures]), eval_n_input ,
                            ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
-                           filename = graphs.dir_to_save + self.__param_code() + '_n_metric_dae.png' )
+                           filename = self.__param_code() + '_n_metric_dae.png' )
 
             graphs.line_series(numpy.array([selected_feature_importance, top_lab_importance]), eval_n_input ,
                            ['selected', 'lab_test'],
                            x_label = "Number of Metrics Used", y_label = "Entropy Reduction",
-                           filename = graphs.dir_to_save + self.__param_code() + '_top_dae_importance.png' )
+                           filename = self.__param_code() + '_top_dae_importance.png' )
             
     def point_eval_orig(self):
         [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
@@ -298,8 +298,10 @@ class evaluate_fetaure:
     def __eval_as_single_set(self, lab_data, vital_data, flags,
                            most_common_tests, lab_descs, lab_units):
 
-        self.__classify_important_feature(lab_importance, lab_data, flags, filename = graphs.dir_to_save+self.__param_code() + "_lab_imp.png")
-        self.__classify_important_feature(vital_importance, vital_data, flags, filename = graphs.dir_to_save + self.__param_code() + "_vital_imp.png")
+        self.__classify_important_feature(lab_importance, lab_data, flags,
+                                          filename = self.__param_code() + "_lab_imp.png")
+        self.__classify_important_feature(vital_importance, vital_data, flags,
+                                          filename = self.__param_code() + "_vital_imp.png")
 
         if self.rp_learn_flag:
             ## Encoded Feature Evalation
@@ -321,8 +323,8 @@ class evaluate_fetaure:
             all_importance = lab_importance + feature_importance + vital_importance
             all_importance.sort(reverse = True)
 
-            self.__feature_importance_graph(lab_feature_importance[0:20], graphs.dir_to_save + self.__param_code() + "_lab_feature.png")
-            self.__classify_important_feature(feature_importance, feature_data, flags, filename = graphs.dir_to_save+self.__param_code() + "_feature_imp.png")
+            self.__feature_importance_graph(lab_feature_importance[0:20], self.__param_code() + "_lab_feature.png")
+            self.__classify_important_feature(feature_importance, feature_data, flags, filename = self.__param_code() + "_feature_imp.png")
 
         return all_importance
 
@@ -364,7 +366,7 @@ class evaluate_fetaure:
         mean_reduction = alg_feature_selection.mean_entropy_reduction(results)
 
         print numpy.array(mean_reduction)
-        self.__feature_importance_graph(mean_reduction[0:20], graphs.dir_to_save + self.__param_code() + "_cv_lab_feature.png")
+        self.__feature_importance_graph(mean_reduction[0:20],  self.__param_code() + "_cv_lab_feature.png")
         return mean_reduction
 
 
@@ -558,7 +560,6 @@ def float_list(l):
     return numpy.array(f_list)
 
 
-    
 if __name__ == '__main__':
     ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20)
     ef.point_eval()
