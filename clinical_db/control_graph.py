@@ -137,10 +137,35 @@ class control_graph:
         
         Y = range(len(data))
         Y.reverse()
-        
+
         ax.barh(Y, data, height = 0.4)
         plt.yticks([item + 0.2 for item in Y], labels) 
 
+        if x_label is not "": ax.set_xlabel(x_label)
+        if title is not "": ax.set_title(title)
+
+        self.__show_and_save(fig, filename, show_flag, original_data)
+        
+    def bar_pl(self, data_list, labels, legend, xlim = [], x_label = "", title = "", filename = "", show_flag = True):
+        original_data = locals().copy()
+        
+        fig, ax = plt.subplots()
+
+        Y = range(len(labels))
+        Y.reverse()
+        bar_height = 1./(len(data_list)+1)
+        cmap = plt.cm.rainbow
+        cmap_v = cmap.N/(len(legend)-1)
+        for index, data in enumerate(data_list):
+            ax.barh([y+bar_height*(len(legend)-index-1) for y in Y],
+                    data,
+                    height = bar_height,
+                    color = cmap(index*cmap_v))
+
+        plt.yticks([item + bar_height/2 * len(legend) for item in Y], labels) 
+        plt.legend(legend)
+        
+        if xlim is not []: ax.set_xlim(xlim)
         if x_label is not "": ax.set_xlabel(x_label)
         if title is not "": ax.set_title(title)
 

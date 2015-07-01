@@ -150,36 +150,44 @@ class evaluate_fetaure:
         vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
         all_importance = lab_importance + vital_importance
         all_importance.sort(reverse = True)
-        self.__feature_importance_graph(all_importance[0:20], self.__param_code() + "_all.png")
+#        self.__feature_importance_graph(all_importance[0:20], self.__param_code() + "_all.png")
 
+        ## classification with combination of multiple metrics
+        lab_class_result = []
         lab_priority = [item[1] for item in lab_importance]
-
-        ## classification with combination of multiple metrics 
-        recalls = []
-        precisions = []
-        f_measures = []
         for n_items in range(1, self.n_lab+1):
             pri_lab = lab_data[:, lab_priority[0:n_items]]
             result = alg_classification.cross_validate(pri_lab, flags, self.n_cv_folds, self.class_alg)
-            precisions.append(result.prec)
-            recalls.append(result.rec)
-            f_measures.append(result.f)
+            lab_class_result.append(result)
 
-        graphs.line_series(numpy.array([recalls, precisions, f_measures]), range(1, self.n_lab+1) ,
+        graph_data = numpy.transpose(numpy.array([ [item.rec, item.prec, item.f] for item in lab_class_result ]))
+        graphs.line_series(graph_data, range(1, self.n_lab+1) ,
                            ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
-                           title = self.class_alg, ylim = [0,1],
-                           filename = self.__param_code() + '_n_metric.png' )
+                           title = "%s Lab Tests"%self.class_alg, ylim = [0,1],
+                           filename = self.__param_code() + '_n_metric_lab.png' )
+        ret_val['lab_class'] = lab_class_result
 
-        ret_val['recall'] = recalls
-        ret_val['precisions'] = precisions
-        ret_val['f_measures'] = f_measures
-
+        vital_class_result = []
+        vital_priority = [item[1] for item in vital_importance]
+        print vital_priority
+            
+        for n_items in range(1, 5):
+            pri_vital = vital_data[:, vital_priority[0: n_items]]
+            vital_class_result.append(alg_classification.cross_validate(pri_vital, flags, self.n_cv_folds, self.class_alg))
+        
+        graph_data = numpy.transpose(numpy.array([ [item.rec, item.prec, item.f] for item in vital_class_result ]))
+        graphs.line_series(graph_data, range(1, 5) ,
+                           ['recall', 'precision', 'f_measure'],
+                           x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                           title = "%s Vital"%self.class_alg, ylim = [0,1],
+                           filename = self.__param_code() + '_n_metric_vital.png' )
+        ret_val['vital_class'] = vital_class_result
 
         ## representation learning
         if self.rp_learn_flag:
             
-            recalls = []
+            lab_recall = []
             precisions = []
             f_measures = []
 
@@ -251,7 +259,7 @@ class evaluate_fetaure:
 
                 all_result = alg_classification.sumup_classification_result(result_list)
                 precisions.append(all_result.prec)
-                recalls.append(all_result.rec)
+                lab_recall.append(all_result.rec)
                 f_measures.append(all_result.f)
 
                 all_sel_result = alg_classification.sumup_classification_result(sel_result_list)
@@ -259,7 +267,7 @@ class evaluate_fetaure:
                 sel_recalls.append(all_sel_result.rec)
                 sel_f_measures.append(all_sel_result.f)
 
-            graphs.line_series(numpy.array([recalls, precisions, f_measures]), eval_n_input ,
+            graphs.line_series(numpy.array([lab_recall, precisions, f_measures]), eval_n_input ,
                            ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
                            filename = self.__param_code() + '_n_metric_dae.png' )
@@ -590,19 +598,16 @@ def float_list(l):
 
 if __name__ == '__main__':
 
-
     result = []
-    for alg in alg_classification.algorithm_list:
-        ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20, rp_learn_flag = False, class_alg = alg)
+    for alg in alg_classification.algorithm_list[4:5]:
+        ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, rp_learn_flag = False, class_alg = alg)
         result.append(ef.point_eval())
+    
 
-    recall_10 =  [item['recall'][9] for item in result]
-    alg =  [item['param']['class_alg'] for item in result]
-    graphs.bar_comparison(recall_10, alg, title = 'recall 10', filename = 'recall10.png')
 
-    recall_20 =  [item['recall'][19] for item in result]
-    alg =  [item['param']['class_alg'] for item in result]
-    graphs.bar_comparison(recall_20, alg, title = 'recall 20', filename = 'recall20.png')
+    ## recall_20 =  [item['recall'][19] for item in result]
+    ## alg =  [item['param']['class_alg'] for item in result]
+    ## graphs.bar_comparison(recall_20, alg, title = 'recall 20', filename = 'recall20.png')
     
     ## print "n_lab == 10"
     ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
