@@ -138,6 +138,8 @@ class evaluate_fetaure:
 
         
     def point_eval(self):
+        ret_val = {'param': self.__dict__.copy()}
+        
         print self.__param_code()
 
         """ Basic evaluation method """
@@ -152,7 +154,7 @@ class evaluate_fetaure:
 
         lab_priority = [item[1] for item in lab_importance]
 
-        ## multiple metric combination
+        ## classification with combination of multiple metrics 
         recalls = []
         precisions = []
         f_measures = []
@@ -166,7 +168,13 @@ class evaluate_fetaure:
         graphs.line_series(numpy.array([recalls, precisions, f_measures]), range(1, self.n_lab+1) ,
                            ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                           title = self.class_alg, ylim = [0,1],
                            filename = self.__param_code() + '_n_metric.png' )
+
+        ret_val['recall'] = recalls
+        ret_val['precisions'] = precisions
+        ret_val['f_measures'] = f_measures
+
 
         ## representation learning
         if self.rp_learn_flag:
@@ -265,6 +273,8 @@ class evaluate_fetaure:
                            ['selected', 'lab_test'],
                            x_label = "Number of Metrics Used", y_label = "Entropy Reduction",
                            filename = self.__param_code() + '_top_dae_importance.png' )
+
+        return ret_val
 
             
     def point_eval_orig(self):
@@ -578,13 +588,27 @@ def float_list(l):
         f_list.append(float(s))
     return numpy.array(f_list)
 
-
 if __name__ == '__main__':
 
-    print "n_lab == 10"
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
-    ef.point_eval()
-    print "n_lab == 20"
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, dae_hidden = 20, dae_n_epoch = 20000, rp_learn_flag = True)
-    ef.point_eval()
+
+    result = []
+    for alg in alg_classification.algorithm_list:
+        ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20, rp_learn_flag = False, class_alg = alg)
+        result.append(ef.point_eval())
+
+    recall_10 =  [item['recall'][9] for item in result]
+    alg =  [item['param']['class_alg'] for item in result]
+    graphs.bar_comparison(recall_10, alg, title = 'recall 10', filename = 'recall10.png')
+
+    recall_20 =  [item['recall'][19] for item in result]
+    alg =  [item['param']['class_alg'] for item in result]
+    graphs.bar_comparison(recall_20, alg, title = 'recall 20', filename = 'recall20.png')
+    
+    ## print "n_lab == 10"
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
+    ## ef.point_eval()
+    
+    ## print "n_lab == 20"
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, dae_hidden = 20, dae_n_epoch = 20000, rp_learn_flag = True)
+    ## ef.point_eval()
     plt.waitforbuttonpress()

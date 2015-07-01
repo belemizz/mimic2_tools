@@ -1,7 +1,7 @@
 import numpy
 import matplotlib.pyplot as plt
 
-from sklearn import svm, tree, linear_model
+from sklearn import svm, tree, linear_model, ensemble
 from sklearn import cross_validation
 from collections import namedtuple
 
@@ -11,10 +11,31 @@ import control_graph
 graph= control_graph.control_graph()
 ClassificationResult = namedtuple('ClassificationResult' , 'P N TP FP rec prec f acc')
 
+algorithm_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
+
+def get_algorithm(algorithm):
+    if algorithm == 'svm':
+        clf = svm.SVC(random_state = 0, kernel = 'linear', max_iter = 200000)
+    elif algorithm == 'rsvm':
+        clf = svm.SVC(random_state = 0, kernel = 'rbf', max_iter = 200000)
+    elif algorithm == 'psvm':
+        clf = svm.SVC(random_state = 0, kernel = 'poly', max_iter = 200000)
+    elif algorithm == 'dt':
+        clf = tree.DecisionTreeClassifier(random_state = 0)
+    elif algorithm == 'lr':
+        clf = linear_model.LogisticRegression(random_state = 0)
+    elif algorithm == 'rf':
+        clf = ensemble.RandomForestClassifier(random_state = 0)
+    elif algorithm == 'ab':
+        clf = ensemble.AdaBoostClassifier(random_state = 0)
+    else:
+        raise ValueError("algorithm has to be either %s"%algorithm_list)
+    return clf
+
 def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, algorithm = 'svm'):
 
     clf = get_algorithm(algorithm)
-        
+
     if x.shape[1] is not 2:
         raise ValueError("Can't show: x dimension is not 2")
 
@@ -70,16 +91,13 @@ def sumup_classification_result(result_list):
     n_n = 0
     n_tp = 0
     n_fp = 0
-
     for result in result_list:
         n_p = n_p + result.P
         n_n = n_n + result.N
         n_tp = n_tp + result.TP
         n_fp = n_fp + result.FP
-
     recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
     return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
-
 
 def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     clf = get_algorithm(algorithm)
@@ -93,27 +111,16 @@ def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
     return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
 
-
-def get_algorithm(algorithm):
-    if algorithm == 'svm':
-        clf = svm.LinearSVC(max_iter = 200000, random_state = 0)
-    elif algorithm == 'dt':
-        clf = tree.DecisionTreeClassifier(random_state = 0)
-    elif algorithm == 'lr':
-        clf = linear_model.LogisticRegression(random_state = 0)
-    else:
-        raise ValueError("algorithm is svm, dt or lr")
-    return clf
         
 if __name__ == '__main__':
     source_num = 2
-    n_dim = 300
+    n_dim = 200
     n_flag = 2
     [x,y]= generate_sample.get_samples_with_target(source_num, n_dim, n_flag)
 
-    algorithm = 'svm'
+    algorithm = 'ab'
     try:
-        plot_2d(x,y, algorithm)
+        plot_2d(x,y, algorithm = algorithm)
         plt.waitforbuttonpress()
     except ValueError, detail:
         print detail
@@ -133,9 +140,9 @@ if __name__ == '__main__':
         test_x = x[test, :]
         test_y = y[test]
 
-        result = fit_and_test(train_x, train_y, test_x, test_y, 'lr')
+        result = fit_and_test(train_x, train_y, test_x, test_y, algorithm = algorithm)
         print result
         result_list.append(result)
 
+    print 'SUMUP'
     print sumup_classification_result(result_list)
-    
