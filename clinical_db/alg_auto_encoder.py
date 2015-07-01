@@ -38,12 +38,10 @@ def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = '
         pca = PCA(n_components = n_components).fit(train_x)
         pca_train = pca.transform(train_x)
         pca_test = pca.transform(test_x)
-
         entropy_reduction = alg_feature_selection.calc_entropy_reduction(pca_train, train_y)
         select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
         return pca_test[:,select_feature_index]
         
-
 def ica(train_x, test_x, n_components, cache_key = 'ica'):
     params = locals()
     cache = mutil.cache(cache_key)
@@ -92,7 +90,6 @@ def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, ba
         return cache.save(ret_val, params )
 
     
-
 def dae_selected(train_x, train_y, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
 
     params = locals()
@@ -114,11 +111,10 @@ def dae_selected(train_x, train_y, test_x, learning_rate = 0.1, n_epochs = 2000,
         
         select_feature_index = alg_feature_selection.select_feature_index(da_train, train_y, n_select)
         return da_test[:,select_feature_index]
-        
+
 
 def da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_level):
     
-
     ## Check type and convert to the shared valuable
     norm_train_x = normalize(train_x)
     shared_train = convert_to_tensor_shared_variable(norm_train_x)

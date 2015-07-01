@@ -32,9 +32,10 @@ class evaluate_fetaure:
                   ica_components = 5,
                   dae_hidden = 40,
                   dae_corruption = 0.3,
+                  dae_n_epoch = 20,
                   n_cv_folds = 4,
                   classification = False,
-                  class_alg = 'lr'):
+                  class_alg = 'dt'):
         
         # params for data retrieval
         self.max_id = max_id
@@ -49,6 +50,7 @@ class evaluate_fetaure:
         self.ica_components = ica_components
         self.dae_hidden = dae_hidden
         self.dae_corruption = dae_corruption
+        self.dae_n_epoch = dae_n_epoch
         self.n_cv_folds = n_cv_folds
         self.classification = classification
         self.class_alg = class_alg
@@ -60,6 +62,9 @@ class evaluate_fetaure:
                 'days_before_discharge' : self.days_before_discharge,
                 'span' : self.span
                 }
+
+    def __param_code(self):
+        return "%s"%self.__dict__.values()
 
     def compare_dbd(self, dbd_list):
 
@@ -131,7 +136,10 @@ class evaluate_fetaure:
             ret_val =  [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags]
             return cache.save(ret_val, param)
 
+        
     def point_eval(self):
+        print self.__param_code()
+
         """ Basic evaluation method """
         [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
 
@@ -167,10 +175,14 @@ class evaluate_fetaure:
             precisions = []
             f_measures = []
 
+            sel_recalls = []
+            sel_precisions = []
+            sel_f_measures = []
+
             selected_feature_importance = []
             top_lab_importance = []
 
-            eval_n_input = range(1,self.n_lab + 1);
+            eval_n_input = range(1,self.n_lab + 1)
             
             for n_input in eval_n_input:
 
@@ -181,8 +193,8 @@ class evaluate_fetaure:
                 # cross validation
                 kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
                 result_list = []
+                sel_result_list = []
                 importance_list = []
-                importance_list2 = []
                 lab_importance_list = []
                 for train, test in kf:
                     # datasets
@@ -200,11 +212,19 @@ class evaluate_fetaure:
                         n_hidden = self.dae_hidden,
                         corruption_level = self.dae_corruption,
                         return_train = True,
-                        n_epochs = 4000
+                        n_epochs = self.dae_n_epoch
                         )
 
                     # classification
                     result_list.append(alg_classification.fit_and_test(enc_train_x, train_y, enc_test_x, test_y, self.class_alg))
+
+                    # classification_after_selection
+                    ratio = 0.3
+                    n_sel = int(ratio * n_input + 1)
+                    sel_index =  alg_feature_selection.select_feature_index(enc_train_x, train_y, n_sel)
+                    sel_train_x = enc_train_x[:, sel_index]
+                    sel_test_x = enc_test_x[:, sel_index]
+                    sel_result_list.append(alg_classification.fit_and_test(sel_train_x, train_y, sel_test_x, test_y, self.class_alg))
 
                     # feature_importance
                     i_index = alg_feature_selection.select_feature_index(enc_train_x, train_y, 1)
@@ -220,20 +240,32 @@ class evaluate_fetaure:
 
                 selected_feature_importance.append(numpy.mean(importance_list))
                 top_lab_importance.append(numpy.mean(lab_importance_list))
+
                 all_result = alg_classification.sumup_classification_result(result_list)
                 precisions.append(all_result.prec)
                 recalls.append(all_result.rec)
                 f_measures.append(all_result.f)
+
+                all_sel_result = alg_classification.sumup_classification_result(sel_result_list)
+                sel_precisions.append(all_sel_result.prec)
+                sel_recalls.append(all_sel_result.rec)
+                sel_f_measures.append(all_sel_result.f)
 
             graphs.line_series(numpy.array([recalls, precisions, f_measures]), eval_n_input ,
                            ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
                            filename = self.__param_code() + '_n_metric_dae.png' )
 
+            graphs.line_series(numpy.array([sel_recalls, sel_precisions, sel_f_measures]), eval_n_input,
+                           ['recall', 'precision', 'f_measure'],
+                           x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                           filename = self.__param_code() + '_n_metric_dae_sel0.3.png' )
+
             graphs.line_series(numpy.array([selected_feature_importance, top_lab_importance]), eval_n_input ,
                            ['selected', 'lab_test'],
                            x_label = "Number of Metrics Used", y_label = "Entropy Reduction",
                            filename = self.__param_code() + '_top_dae_importance.png' )
+
             
     def point_eval_orig(self):
         [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
@@ -368,7 +400,6 @@ class evaluate_fetaure:
         print numpy.array(mean_reduction)
         self.__feature_importance_graph(mean_reduction[0:20],  self.__param_code() + "_cv_lab_feature.png")
         return mean_reduction
-
 
     def __ts_eval(self):
         print 'not implemented'
@@ -527,18 +558,6 @@ class evaluate_fetaure:
         return lab_array, chart_array, y
 
 
-    def __param_code(self):
-        return "mid%d_tc%s_nf%d_dbd%0.2f_pca%d_ica%d_da%d_%f_%d"%(self.max_id,
-                                                            self.target_codes,
-                                                            self.n_lab,
-                                                            self.days_before_discharge,
-                                                            self.pca_components,
-                                                            self.ica_components,
-                                                            self.dae_hidden,
-                                                            self.dae_corruption,
-                                                               self.n_cv_folds)
-
-
 ############ UTILITY ###################
 def is_number(s):
     try:
@@ -561,7 +580,11 @@ def float_list(l):
 
 
 if __name__ == '__main__':
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20)
+
+    print "n_lab == 10"
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
+    ef.point_eval()
+    print "n_lab == 20"
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, dae_hidden = 20, dae_n_epoch = 20000, rp_learn_flag = True)
     ef.point_eval()
     plt.waitforbuttonpress()
-
