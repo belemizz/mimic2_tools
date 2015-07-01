@@ -581,10 +581,17 @@ def float_list(l):
 
 if __name__ == '__main__':
 
-    print "n_lab == 10"
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, rp_learn_flag = False, class_alg = 'psvm')
     ef.point_eval()
-    print "n_lab == 20"
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, dae_hidden = 20, dae_n_epoch = 20000, rp_learn_flag = True)
+
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, rp_learn_flag = False, class_alg = 'rsvm')
     ef.point_eval()
+
+    ## print "n_lab == 10"
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
+    ## ef.point_eval()
+    
+    ## print "n_lab == 20"
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, dae_hidden = 20, dae_n_epoch = 20000, rp_learn_flag = True)
+    ## ef.point_eval()
     plt.waitforbuttonpress()
