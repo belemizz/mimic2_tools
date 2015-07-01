@@ -11,7 +11,7 @@ import control_graph
 graph= control_graph.control_graph()
 ClassificationResult = namedtuple('ClassificationResult' , 'P N TP FP rec prec f acc')
 
-algorithm_list = ['svm', 'rsvm', 'psvm', 'dt', 'lr', 'rf', 'ab']
+algorithm_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
 
 def get_algorithm(algorithm):
     if algorithm == 'svm':

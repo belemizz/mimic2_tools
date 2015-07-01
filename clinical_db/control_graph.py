@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from more_itertools import chunked
+import cPickle
 
 class control_graph:
     def __init__(self):
@@ -79,27 +80,6 @@ class control_graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
-    def line_series(self, data, timestamp, label, x_label="", y_label="", title="", markersize = 10, filename = "", show_flag = True):
-
-        fig, ax = plt.subplots()
-        for item in data:
-            if markersize is 0:
-                ax.plot(timestamp, item, '-')
-            else:
-                ax.plot(timestamp, item, 'o--', markersize = markersize)
-        ax.legend(label)
-
-        ax.set_xlim(self.__calc_lim(timestamp, 0.05))
-        
-        if x_label is not "": ax.set_xlabel(x_label)
-        if y_label is not "": ax.set_ylabel(y_label)
-                
-        self.__show_and_save(fig, filename, show_flag)
-
-    def __calc_lim(self,values, margin_ratio):
-        margin = (max(values) - min(values)) * margin_ratio
-        return [min(values) - margin, max(values) + margin]
-
 
     def plot_classification(self, positive, negative, line, title, filename = "", show_flag = True, x_label = "", y_label = ""):
         fig, ax = plt.subplots()
@@ -145,11 +125,50 @@ class control_graph:
         ax.barh(Y, entropy_reduction, height = 0.4)
         plt.yticks(Y, labels)
         ax.set_xlabel("Entropy Reduction")
-        plt.tick_params(axis = 'both', which = 'major', labelsize = 8)
-        plt.tick_params(axis = 'both', which = 'minor', labelsize = 8)
+        plt.tick_params(axis = 'both', which = 'both', labelsize = 8)
         plt.tight_layout()
 
         self.__show_and_save(fig, filename, show_flag)
+
+    def bar_comparison(self, data, labels, x_label = "", title = "", filename = "", show_flag = True):
+        original_data = locals().copy()
+        
+        fig, ax = plt.subplots()
+        
+        Y = range(len(data))
+        Y.reverse()
+        
+        ax.barh(Y, data, height = 0.4)
+        plt.yticks([item + 0.2 for item in Y], labels) 
+
+        if x_label is not "": ax.set_xlabel(x_label)
+        if title is not "": ax.set_title(title)
+
+        self.__show_and_save(fig, filename, show_flag, original_data)
+        
+    def line_series(self, data, timestamp, label, x_label="", y_label="", title="", ylim = [], markersize = 10, filename = "", show_flag = True):
+        original_data = locals().copy()
+        
+        fig, ax = plt.subplots()
+        for item in data:
+            if markersize is 0:
+                ax.plot(timestamp, item, '-')
+            else:
+                ax.plot(timestamp, item, 'o--', markersize = markersize)
+        ax.legend(label)
+        ax.set_xlim(self.__calc_lim(timestamp, 0.05))
+        
+        if ylim is not []: ax.set_ylim(ylim)
+        if x_label is not "": ax.set_xlabel(x_label)
+        if y_label is not "": ax.set_ylabel(y_label)
+        if title is not "": ax.set_title(title)
+                
+        self.__show_and_save(fig, filename, show_flag, original_data)
+        
+
+    def __calc_lim(self,values, margin_ratio):
+        margin = (max(values) - min(values)) * margin_ratio
+        return [min(values) - margin, max(values) + margin]
 
     def normalize(self, value):
         max_val = max(abs(value))
@@ -157,10 +176,17 @@ class control_graph:
         n_value = value / order
         return n_value, order
 
-    def __show_and_save(self, fig, filename, show_flag):
+    def __show_and_save(self, fig, filename, show_flag, data = None):
         if len(filename) > 0:
             path = self.dir_to_save + filename
             fig.savefig(path)
+
+            if data is not None:
+                p_path = path + '.pkl'
+                f = open(p_path, 'w')
+                cPickle.dump(data, f)
+                f.close()
+                
         if show_flag:
             fig.show()
 
