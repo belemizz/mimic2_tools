@@ -30,7 +30,8 @@ class evaluate_fetaure:
                   rp_learn_flag = True,
                   pca_components = 5,
                   ica_components = 5,
-                  dae_hidden = 40,
+                  dae_hidden_ratio = 2,
+                  dae_select_ratio = 0.4,
                   dae_corruption = 0.3,
                   dae_n_epoch = 20,
                   n_cv_folds = 4,
@@ -48,7 +49,8 @@ class evaluate_fetaure:
         self.rp_learn_flag = rp_learn_flag
         self.pca_components = pca_components
         self.ica_components = ica_components
-        self.dae_hidden = dae_hidden
+        self.dae_hidden_ratio = dae_hidden_ratio
+        self.dae_select_ratio = dae_select_ratio
         self.dae_corruption = dae_corruption
         self.dae_n_epoch = dae_n_epoch
         self.n_cv_folds = n_cv_folds
@@ -155,14 +157,14 @@ class evaluate_fetaure:
         ## classification with combination of multiple metrics
         lab_class_result = []
         lab_priority = [item[1] for item in lab_importance]
-        for n_items in range(1, self.n_lab+1):
+        eval_n_input = range(1,self.n_lab + 1)
+        for n_items in eval_n_input:
             pri_lab = lab_data[:, lab_priority[0:n_items]]
             result = alg_classification.cross_validate(pri_lab, flags, self.n_cv_folds, self.class_alg)
             lab_class_result.append(result)
 
         graph_data = numpy.transpose(numpy.array([ [item.rec, item.prec, item.f] for item in lab_class_result ]))
-        graphs.line_series(graph_data, range(1, self.n_lab+1) ,
-                           ['recall', 'precision', 'f_measure'],
+        graphs.line_series(graph_data, eval_n_input, ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
                            title = "%s Lab Tests"%self.class_alg, ylim = [0,1],
                            filename = self.__param_code() + '_n_metric_lab.png' )
@@ -186,32 +188,25 @@ class evaluate_fetaure:
 
         ## representation learning
         if self.rp_learn_flag:
-            
-            lab_recall = []
-            precisions = []
-            f_measures = []
 
-            sel_recalls = []
-            sel_precisions = []
-            sel_f_measures = []
+            dae_result = []
+            dae_sel_result = []
+            dae_top_importance = []
+            lab_top_importance = []
 
-            selected_feature_importance = []
-            top_lab_importance = []
-
-            eval_n_input = range(1,self.n_lab + 1)
             
             for n_input in eval_n_input:
 
                 print "---------stage%d----------"%n_input
-                self.dae_hidden = 2 * n_input
+                n_dae_hidden = int(self.dae_hidden_ratio * n_input)
                 pri_lab = lab_data[:, lab_priority[0:n_input]]
 
                 # cross validation
                 kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
-                result_list = []
-                sel_result_list = []
-                importance_list = []
-                lab_importance_list = []
+                dae_cv = []
+                dae_sel_cv = []
+                dae_top_imp_cv = []
+                lab_imp_cv = []
                 for train, test in kf:
                     # datasets
                     train_lab = pri_lab[train, :]
@@ -225,62 +220,68 @@ class evaluate_fetaure:
                     # encoding
                     enc_test_x, enc_train_x = alg_auto_encoder.dae(
                         train_lab, test_lab,
-                        n_hidden = self.dae_hidden,
+                        n_hidden = n_dae_hidden,
                         corruption_level = self.dae_corruption,
                         return_train = True,
                         n_epochs = self.dae_n_epoch
                         )
 
                     # classification
-                    result_list.append(alg_classification.fit_and_test(enc_train_x, train_y, enc_test_x, test_y, self.class_alg))
+                    dae_cv.append(alg_classification.fit_and_test(enc_train_x, train_y, enc_test_x, test_y, self.class_alg))
 
                     # classification_after_selection
-                    ratio = 0.3
-                    n_sel = int(ratio * n_input + 1)
+                    n_sel = int(self.dae_select_ratio * n_input + 1)
                     sel_index =  alg_feature_selection.select_feature_index(enc_train_x, train_y, n_sel)
                     sel_train_x = enc_train_x[:, sel_index]
                     sel_test_x = enc_test_x[:, sel_index]
-                    sel_result_list.append(alg_classification.fit_and_test(sel_train_x, train_y, sel_test_x, test_y, self.class_alg))
+                    dae_sel_cv.append(alg_classification.fit_and_test(sel_train_x, train_y, sel_test_x, test_y, self.class_alg))
 
                     # feature_importance
                     i_index = alg_feature_selection.select_feature_index(enc_train_x, train_y, 1)
                     feature_data = enc_test_x[:, i_index]
                     feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, test_y)                    
-                    importance_list.append(feature_importance[0][0])
+                    dae_top_imp_cv.append(feature_importance[0][0])
 
                     # importance of each lab_test for comparison
                     test_all_lab = lab_data[test, :]
                     lab_importance = alg_feature_selection.calc_entropy_reduction(test_all_lab, test_y)
                     sorted(lab_importance)
-                    lab_importance_list.append(lab_importance[0][0])
+                    lab_imp_cv.append(lab_importance[0][0])
 
-                selected_feature_importance.append(numpy.mean(importance_list))
-                top_lab_importance.append(numpy.mean(lab_importance_list))
+                dae_top_importance.append(numpy.mean(dae_top_imp_cv))
+                lab_top_importance.append(numpy.mean(lab_imp_cv))
+                dae_result.append(alg_classification.sumup_classification_result(dae_cv))
+                dae_sel_result.append(alg_classification.sumup_classification_result(dae_sel_cv))
 
-                all_result = alg_classification.sumup_classification_result(result_list)
-                precisions.append(all_result.prec)
-                lab_recall.append(all_result.rec)
-                f_measures.append(all_result.f)
+            
 
-                all_sel_result = alg_classification.sumup_classification_result(sel_result_list)
-                sel_precisions.append(all_sel_result.prec)
-                sel_recalls.append(all_sel_result.rec)
-                sel_f_measures.append(all_sel_result.f)
+            graph_data_dae = numpy.transpose(numpy.array([[item.rec, item.prec, item.f] for item in dae_result]))
+            graphs.line_series(graph_data_dae, eval_n_input ,['recall', 'precision', 'f_measure'],
+                               x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                               ylim = [0,1], title = "%s DAE %0.1f"%(self.class_alg,self.dae_hidden_ratio),
+                               filename = self.__param_code() + '_n_metric_dae.png' )
 
-            graphs.line_series(numpy.array([lab_recall, precisions, f_measures]), eval_n_input ,
-                           ['recall', 'precision', 'f_measure'],
-                           x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
-                           filename = self.__param_code() + '_n_metric_dae.png' )
+            graph_data_dae_sel = numpy.transpose(numpy.array([[item.rec, item.prec, item.f] for item in dae_sel_result]))
+            graphs.line_series(graph_data_dae_sel, eval_n_input,  ['recall', 'precision', 'f_measure'],
+                               x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
+                               ylim = [0,1], title = "%s DAE %0.1f select %0.1f"%(self.class_alg,self.dae_hidden_ratio, self.dae_select_ratio),
+                               filename = self.__param_code() + '_n_metric_dae_sel.png' )
 
-            graphs.line_series(numpy.array([sel_recalls, sel_precisions, sel_f_measures]), eval_n_input,
-                           ['recall', 'precision', 'f_measure'],
-                           x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
-                           filename = self.__param_code() + '_n_metric_dae_sel0.3.png' )
+            graphs.line_series(numpy.array([dae_top_importance, lab_top_importance]), eval_n_input ,
+                               ['selected', 'lab_test'],
+                               x_label = "Number of Metrics Used", y_label = "Entropy Reduction",
+                               filename = self.__param_code() + '_top_dae_importance.png' )
 
-            graphs.line_series(numpy.array([selected_feature_importance, top_lab_importance]), eval_n_input ,
-                           ['selected', 'lab_test'],
-                           x_label = "Number of Metrics Used", y_label = "Entropy Reduction",
-                           filename = self.__param_code() + '_top_dae_importance.png' )
+            f_base = numpy.transpose(numpy.array([ [item.f] for item in lab_class_result ]))
+            f_dae = numpy.transpose(numpy.array([ [item.f] for item in dae_result ]))
+            f_dae_sel = numpy.transpose(numpy.array([ [item.f] for item in dae_sel_result ]))
+            f_comp = numpy.vstack([f_base, f_dae, f_dae_sel])
+            graphs.line_series(f_comp, eval_n_input ,['lab_raw','DAE', 'DAE_SEL'],
+                               x_label = "Number of Metrics Used", y_label = "F_measure",
+                               ylim = [0,1], title = "%s DAE %0.1f SEL %0.1f Comparison"%(self.class_alg,self.dae_hidden_ratio, self.dae_select_ratio),
+                               filename = self.__param_code() + '_n_metric_dae_comp.png' )
+            
+            
 
         return ret_val
 
@@ -598,13 +599,11 @@ def float_list(l):
 
 if __name__ == '__main__':
 
-    result = []
-    for alg in alg_classification.algorithm_list[4:5]:
-        ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, rp_learn_flag = False, class_alg = alg)
-        result.append(ef.point_eval())
+#    result = []
+#    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
+#                          rp_learn_flag = True, class_alg = 'all',
+#                          )
     
-
-
     ## recall_20 =  [item['recall'][19] for item in result]
     ## alg =  [item['param']['class_alg'] for item in result]
     ## graphs.bar_comparison(recall_20, alg, title = 'recall 20', filename = 'recall20.png')
@@ -613,7 +612,26 @@ if __name__ == '__main__':
     ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
     ## ef.point_eval()
     
-    ## print "n_lab == 20"
-    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20, dae_hidden = 20, dae_n_epoch = 20000, rp_learn_flag = True)
-    ## ef.point_eval()
+
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
+                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
+                          rp_learn_flag = True, class_alg = 'dt')
+    ef.point_eval()
+
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
+                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
+                          rp_learn_flag = True, class_alg = 'dt')
+    ef.point_eval()
+
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
+                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.2,
+                          rp_learn_flag = True, class_alg = 'dt')
+    ef.point_eval()
+
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
+                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.2,
+                          rp_learn_flag = True, class_alg = 'dt')
+    ef.point_eval()
+
+
     plt.waitforbuttonpress()

@@ -171,7 +171,7 @@ class control_graph:
 
         self.__show_and_save(fig, filename, show_flag, original_data)
         
-    def line_series(self, data, timestamp, label, x_label="", y_label="", title="", ylim = [], markersize = 10, filename = "", show_flag = True):
+    def line_series(self, data, timestamp, label, x_label="", y_label="", title="", ylim = None, markersize = 10, filename = "", show_flag = True):
         original_data = locals().copy()
         
         fig, ax = plt.subplots()
@@ -183,7 +183,7 @@ class control_graph:
         ax.legend(label)
         ax.set_xlim(self.__calc_lim(timestamp, 0.05))
         
-        if ylim is not []: ax.set_ylim(ylim)
+        if ylim is not None: ax.set_ylim(ylim)
         if x_label is not "": ax.set_xlabel(x_label)
         if y_label is not "": ax.set_ylabel(y_label)
         if title is not "": ax.set_title(title)

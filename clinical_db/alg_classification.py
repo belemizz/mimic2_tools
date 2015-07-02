@@ -60,7 +60,6 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
     z = z.reshape(xx.shape)
 
     graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
-
     return clf
 
 def recall_precision(n_positive, n_negative, n_true_positive, n_false_positive):
@@ -111,7 +110,6 @@ def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
     return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
 
-        
 if __name__ == '__main__':
     source_num = 2
     n_dim = 200
