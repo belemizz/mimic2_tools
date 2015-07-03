@@ -33,14 +33,13 @@ class BinaryClassifier():
 
         # Symbol 
         self.p_y_given_x = T.nnet.sigmoid(T.dot(input, self.W) + self.b)
-#        self.y_pred_ =
 
     def negative_log_likelihood(self, y):
         """ Return the mean of the negative log-likelihood of the prediction"""
-        return - T.mean(
-            T.log(self.p_y_given_x)   *  y
-            + T.log(1-self.p_y_given_x) * (1 - y)
-            )
+        ## return - T.mean(
+        ##     T.log(self.p_y_given_x)   *  y
+        ##     + T.log(1-self.p_y_given_x) * (1 - y)
+        ##     )
         
 
 ### show the algorithms

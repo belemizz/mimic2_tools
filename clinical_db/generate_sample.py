@@ -30,6 +30,7 @@ def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
     return x, y
 
 def chop_data(all_data, all_target, data_dim, n_flag):
+    """ reduce the number of category of the flags to n_flag """
     all_flag = numpy.unique(all_target)
     flags = all_flag[0: min(all_flag.shape[0], n_flag)]
 
@@ -111,5 +112,3 @@ def uniform_dist(n_dim = 2, n_sample = 100, minimum = 0.0, maximum = 1.0, seed =
 
     numpy.random.seed(seed)
     return numpy.random.uniform(minimum, maximum, (n_sample, n_dim))
-
-

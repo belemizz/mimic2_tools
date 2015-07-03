@@ -112,11 +112,11 @@ def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
 
 if __name__ == '__main__':
     source_num = 2
-    n_dim = 200
+    n_dim = 10
     n_flag = 2
     [x,y]= generate_sample.get_samples_with_target(source_num, n_dim, n_flag)
 
-    algorithm = 'ab'
+    algorithm = 'rsvm'
     try:
         plot_2d(x,y, algorithm = algorithm)
         plt.waitforbuttonpress()

@@ -172,12 +172,10 @@ class evaluate_fetaure:
 
         vital_class_result = []
         vital_priority = [item[1] for item in vital_importance]
-        print vital_priority
-            
         for n_items in range(1, 5):
             pri_vital = vital_data[:, vital_priority[0: n_items]]
             vital_class_result.append(alg_classification.cross_validate(pri_vital, flags, self.n_cv_folds, self.class_alg))
-        
+
         graph_data = numpy.transpose(numpy.array([ [item.rec, item.prec, item.f] for item in vital_class_result ]))
         graphs.line_series(graph_data, range(1, 5) ,
                            ['recall', 'precision', 'f_measure'],
@@ -599,11 +597,13 @@ def float_list(l):
 
 if __name__ == '__main__':
 
-#    result = []
-#    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
-#                          rp_learn_flag = True, class_alg = 'all',
-#                          )
     
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
+                           dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
+                           rp_learn_flag = False, class_alg = 'svm')
+    ef.point_eval()
+
+
     ## recall_20 =  [item['recall'][19] for item in result]
     ## alg =  [item['param']['class_alg'] for item in result]
     ## graphs.bar_comparison(recall_20, alg, title = 'recall 20', filename = 'recall20.png')
@@ -613,25 +613,25 @@ if __name__ == '__main__':
     ## ef.point_eval()
     
 
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
-                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
-                          rp_learn_flag = True, class_alg = 'dt')
-    ef.point_eval()
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
+    ##                       dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
+    ##                       rp_learn_flag = True, class_alg = 'dt')
+    ## ef.point_eval()
 
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
-                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
-                          rp_learn_flag = True, class_alg = 'dt')
-    ef.point_eval()
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
+    ##                       dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
+    ##                       rp_learn_flag = True, class_alg = 'dt')
+    ## ef.point_eval()
 
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
-                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.2,
-                          rp_learn_flag = True, class_alg = 'dt')
-    ef.point_eval()
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
+    ##                       dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.2,
+    ##                       rp_learn_flag = True, class_alg = 'dt')
+    ## ef.point_eval()
 
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
-                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.2,
-                          rp_learn_flag = True, class_alg = 'dt')
-    ef.point_eval()
+    ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
+    ##                       dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.2,
+    ##                       rp_learn_flag = True, class_alg = 'dt')
+    ## ef.point_eval()
 
 
     plt.waitforbuttonpress()

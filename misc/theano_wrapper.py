@@ -40,7 +40,7 @@ def stacked_denoising_auto_encoder(x, y,
     n_valid_batches = ar_valid_x.shape[0] / batch_size
     n_test_batches = ar_test_x.shape[0] / batch_size
 
-    n_in = train_x.get_value().shape[1]
+    n_in =  train_x.get_value().shape[1]
     n_out = len( set(train_y.eval()))
 
     print '[INFO] building the model'
@@ -148,6 +148,82 @@ def stacked_denoising_auto_encoder(x, y,
                           os.path.split(__file__)[1] +
                           ' ran for %.2fm' % (sw.real_elapsed()/ 60.))
     
+def simple_lr(train_x_data, train_y_data,
+              test_x_data, test_y_data,
+              learning_rate = 0.13,
+              n_epochs = 1000,
+              batch_size = 600):
+
+    train_x = generate_sample.shared_array(train_x_data)
+    train_y = generate_sample.shared_flag(train_y_data)
+    test_x = generate_sample.shared_array(test_x_data)
+    test_y = generate_sample.shared_flag(test_y_data)
+
+    n_train_batches = train_x_data.shape[0] / batch_size
+    n_test_batches = test_x_data.shape[0] / batch_size
+
+    index = T.lscalar()
+    x = T.matrix('x')
+    y = T.ivector('y')
+
+    n_in = train_x.get_value().shape[1]
+    n_out = len( set(train_y.eval()))
+    
+    classifier = LogisticRegression(input = x, n_in = n_in, n_out = n_out)
+
+    cost = classifier.negative_log_likelihood(y)
+
+    ## models
+    test_model = theano.function(
+        inputs = [index],
+        outputs = classifier.errors(y),
+        givens = {
+            x: test_x[index * batch_size: (index+1) * batch_size],
+            y: test_y[index * batch_size: (index+1) * batch_size]
+        }
+    )
+    
+    g_W = T.grad(cost = cost, wrt=classifier.W)
+    g_b = T.grad(cost = cost, wrt=classifier.b)
+
+    updates = [(classifier.W, classifier.W - learning_rate * g_W),
+               (classifier.b, classifier.b - learning_rate * g_b)]
+
+    train_model = theano.function(
+        inputs=[index],
+#        outputs=cost,
+        outputs=classifier.errors(y),
+        updates=updates,
+        givens={
+            x: train_x[index * batch_size: (index + 1) * batch_size],
+            y: train_y[index * batch_size: (index + 1) * batch_size]
+        }
+    )
+
+    for epoch in range(1, n_epochs + 1):
+        print ('epoch', epoch)
+
+        train_errors = []
+        for minibatch_index in range(n_train_batches):
+            train_minibatch_error = train_model(minibatch_index)
+            train_errors.append(train_minibatch_error)
+        train_score = 1. - numpy.mean(train_errors)
+
+        test_errors = []
+        for minibatch_index in range(n_test_batches):
+            test_minibatch_avg_cost = test_model(minibatch_index)
+            test_errors.append(test_minibatch_avg_cost)
+
+        test_score = 1.0 - numpy.mean(test_errors)
+        print (train_score, test_score)
+        
+        done_looping = False
+        if done_looping: break
+
+        
+        
+
+
     
 
 
