@@ -116,7 +116,7 @@ def normal_dist(n_dim = 2, n_neg_sample = 100, n_pos_sample = 100, bias = [-2, 2
 
     return [x,y]
 
-def normal_timeseries(length = 50, random_length = True, n_neg_sample = 100, n_pos_sample = 100, bias = [-2, +2], seed = 0):
+def normal_timeseries(length = 50, random_length = True, n_neg_sample = 150, n_pos_sample = 50, bias = [-1, +1], seed = 0):
     data = []
 
     random.seed(seed)

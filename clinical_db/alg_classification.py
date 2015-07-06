@@ -62,6 +62,14 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
     graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
     return clf
 
+def calc_classification_result(predict_y, test_y):
+    n_positive = sum(test_y == 1)
+    n_negative = sum(test_y == 0)
+    n_true_positive = sum(predict_y[test_y == 1])
+    n_false_positive = sum(predict_y[test_y == 0])
+    recall, precision, f, acc = recall_precision(n_positive, n_negative, n_true_positive, n_false_positive)
+    return ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
+
 def recall_precision(n_positive, n_negative, n_true_positive, n_false_positive):
     recall = float(n_true_positive) / n_positive
     precision = float(n_true_positive) / (n_true_positive + n_false_positive)
@@ -76,14 +84,7 @@ def fit_and_test(train_x, train_y, test_x, test_y, algorithm = 'dt'):
     clf = get_algorithm(algorithm)
     clf.fit(train_x, train_y)
     predict_y = clf.predict(test_x)
-
-    n_positive = sum(test_y == 1)
-    n_negative = sum(test_y == 0)
-    n_true_positive = sum(predict_y[test_y == 1])
-    n_false_positive = sum(predict_y[test_y == 0])
-    recall, precision, f, acc = recall_precision(n_positive, n_negative, n_true_positive, n_false_positive)
-
-    return ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
+    return calc_classification_result(predict_y, test_y)
 
 def sumup_classification_result(result_list):
     n_p = 0
