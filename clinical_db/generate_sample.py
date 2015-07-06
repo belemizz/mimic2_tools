@@ -1,12 +1,20 @@
 import sys
 sys.path.append('../../DeepLearningTutorials/code/')
 
-import numpy
+import numpy as np
 import theano
 import theano.tensor as T
 
 import random
 
+
+def generate_time_series(source_num = 0):
+
+    if source_num is 0:
+        [x, y] = normal_timeseries()
+    else:
+        raise ValueError('source_num must be 0')
+    return x, y
 
 def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
     
@@ -40,8 +48,8 @@ def chop_data(all_data, all_target, data_dim, n_flag):
         x_list.append(all_data[all_target == flag])
         y_list.append(all_target[all_target == flag])
 
-    x = numpy.vstack(x_list)
-    y = numpy.hstack(y_list)
+    x = np.vstack(x_list)
+    y = np.hstack(y_list)
 
     if data_dim > 0:
         x = x[:, 0:data_dim]
@@ -74,13 +82,13 @@ def split_to_three_sets(x, y, valid_ratio = 1./3, test_ratio = 1./3, r_seed = 1)
 
 def shared_array(set_x):
     shared_x = theano.shared(
-        numpy.asarray(set_x, dtype = theano.config.floatX),
+        np.asarray(set_x, dtype = theano.config.floatX),
         borrow = True)
     return shared_x
 
 def shared_flag(set_y):
     shared_y = theano.shared(
-        numpy.asarray(set_y, dtype=theano.config.floatX),
+        np.asarray(set_y, dtype=theano.config.floatX),
         borrow=True)
     return T.cast(shared_y, 'int32')
 
@@ -90,25 +98,63 @@ def normal_dist(n_dim = 2, n_neg_sample = 100, n_pos_sample = 100, bias = [-2, 2
     data = []
     
     random.seed(seed)
-    numpy.random.seed(seed)
+    np.random.seed(seed)
 
     for i in xrange(0,n_neg_sample):
-        vec = numpy.random.randn(1,n_dim) + bias[0]
+        vec = np.random.randn(1,n_dim) + bias[0]
         flag = 0
         data.append([vec,flag])
     for i in range(0,n_pos_sample):
-        vec = numpy.random.randn(1,n_dim) + bias[1]
+        vec = np.random.randn(1,n_dim) + bias[1]
         flag = 1
         data.append([vec,flag])
 
     random.shuffle(data)
 
-    x = numpy.array([item[0][0] for item in data])
-    y = numpy.array([item[1] for item in data])
+    x = np.array([item[0][0] for item in data])
+    y = np.array([item[1] for item in data])
 
     return [x,y]
 
+def normal_timeseries(length = 50, random_length = True, n_neg_sample = 100, n_pos_sample = 100, bias = [-2, +2], seed = 0):
+    data = []
+
+    random.seed(seed)
+    np.random.seed(seed)
+
+    for num in xrange(0, n_neg_sample):
+        if random_length:
+            s_len = np.random.randint(length) + length
+        else:
+            s_len = length
+
+        sample = np.zeros(s_len)
+        for i in range(0, s_len):
+            sample[i] = np.random.randn(1) + bias[0]
+        flag = 0
+        data.append([sample, flag])
+
+    for num in xrange(0, n_pos_sample):
+        if random_length:
+            s_len = np.random.randint(length) + length
+        else:
+            s_len = length
+
+        sample = np.zeros(s_len)
+        for i in range(0, s_len):
+            sample[i] = np.random.randn(1) + bias[1]
+        flag = 1
+        data.append([sample, flag])
+    
+    random.shuffle(data)
+
+    x = np.array([item[0] for item in data])
+    y = np.array([item[1] for item in data])
+
+    return [x,y]
+
+
 def uniform_dist(n_dim = 2, n_sample = 100, minimum = 0.0, maximum = 1.0, seed = 1):
 
-    numpy.random.seed(seed)
-    return numpy.random.uniform(minimum, maximum, (n_sample, n_dim))
+    np.random.seed(seed)
+    return np.random.uniform(minimum, maximum, (n_sample, n_dim))
