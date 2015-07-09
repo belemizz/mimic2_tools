@@ -1,5 +1,7 @@
 import sys
+sys.path.append('../../deep_tutorial/sample_codes/')
 sys.path.append('../../DeepLearningTutorials/code/')
+
 
 import numpy as np
 import theano
@@ -7,11 +9,25 @@ import theano.tensor as T
 
 import random
 
+import imdb
 
-def generate_time_series(source_num = 0):
 
+def imdb_data():
+    train, valid, test = imdb.load_data(n_words = 10000,
+                                        valid_portion = 0.05,
+                                        maxlen = 100)
+
+    
+    x = train[0] + valid[0] + test[0]
+    y = train[1] + valid[1] + test[1]
+    return [x, y]
+
+
+def time_series(source_num = 0):
     if source_num is 0:
-        [x, y] = normal_timeseries()
+        [x ,y ] = normal_timeseries()
+    if source_num is 1:
+        [x, y ] = imdb_data()
     else:
         raise ValueError('source_num must be 0')
     return x, y
@@ -158,3 +174,14 @@ def uniform_dist(n_dim = 2, n_sample = 100, minimum = 0.0, maximum = 1.0, seed =
 
     np.random.seed(seed)
     return np.random.uniform(minimum, maximum, (n_sample, n_dim))
+
+
+def hoge():
+    print 'hoge'
+    
+if __name__ == '__main__':
+    print 'hoge'
+
+
+
+
