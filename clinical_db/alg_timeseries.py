@@ -18,6 +18,13 @@ sys.path.append('../../deep_tutorial/sample_codes/')
 def ar_float(data):
     return np.asarray(data, dtype=th.config.floatX)
 
+def th_imatrix(name):
+    return T.matrix(name, dtype= 'int64')
+
+def th_fmatrix(name):
+    return T.matrix(name, dtype= 'float64')
+
+
 def get_minibatches_idx(n, minibatch_size, shuffle=False):
     """
     Used to shuffle the dataset at each iteration.
@@ -58,25 +65,27 @@ def init_params(options):
     return params
 
 def param_init_lstm(options, params, prefix='lstm'):
-    W = np.concatenate([ortho_weight(options['dim_proj']),
-                        ortho_weight(options['dim_proj']),
-                        ortho_weight(options['dim_proj']),
-                        ortho_weight(options['dim_proj'])], axis=1)
+
+    def ortho_w(ndim):
+        W = np.random.randn(ndim, ndim)
+        u, s, v = np.linalg.svd(W)
+        return u.astype(th.config.floatX)
+
+    W = np.concatenate([ortho_w(options['dim_proj']),
+                        ortho_w(options['dim_proj']),
+                        ortho_w(options['dim_proj']),
+                        ortho_w(options['dim_proj'])], axis=1)
     params[_p(prefix, 'W')] = W
-    U = np.concatenate([ortho_weight(options['dim_proj']),
-                        ortho_weight(options['dim_proj']),
-                        ortho_weight(options['dim_proj']),
-                        ortho_weight(options['dim_proj'])], axis=1)
+    U = np.concatenate([ortho_w(options['dim_proj']),
+                        ortho_w(options['dim_proj']),
+                        ortho_w(options['dim_proj']),
+                        ortho_w(options['dim_proj'])], axis=1)
     params[_p(prefix, 'U')] = U
     b = np.zeros((4 * options['dim_proj'],))
     params[_p(prefix, 'b')] = b.astype(th.config.floatX)
 
     return params
 
-def ortho_weight(ndim):
-    W = np.random.randn(ndim, ndim)
-    u, s, v = np.linalg.svd(W)
-    return u.astype(th.config.floatX)
 
 def init_tparams(params):
     tparams = OrderedDict()
@@ -211,45 +220,168 @@ class Lstm():
                   n_epochs = 1,
                   patience=10
                   ):
-        
+
+        # loop
         self.n_epochs = n_epochs
         self.patience = patience
+        self.validFreq=370  # Compute the validation error after this number of update.
+        self.saveFreq=1110  # Save the parameters after every saveFreq updates
+        self.dispFreq=10  # Display to stdout the training progress every N updates
+
+        # optimization
+        self.optimizer=adadelta  # sgd, adadelta and rmsprop available, sgd very hard to use, not recommanded (probably need momentum and decaying learning rate).
+        self.lrate=0.0001  # Learning rate for sgd (not used for adadelta and rmsprop)
+        
+        # embedding params
+        self.dim_feature = 128
+        self.maxlen=100  # Sequence longer then this get ignored
+        self.n_words=10000  # Vocabulary size
+        self.ydim = 2
+
+        # lstm params
+
+        # classification params
+        self.use_dropout=True
+
+        # random seed
+        self.trng = RandomStreams(123)
+        np.random.seed(123)
+
+        self.__init_param()
+
+    def __init_param(self):
+        # parameters
+        params = self.__init_params()
+        self.tparams = self.__init_tparams(params)
+
+    def __init_tparams(self,params):
+        tparams = OrderedDict()
+        for kk, pp in params.iteritems():
+            tparams[kk] = th.shared(params[kk], name=kk)
+        return tparams
+
+    def __init_params(self):
+        def ortho_w(ndim):
+            W = np.random.randn(ndim, ndim)
+            u, s, v = np.linalg.svd(W)
+            return u.astype(th.config.floatX)
+        
+        params = OrderedDict()
+        # embedding
+        randn = np.random.rand(self.n_words, self.dim_feature)
+        params['Wemb'] = (0.01 * randn).astype(th.config.floatX)
+
+        # lstm
+        params['lstm_W'] = np.concatenate([ortho_w(self.dim_feature),
+                                           ortho_w(self.dim_feature),
+                                           ortho_w(self.dim_feature),
+                                           ortho_w(self.dim_feature)], axis=1)
+        params['lstm_U'] = np.concatenate([ortho_w(self.dim_feature),
+                                           ortho_w(self.dim_feature),
+                                           ortho_w(self.dim_feature),
+                                           ortho_w(self.dim_feature)], axis=1)
+        params['lstm_b'] = np.zeros((4 * self.dim_feature,)).astype(th.config.floatX)
+        
+        # classifier
+        params['U'] = 0.01 * np.random.randn(self.dim_feature, self.ydim).astype(th.config.floatX)
+        params['b'] = np.zeros((self.ydim,)).astype(th.config.floatX)
+
+        return params
+
+    def lstm_layer(self,state_below, mask=None):
+
+        nsteps = state_below.shape[0]
+        if state_below.ndim == 3:
+            n_samples = state_below.shape[1]
+        else:
+            n_samples = 1
+
+        assert mask is not None
+
+        def _slice(_x, n, dim):
+            if _x.ndim == 3:
+                return _x[:, :, n * dim:(n + 1) * dim]
+            return _x[:, n * dim:(n + 1) * dim]
+
+        def _step(m_, x_, h_, c_):
+            preact = T.dot(h_, self.tparams['lstm_U']) + x_
+
+            i = T.nnet.sigmoid(_slice(preact, 0, self.dim_feature))
+            f = T.nnet.sigmoid(_slice(preact, 1, self.dim_feature))
+            o = T.nnet.sigmoid(_slice(preact, 2, self.dim_feature))
+            c = T.tanh(_slice(preact, 3, self.dim_feature))
+
+            c = f * c_ + i * c
+            c = m_[:, None] * c + (1. - m_)[:, None] * c_
+            # if mask = 1 then c, else c_prev
+
+            h = o * T.tanh(c)
+            h = m_[:, None] * h + (1. - m_)[:, None] * h_
+            # if mask = 1 then h, else h_prev
+
+            return h, c
+
+        state =  T.dot( state_below, self.tparams['lstm_W'] ) + self.tparams['lstm_b']
+
+        rval, updates = th.scan(_step,
+                                sequences=[mask, state],
+                                outputs_info=[T.alloc(ar_float(0.),
+                                                      n_samples,
+                                                      self.dim_feature),
+                                              T.alloc(ar_float(0.),
+                                                      n_samples,
+                                                      self.dim_feature)
+                                              ],
+                                name='lstm_layers',
+                                n_steps=nsteps)
+        return rval[0] #return only sequence of hidden
+        
+    def get_lstm_cost(self, x, mask, y):
+        ## embedding
+        emb = self.tparams['Wemb'][x.flatten()].reshape([x.shape[0],
+                                                         x.shape[1],
+                                                         self.dim_feature])
+
+        ## lstm get sequence of hidden variable
+        proj = self.lstm_layer(emb, mask=mask)
+
+        ## calcurate_mean
+        proj = (proj * mask[:, :, None]).sum(axis=0)
+        proj = proj / mask.sum(axis=0)[:, None]
+
+        ## dropout
+        if self.use_dropout:
+            use_noise = th.shared( ar_float(0.))
+            proj = dropout_layer(proj, use_noise, self.trng)
+        
+        ## classification
+        pred = T.nnet.softmax(T.dot(proj, self.tparams['U']) + self.tparams['b'])
+
+        off = 1e-8
+        if pred.dtype == 'float16':
+            off = 1e-6
+        cost = -T.log(pred[T.arange(x.shape[1]), y] + off).mean()
+
+        return cost
 
     def fit(self, train_x, train_y):
         print '___fit training sample___'
 
         ## Parameters
-        dim_feature=128  # word embeding dimension and LSTM number of hidden units.
-        dispFreq=10  # Display to stdout the training progress every N updates
         decay_c=0.  # Weight decay for the classifier applied to the U weights.
-        lrate=0.0001  # Learning rate for sgd (not used for adadelta and rmsprop)
-        n_words=10000  # Vocabulary size
-        optimizer=adadelta  # sgd, adadelta and rmsprop available, sgd very hard to use, not recommanded (probably need momentum and decaying learning rate).
         saveto='lstm_model.npz'  # The best model will be saved there
-        validFreq=370  # Compute the validation error after this number of update.
-        saveFreq=1110  # Save the parameters after every saveFreq updates
-        maxlen=100  # Sequence longer then this get ignored
         batch_size=16  # The batch size during training.
         valid_batch_size=64  # The batch size used for validation/test set.
         dataset='imdb'
 
         # Parameter for extra option
         noise_std=0.
-        use_dropout=True  # if False slightly faster, but worst test error
                            # This frequently need a bigger model.
         reload_model=None  # Path to a saved model we want to start from.
         test_size=-1  # If >0, we keep only this number of test example.
 
         # parameter
         model_options = locals().copy()
-
-        # random seed
-        trng = RandomStreams(123)
-        np.random.seed(123)
-
-        # number of targets
-        ydim = np.max(train_y) + 1
-        model_options['ydim'] = ydim
 
         # todo make it to function
         n_valid = 105
@@ -261,71 +393,24 @@ class Lstm():
         train_x = train_x[0:n_train]
         train_y = train_y[0:n_train]
 
-        params = init_params(model_options)
-        tparams = init_tparams(params)
-
-        
         print '___fit build model___'
-        ## my implementation ##
-        def th_imatrix(name):
-            return T.matrix(name, dtype= 'int64')
-        def th_fmatrix(name):
-            return T.matrix(name, dtype= 'float64')
-        
+
         x = th_imatrix('x')
         y = th_imatrix('y')
         mask = th_fmatrix('mask')
 
-        n_steps = x.shape[0]
-        n_samples = x.shape[1]
-        
-        
-        ### ####
-        use_noise = th.shared( ar_float(0.) )
-        x = T.matrix('x', dtype = 'int64')
-        mask = T.matrix('mask', dtype=th.config.floatX)
-        y = T.vector('y', dtype = 'int64')
+        cost = self.get_lstm_cost(x, mask, y)
+        grads = T.grad(cost, wrt=self.tparams.values())
 
-        n_timesteps = x.shape[0]
-        n_samples = x.shape[1]
+        import ipdb
+        ipdb.set_trace()
 
-        ## embedding
-        emb = tparams['Wemb'][x.flatten()].reshape([n_timesteps,
-                                                    n_samples,
-                                                    dim_feature])
-        f_emb = th.function(inputs = [x], outputs= emb)
+#        f_proj = th.function(inputs = [x, mask], outputs=proj)
+#        f_pred_prob = th.function([x, mask], pred, name='f_pred_prob')
+#        f_pred = th.function([x, mask], pred.argmax(axis=1), name='f_pred')
 
-        ## lstm get sequence of hidden variable
-        proj = lstm_layer(tparams, emb, model_options, prefix='lstm', mask=mask)
-
-        ## calcurate_mean
-        proj = (proj * mask[:, :, None]).sum(axis=0)
-        proj = proj / mask.sum(axis=0)[:, None]
-
-        if model_options['use_dropout']:
-            proj = dropout_layer(proj, use_noise, trng)
-
-        f_proj = th.function(inputs = [x, mask], outputs=proj)
-
-        ## classification
-        pred = T.nnet.softmax(T.dot(proj, tparams['U']) + tparams['b'])
-
-        f_pred_prob = th.function([x, mask], pred, name='f_pred_prob')
-        f_pred = th.function([x, mask], pred.argmax(axis=1), name='f_pred')
-
-        off = 1e-8
-        if pred.dtype == 'float16':
-            off = 1e-6
-
-        cost = -T.log(pred[T.arange(n_samples), y] + off).mean()
-        f_cost = th.function([x,mask, y], cost, name = 'f_cost')
-        
-        grads = T.grad(cost, wrt=tparams.values())
-        f_grad = th.function([x, mask, y], grads, name='f_grad')
-        
         lr = T.scalar(name='lr')
-        f_grad_shared, f_update = optimizer(lr, tparams, grads,
-                                            x, mask, y, cost)
+        f_grad_shared, f_update = adadelta(lr, self.tparams, grads, x, mask, y, cost)
         
         print 'Optimization'
 
@@ -338,11 +423,11 @@ class Lstm():
 
         uidx = 0  # the number of update done
         estop = False  # early stop
+        use_noise = th.shared( ar_float(0.))
 
         for eidx in xrange(self.n_epochs):
             n_samples = 0
 
-            np.random.seed(123)
             kf = get_minibatches_idx(len(train_x), batch_size, shuffle = True)
 
             for _, train_index in kf:
@@ -360,18 +445,6 @@ class Lstm():
                 
                 import ipdb
                 ipdb.set_trace()
-
-
-
-                
-
-                # test
-                
-
-                
-                    
-            
-
         print 'not implemented'
 
 
