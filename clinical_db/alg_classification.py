@@ -63,6 +63,9 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
     return clf
 
 def calc_classification_result(predict_y, test_y):
+    predict_y = numpy.array(predict_y)
+    test_y = numpy.array(test_y)
+    
     n_positive = sum(test_y == 1)
     n_negative = sum(test_y == 0)
     n_true_positive = sum(predict_y[test_y == 1])
@@ -71,9 +74,20 @@ def calc_classification_result(predict_y, test_y):
     return ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
 
 def recall_precision(n_positive, n_negative, n_true_positive, n_false_positive):
-    recall = float(n_true_positive) / n_positive
-    precision = float(n_true_positive) / (n_true_positive + n_false_positive)
-    f_measure = 2 * precision * recall / (precision + recall)
+    if n_positive > 0:
+        recall = float(n_true_positive) / n_positive
+    else:
+        recall = 0.0
+
+    if (n_true_positive + n_false_positive) > 0:
+        precision = float(n_true_positive) / (n_true_positive + n_false_positive)
+    else:
+        precision = 0.0
+
+    if (precision + recall > 0.0):
+        f_measure = 2 * precision * recall / (precision + recall)
+    else:
+        f_measure = 0.0
 
     n_true_negative = n_negative - n_false_positive
     

@@ -17,6 +17,9 @@ sys.path.append('../../deep_tutorial/sample_codes/')
 def ar_float(data):
     return np.asarray(data, dtype=th.config.floatX)
 
+def print_info(word):
+    print '[INFO] ' + word
+
 def th_imatrix(name):
     return T.matrix(name, dtype= 'int64')
 
@@ -26,8 +29,19 @@ def th_ivector(name):
 def th_fmatrix(name):
     return T.matrix(name, dtype= 'float64')
 
-def print_info(word):
-    print '[INFO] ' + word
+def l_tseries_to_ar(ts_x):
+    """
+    Convert list of timeseries to numpy arrays of value and mask
+    """
+    max_length = max([len(s) for s in ts_x])
+    x = np.zeros((max_length, len(ts_x))).astype('int64')
+    mask = np.zeros((max_length, len(ts_x)))
+
+    for i_series, series in enumerate(ts_x):
+        x[:len(series), i_series] = series
+        mask[:len(series), i_series] = 1.
+
+    return x, mask
 
 def get_minibatches_idx(n, minibatch_size, shuffle=False):
     """
@@ -47,38 +61,6 @@ def get_minibatches_idx(n, minibatch_size, shuffle=False):
         # Make a minibatch out of what is left
         minibatches.append(idx_list[minibatch_start:])
     return zip(range(len(minibatches)), minibatches)
-
-def prepare_data(seqs, labels, maxlen = None):
-        # x: a list of sentences
-    lengths = [len(s) for s in seqs]
-
-    if maxlen is not None:
-        new_seqs = []
-        new_labels = []
-        new_lengths = []
-        for l, s, y in zip(lengths, seqs, labels):
-            if l < maxlen:
-                new_seqs.append(s)
-                new_labels.append(y)
-                new_lengths.append(l)
-        lengths = new_lengths
-        labels = new_labels
-        seqs = new_seqs
-
-        if len(lengths) < 1:
-            return None, None, None
-
-    n_samples = len(seqs)
-    maxlen = np.max(lengths)
-
-    x = np.zeros((maxlen, n_samples)).astype('int64')
-    x_mask = np.zeros((maxlen, n_samples)).astype(th.config.floatX)
-    for idx, s in enumerate(seqs):
-        x[:lengths[idx], idx] = s
-        x_mask[:lengths[idx], idx] = 1.
-
-    return x, x_mask, labels
-
 
 ## Optimizer
 def adadelta(lr, tparams, grads, x, mask, y, cost):
@@ -136,8 +118,8 @@ def adadelta(lr, tparams, grads, x, mask, y, cost):
     param_up = [(p, p + ud) for p, ud in zip(tparams.values(), updir)]
 
     f_update = th.function([lr], [], updates=ru2up + param_up,
-                               on_unused_input='ignore',
-                               name='adadelta_f_update')
+                            on_unused_input='ignore',
+                           name='adadelta_f_update')
 
     return f_grad_shared, f_update
 
@@ -145,7 +127,7 @@ def adadelta(lr, tparams, grads, x, mask, y, cost):
 class Lstm():
     def __init__( self,
                   n_epochs = 100,
-                  patience=2
+                  patience=20
                   ):
 
         # loop
@@ -160,14 +142,14 @@ class Lstm():
         # optimization
         self.optimizer=adadelta  # sgd, adadelta and rmsprop available, sgd very hard to use, not recommanded (probably need momentum and decaying learning rate).
         self.lrate=0.01  # Learning rate for sgd (not used for adadelta and rmsprop)
-        
+
+        # number of flags
+        self.ydim = 2
+
         # embedding params
         self.dim_feature = 128
         self.maxlen=100  # Sequence longer then this get ignored
         self.n_words=10000  # Vocabulary size
-        self.ydim = 2
-
-        # lstm params
 
         # regularization
         self.decay_c=1.  # Weight decay for the classifier applied to the U weights.
@@ -184,9 +166,11 @@ class Lstm():
     def __init_param(self):
         # parameters
         self.tparams = self.__init_params()
+#        self.best_params = self.tparams.copy()
 
     def __init_params(self):
         def ortho_w(ndim):
+            """ generate random orthogonal weight"""
             W = np.random.randn(ndim, ndim)
             u, s, v = np.linalg.svd(W)
             return u.astype(th.config.floatX)
@@ -224,23 +208,6 @@ class Lstm():
                                                       dtype=state_before.dtype)),
                         state_before * 0.5)
         return proj
-
-    def pred_error(self, f_pred, prepare_data, data, iterator, verbose=False):
-        """
-        Just compute the error
-        f_pred: Theano fct computing the prediction
-        prepare_data: usual prepare_data for that dataset.
-        """
-        valid_err = 0
-        for _, valid_index in iterator:
-            x, mask, y = prepare_data([data[0][t] for t in valid_index],
-                                      np.array(data[1])[valid_index],
-                                      maxlen=None)
-            preds = f_pred(x, mask)
-            targets = np.array(data[1])[valid_index]
-            valid_err += (preds == targets).sum()
-        valid_err = 1. - ar_float(valid_err) / len(data[0])
-        return valid_err
 
     def lstm_layer(self, x, mask=None):
         n_steps = x.shape[0]
@@ -288,7 +255,6 @@ class Lstm():
                                 n_steps=n_steps)
         return rval[0] #return only sequence of hidden
 
-
     def get_lstm_model_with_emb(self, x, mask, y):
         ## embedding
         emb = self.tparams['Wemb'][x.flatten()].reshape([x.shape[0],
@@ -308,18 +274,22 @@ class Lstm():
             proj = self.dropout_layer(proj, use_noise, self.trng)
         
         ## classification
-        pred_prob = T.nnet.softmax(T.dot(proj, self.tparams['U']) + self.tparams['b'])
-
+        pred_prob = T.nnet.softmax(T.dot(proj, self.tparams['U']) +\
+                                   self.tparams['b'])
         pred = pred_prob.argmax(axis = 1)
         
-#        f_pred_prob = th.function([x, mask], pred_prob, name='f_pred_prob')
-#        f_pred = th.function([x, mask], pred_prob.argmax(axis=1), name='f_pred')
         off = 1e-8
         if pred_prob.dtype == 'float16':
             off = 1e-6
         cost = -T.log(pred_prob[T.arange(x.shape[1]), y] + off).mean()
 
         return cost, pred
+
+    def prediction_error(self, x, y):
+        x, mask = l_tseries_to_ar(x)
+        predicted_y = self.f_pred(x, mask)
+        error_rate = 1. - calc_classification_result(predicted_y, y).acc
+        return error_rate
 
     def split_train_and_valid(self, r_valid, train_x, train_y):
         if r_valid < 0 or r_valid > 1:
@@ -339,8 +309,7 @@ class Lstm():
 
         ## Parameters
         valid_batch_size=64  # The batch size used for validation/test set.
-
-        print_info('building model')
+        print_info('Building model')
 
         # variables
         x = th_imatrix('x')
@@ -351,24 +320,18 @@ class Lstm():
         # models
         cost, pred = self.get_lstm_model_with_emb(x, mask, y)
 
-        if decay_c > 0.:
-            decay_c = th.shared(ar_float(decay_c), name='decay_c')
-            weight_decay = 0.
-            weight_decay += (self.tparams['U'] ** 2).sum()
-            weight_decay *= decay_c
+        if self.decay_c > 0.:
+            th_decay_c = th.shared(ar_float(self.decay_c), name='decay_c')
+            weight_decay = (self.tparams['U'] ** 2).sum() * th_decay_c
             cost += weight_decay
 
-        f_pred = th.function([x, mask], pred, name='f_pred')
+        self.f_pred = th.function([x, mask], pred, name='f_pred')
         grads = T.grad(cost, wrt = self.tparams.values())
 
         # optimization
         f_grad_shared, f_update = adadelta(l_rate, self.tparams, grads, x, mask, y, cost)
 
-#        kf_valid = lstm.get_minibatches_idx(len(valid[0]), valid_batch_size)
-#        kf_test = lstm.get_minibatches_idx(len(test[0]), valid_batch_size)
-
-        print_info('loop begins')
-
+        print_info('Loop begins')
         [train_x, train_y], [valid_x, valid_y] = self.split_train_and_valid(0.05, train_x, train_y)
         
         n_updates = 0  # the number of update done
@@ -376,7 +339,6 @@ class Lstm():
 
         l_errors = []
         b_estop = False
-        best_p = None
 
         kf_valid = get_minibatches_idx(len(valid_x), self.batch_size, True)
         
@@ -390,52 +352,56 @@ class Lstm():
                 y = [train_y[i] for i in train_index]
                 x = [train_x[i] for i in train_index]
 
-                x, mask, y = prepare_data(x,y)
+                x, mask = l_tseries_to_ar(x)
                 cost = f_grad_shared(x, mask, y)
-                f_update(self.lrate)
-
                 l_costs.append(cost)
+
+                f_update(self.lrate)
 
                 if np.mod(n_updates, self.dispFreq) == 0:
                     print 'Epoch:', i_epoch, 'Update:', n_updates, 'Cost:', cost
+                    print self.tparams['lstm_W'].eval()[0][0:5]
 
                 if np.mod(n_updates, self.validFreq) == 0:
-                    train_err = self.pred_error(f_pred, prepare_data, [train_x, train_y], kf)
-                    valid_err = self.pred_error(f_pred, prepare_data, [valid_x, valid_y], kf_valid)
-
-                    print 'Train:' , train_err, 'Valid:', valid_err
-
-                    l_errors.append([train_err, valid_err])
-
-                    ## TODO: if best score save the parameter
-
-                    if( len(l_errors) > self.patience and
-                        valid_err >= np.array(l_errors)[:-self.patience,0].min()):
-                        bad_count +1
-                        if bad_count > self.patience:
-                            print_info('Early stopping')
-                            b_estop = True
-                            break
-                        
-                    print "Estop Counter: %d/%d"%(bad_count, self.patience)
-
+                    self.validation(train_x, train_y, valid_x, valid_y, l_errors)
+                    b_estop = self.judge_early_stopping(l_errors)
+                    if b_estop:
+                        print_info('Early stopping')
+                        break
+                    
             print "Averave cost in epoch %d: %f"%(i_epoch, np.mean(l_costs))
-            if b_estop:
-                break
+            if b_estop: break
+
+        self.validation(train_x, train_y, valid_x, valid_y, l_errors)
 
         print l_errors
-        import ipdb
-        ipdb.set_trace()
+        print self.best_params
 
-    def predict(self, test_x):
-        print '___prediction___'
-        predict_y = np.zeros( len(test_x))
+    def validation(self, train_x, train_y, valid_x, valid_y, l_errors):
+        train_err = self.prediction_error(train_x, train_y)
+        valid_err = self.prediction_error(valid_x, valid_y)
+        print 'Train:' , train_err, 'Valid:', valid_err
+
+        if (len(l_errors) > 0 and valid_err < np.array(l_errors)[:, 1].min()):
+            self.best_params = self.tparams.copy()
+            print_info('Save best parameters')
+        l_errors.append([train_err, valid_err])
+
+    def judge_early_stopping(self, l_errors):
+        valid_errors = [error[1] for error in l_errors]
+        min_index= valid_errors.index(min(valid_errors))
+        print_info("Patience: %d/%d"%(len(valid_errors)-min_index, self.patience))
+        if len(valid_errors) > min_index + self.patience:
+            return True
+        else:
+            return False
         
-        print 'not implemented'
-        for i in range(len(test_x)):
-            predict_y[i] = np.random.randint(2)
-        return predict_y
-
+    def predict(self, test_x):
+        if self.f_pred == None:
+            raise ValueError("Fitting must be done before prediction")
+        self.tparams = self.best_params
+        test_x, mask = l_tseries_to_ar(test_x)
+        return self.f_pred(test_x, mask)
 
 class LR_ts():
     def __init__(self, n_dim = 10):
@@ -469,7 +435,7 @@ class Cointoss():
 algorithm_list = ['lstm', 'lr', 'coin']
 def get_algorithm(algorithm):
     if algorithm is 'lstm':
-        clf = Lstm()
+        clf = Lstm(n_epochs = 20)
     elif algorithm is 'lr':
         clf = LR_ts()
     elif algorithm is 'coin':
@@ -483,8 +449,11 @@ def fit_and_test(train_x, train_y, test_x, test_y, algorithm = 'lr'):
     clf.fit(train_x, train_y)
     predict_y = clf.predict(test_x)
 
+    print_info('Predicted Value')
+    print predict_y
+
     return calc_classification_result(predict_y, test_y)
-    
+
 if __name__ == '__main__':
     [x, y] = generate_sample.time_series(1)
 
@@ -498,127 +467,4 @@ if __name__ == '__main__':
 
     algorithm = 'lstm'
     result = fit_and_test(train_x, train_y, test_x, test_y, algorithm)
-
-
-    
-    ## # plot
-    ## kf = cross_validation.KFold(len(x), n_folds = 4, shuffle = True, random_state = 0)
-    ## 
-    
-
-    ## result_list = []
-    ## for train, test in kf:
-    ##     train_x = x[train]
-    ##     train_y = y[train]
-
-    ##     test_x = x[test]
-    ##     test_y = y[test]
-
-    ##     result = fit_and_test(train_x, train_y, test_x, test_y, algorithm)
-    ##     print result
-    ##     result_list.append(result)
-
-    ## print 'sumup'
-    ## print sumup_classification_result(result_list)
-
-
-    ## ## initialization of params
-## def init_params(options):
-##     params = OrderedDict()
-##     # embedding
-##     randn = np.random.rand(options['n_words'],
-##                            options['dim_proj'])
-##     params['Wemb'] = (0.01 * randn).astype(th.config.floatX)
-
-##     # lstm
-##     params = param_init_lstm(options, params)
-    
-##     # classifier
-##     params['U'] = 0.01 * np.random.randn(options['dim_proj'],
-##                                          options['ydim']).astype(th.config.floatX)
-##     params['b'] = np.zeros((options['ydim'],)).astype(th.config.floatX)
-
-##     return params
-
-## def param_init_lstm(options, params, prefix='lstm'):
-
-##     def ortho_w(ndim):
-##         W = np.random.randn(ndim, ndim)
-##         u, s, v = np.linalg.svd(W)
-##         return u.astype(th.config.floatX)
-
-##     W = np.concatenate([ortho_w(options['dim_proj']),
-##                         ortho_w(options['dim_proj']),
-##                         ortho_w(options['dim_proj']),
-##                         ortho_w(options['dim_proj'])], axis=1)
-##     params[_p(prefix, 'W')] = W
-##     U = np.concatenate([ortho_w(options['dim_proj']),
-##                         ortho_w(options['dim_proj']),
-##                         ortho_w(options['dim_proj']),
-##                         ortho_w(options['dim_proj'])], axis=1)
-##     params[_p(prefix, 'U')] = U
-##     b = np.zeros((4 * options['dim_proj'],))
-##     params[_p(prefix, 'b')] = b.astype(th.config.floatX)
-
-##     return params
-
-
-## def init_tparams(params):
-##     tparams = OrderedDict()
-##     for kk, pp in params.iteritems():
-##         tparams[kk] = th.shared(params[kk], name=kk)
-##     return tparams
-
-## ## model
-## def lstm_layer(tparams, state_below, options, prefix='lstm', mask=None):
-    
-##     nsteps = state_below.shape[0]
-##     if state_below.ndim == 3:
-##         n_samples = state_below.shape[1]
-##     else:
-##         n_samples = 1
-
-##     assert mask is not None
-    
-##     def _slice(_x, n, dim):
-##         if _x.ndim == 3:
-##             return _x[:, :, n * dim:(n + 1) * dim]
-##         return _x[:, n * dim:(n + 1) * dim]
-
-##     def _step(m_, x_, h_, c_):
-##         preact = T.dot(h_, tparams[_p(prefix, 'U')])
-##         preact += x_
-
-##         i = T.nnet.sigmoid(_slice(preact, 0, options['dim_proj']))
-##         f = T.nnet.sigmoid(_slice(preact, 1, options['dim_proj']))
-##         o = T.nnet.sigmoid(_slice(preact, 2, options['dim_proj']))
-##         c = T.tanh(_slice(preact, 3, options['dim_proj']))
-
-##         c = f * c_ + i * c
-##         c = m_[:, None] * c + (1. - m_)[:, None] * c_
-##         # if mask = 1 then c, else c_prev
-
-##         h = o * T.tanh(c)
-##         h = m_[:, None] * h + (1. - m_)[:, None] * h_
-##         # if mask = 1 then h, else h_prev
-
-##         return h, c
-
-##     state_below = (T.dot(state_below, tparams[_p(prefix, 'W')]) +
-##                    tparams[_p(prefix, 'b')])
-
-##     dim_proj = options['dim_proj']
-##     rval, updates = th.scan(_step,
-##                             sequences=[mask, state_below],
-##                             outputs_info=[T.alloc(ar_float(0.),
-##                                                   n_samples,
-##                                                   dim_proj),
-##                                           T.alloc(ar_float(0.),
-##                                                   n_samples,
-##                                                   dim_proj)
-##                                           ],
-##                             name=_p(prefix, '_layers'),
-##                             n_steps=nsteps)
-##     return rval[0] #return only sequence of hidden
-
-
+    print result
