@@ -123,6 +123,33 @@ def adadelta(lr, tparams, grads, x, mask, y, cost):
 
     return f_grad_shared, f_update
 
+def sgd(lr, tparams, grads, x, mask, y, cost):
+    """ Stochastic Gradient Descent
+
+    :note: A more complicated version of sgd then needed.  This is
+        done like that for adadelta and rmsprop.
+
+    """
+    # New set of shared variable that will contain the gradient
+    # for a mini-batch.
+    gshared = [th.shared(p.get_value() * 0., name='%s_grad' % k)
+               for k, p in tparams.iteritems()]
+    gsup = [(gs, g) for gs, g in zip(gshared, grads)]
+    
+    # Function that computes gradients for a mini-batch, but do not
+    # updates the weights.
+    f_grad_shared = th.function([x, mask, y], cost, updates=gsup,
+                                    name='sgd_f_grad_shared')
+
+    pup = [(p, p - lr * g) for p, g in zip(tparams.values(), gshared)]
+
+    # Function that updates the weights from the previously computed
+    # gradient.
+    f_update = th.function([lr], [], updates=pup,
+                               name='sgd_f_update')
+
+    return f_grad_shared, f_update
+
 
 class Lstm():
     def __init__( self,
@@ -140,8 +167,8 @@ class Lstm():
         self.batch_size=16  # The batch size during training.
         
         # optimization
-        self.optimizer=adadelta  # sgd, adadelta and rmsprop available, sgd very hard to use, not recommanded (probably need momentum and decaying learning rate).
-        self.lrate=0.01  # Learning rate for sgd (not used for adadelta and rmsprop)
+        self.optimizer=sgd  # sgd, adadelta and rmsprop available, sgd very hard to use, not recommanded (probably need momentum and decaying learning rate).
+        self.lrate=0.0001  # Learning rate for sgd (not used for adadelta and rmsprop)
 
         # number of flags
         self.ydim = 2
@@ -152,7 +179,7 @@ class Lstm():
         self.n_words=10000  # Vocabulary size
 
         # regularization
-        self.decay_c=1.  # Weight decay for the classifier applied to the U weights.
+        self.decay_c=0.  # Weight decay for the classifier applied to the U weights.
 
         # classification params
         self.use_dropout=True
@@ -161,12 +188,13 @@ class Lstm():
         self.trng = RandomStreams(123)
         np.random.seed(123)
 
+        # initialize parameters
         self.__init_param()
 
     def __init_param(self):
         # parameters
         self.tparams = self.__init_params()
-#        self.best_params = self.tparams.copy()
+        self.best_params = self.tparams.copy()
 
     def __init_params(self):
         def ortho_w(ndim):
@@ -198,9 +226,9 @@ class Lstm():
 
         tparams = OrderedDict()
         for kk, pp in params.iteritems():
-            tparams[kk] = th.shared(params[kk], name=kk)
+            tparams[kk] = th.shared(params[kk], name=kk, borrow = True)
         return tparams
-
+    
     def dropout_layer(self, state_before, use_noise, trng):
         proj = T.switch(use_noise,
                         (state_before * trng.binomial(state_before.shape,
@@ -326,11 +354,16 @@ class Lstm():
             cost += weight_decay
 
         self.f_pred = th.function([x, mask], pred, name='f_pred')
+
         grads = T.grad(cost, wrt = self.tparams.values())
+        
+        f_cost, f_update = adadelta(l_rate, self.tparams, grads, x, mask, y, cost)
 
-        # optimization
-        f_grad_shared, f_update = adadelta(l_rate, self.tparams, grads, x, mask, y, cost)
-
+        ## param_update = [(param, param - self.lrate * grad) for param, grad in zip(self.tparams.values(), grads)]
+        ## f_update = th.function([x, mask, y], [], updates = param_update, name = 'f_update')
+        ## f_cost = th.function([x,mask, y], cost, name = 'f_cost')
+        ## f_grads = th.function([x, mask, y], grads, name = 'f_grads')
+        
         print_info('Loop begins')
         [train_x, train_y], [valid_x, valid_y] = self.split_train_and_valid(0.05, train_x, train_y)
         
@@ -341,7 +374,7 @@ class Lstm():
         b_estop = False
 
         kf_valid = get_minibatches_idx(len(valid_x), self.batch_size, True)
-        
+
         for i_epoch in xrange(self.n_epochs):
             kf = get_minibatches_idx(len(train_x), self.batch_size, True)
             n_samples = 0
@@ -353,9 +386,9 @@ class Lstm():
                 x = [train_x[i] for i in train_index]
 
                 x, mask = l_tseries_to_ar(x)
-                cost = f_grad_shared(x, mask, y)
-                l_costs.append(cost)
 
+                cost_from_f_cost = f_cost(x,mask,y)
+                l_costs.append(cost_from_f_cost)
                 f_update(self.lrate)
 
                 if np.mod(n_updates, self.dispFreq) == 0:
