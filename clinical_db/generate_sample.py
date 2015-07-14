@@ -8,29 +8,92 @@ import theano
 import theano.tensor as T
 
 import random
-
 import imdb
 
+
+def time_series(source_num = 0, n_dim = 2):
+    """
+    get timeseries data
+    returns [x, y]:
+    x: list of data series
+        1st dim: time
+        2nd dim: sample
+        3rd dim: feature
+    y: list of labels
+    """
+    if source_num is 0:
+        [x, mask, y] = normal_timeseries(n_dim = n_dim)
+    elif source_num is 1:
+        [x, mask, y] = imdb_data()
+    else:
+        raise ValueError('source_num must be 0')
+    return x, mask, y
+
+def l_tseries_to_ar(ts_x):
+    """
+    Convert list of timeseries to numpy arrays of value and mask
+    """
+    max_length = max([len(s) for s in ts_x])
+
+    if np.array(ts_x[0]).ndim == 1:
+        # data is one dimentional
+        dim = 1
+    elif np.array(ts_x[0]).ndim == 2:
+        dim = ts_x[0].shape[1]
+    else:
+        raise ValueError('Invalid data format')
+    
+    x = np.zeros( (max_length, len(ts_x), dim) )
+    mask = np.zeros((max_length, len(ts_x)))
+
+    for i_series, series in enumerate(ts_x):
+        if dim == 1:
+            x[:len(series), i_series] = [[val] for val in series]
+        else:
+            x[:len(series), i_series] = series
+        mask[:len(series), i_series] = 1
+
+    return x, mask
+
+def normal_timeseries(length = 50, n_dim = 2, random_length = True, n_neg_sample = 150, n_pos_sample = 50, bias = [-1, +1], seed = 0):
+
+    random.seed(seed)
+    np.random.seed(seed)
+
+    def get_series(bias, flag, n_sample):
+        data = []
+        for num in xrange(0, n_sample):
+            if random_length:
+                s_len = np.random.randint(length) + length
+            else:
+                s_len = length
+            sample = np.zeros([s_len, n_dim])
+            for i in xrange(0, s_len):
+                sample[i] = np.random.randn(1, n_dim) + bias
+            data.append([sample, flag])
+        return data
+
+    negative_data = get_series(bias[0], 0, n_neg_sample)
+    positive_data = get_series(bias[1], 1, n_pos_sample)
+
+    data = negative_data+positive_data
+    random.shuffle(data)
+
+    x = [item[0] for item in data]
+    x, mask = l_tseries_to_ar(x)
+    y = np.array([item[1] for item in data])
+    return [x,mask, y]
 
 def imdb_data():
     train, valid, test = imdb.load_data(n_words = 10000,
                                         valid_portion = 0.05,
                                         maxlen = 100)
 
-    
     x = train[0] + valid[0] + test[0]
-    y = train[1] + valid[1] + test[1]
-    return [x, y]
+    x, mask = l_tseries_to_ar(x)
 
-
-def time_series(source_num = 0):
-    if source_num is 0:
-        [x ,y ] = normal_timeseries()
-    if source_num is 1:
-        [x, y ] = imdb_data()
-    else:
-        raise ValueError('source_num must be 0')
-    return x, y
+    y = np.array(train[1] + valid[1] + test[1])
+    return [x, mask,  y]
 
 def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
     
@@ -52,6 +115,7 @@ def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
         raise ValueError
 
     return x, y
+
 
 def chop_data(all_data, all_target, data_dim, n_flag):
     """ reduce the number of category of the flags to n_flag """
@@ -128,43 +192,6 @@ def normal_dist(n_dim = 2, n_neg_sample = 100, n_pos_sample = 100, bias = [-2, 2
     random.shuffle(data)
 
     x = np.array([item[0][0] for item in data])
-    y = np.array([item[1] for item in data])
-
-    return [x,y]
-
-def normal_timeseries(length = 50, random_length = True, n_neg_sample = 150, n_pos_sample = 50, bias = [-1, +1], seed = 0):
-    data = []
-
-    random.seed(seed)
-    np.random.seed(seed)
-
-    for num in xrange(0, n_neg_sample):
-        if random_length:
-            s_len = np.random.randint(length) + length
-        else:
-            s_len = length
-
-        sample = np.zeros(s_len)
-        for i in range(0, s_len):
-            sample[i] = np.random.randn(1) + bias[0]
-        flag = 0
-        data.append([sample, flag])
-
-    for num in xrange(0, n_pos_sample):
-        if random_length:
-            s_len = np.random.randint(length) + length
-        else:
-            s_len = length
-
-        sample = np.zeros(s_len)
-        for i in range(0, s_len):
-            sample[i] = np.random.randn(1) + bias[1]
-        flag = 1
-        data.append([sample, flag])
-    
-    random.shuffle(data)
-
-    x = np.array([item[0] for item in data])
     y = np.array([item[1] for item in data])
 
     return [x,y]
