@@ -29,6 +29,12 @@ def time_series(source_num = 0, n_dim = 2):
         raise ValueError('source_num must be 0')
     return x, mask, y
 
+def select_tseries(sample_all, index):
+    sel_x = sample_all[0][:,index, :]
+    sel_m = sample_all[1][:,index]
+    sel_y = sample_all[2][index]
+    return [sel_x, sel_m, sel_y]
+
 def l_tseries_to_ar(ts_x):
     """
     Convert list of timeseries to numpy arrays of value and mask
@@ -52,7 +58,6 @@ def l_tseries_to_ar(ts_x):
         else:
             x[:len(series), i_series] = series
         mask[:len(series), i_series] = 1
-
     return x, mask
 
 def normal_timeseries(length = 50, n_dim = 2, random_length = True, n_neg_sample = 150, n_pos_sample = 50, bias = [-1, +1], seed = 0):
