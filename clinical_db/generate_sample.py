@@ -22,7 +22,7 @@ def time_series(source_num = 0, n_dim = 2):
     y: list of labels
     """
     if source_num is 0:
-        [x, mask, y] = normal_timeseries(n_dim = n_dim)
+        [x, mask, y] = normal_timeseries(n_dim = n_dim, bias = [-0.3, 0.3])
     elif source_num is 1:
         [x, mask, y] = imdb_data()
     else:
@@ -60,7 +60,7 @@ def l_tseries_to_ar(ts_x):
         mask[:len(series), i_series] = 1
     return x, mask
 
-def normal_timeseries(length = 50, n_dim = 2, random_length = True, n_neg_sample = 150, n_pos_sample = 50, bias = [-1, +1], seed = 0):
+def normal_timeseries(length = 50, n_dim = 2, random_length = True, n_neg_sample = 1500, n_pos_sample = 500, bias = [-1, +1], seed = 0):
 
     random.seed(seed)
     np.random.seed(seed)
