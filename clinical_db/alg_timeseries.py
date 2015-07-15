@@ -385,7 +385,6 @@ class Lstm():
         print l_errors
         print self.best_params
 
-        print 'not implemented'
 
     def predict(self, test_sample):
         if self.f_pred == None:
@@ -393,288 +392,26 @@ class Lstm():
         self.__retrieve_best_params()
         return self.f_pred(test_sample[0], test_sample[1])
     
-
-## class Lstm_with_emb():
-##     def __init__( self,
-##                   n_epochs = 100,
-##                   patience=20
-##                   ):
-
-##         # loop
-##         self.n_epochs = n_epochs
-##         self.patience = patience
-## #        self.validFreq=370  # Compute the validation error after this number of update.
-##         self.validFreq=100  # Compute the validation error after this number of update.
-##         self.saveFreq=1110  # Save the parameters after every saveFreq updates
-##         self.dispFreq=10  # Display to stdout the training progress every N updates
-##         self.batch_size=16  # The batch size during training.
-        
-##         # number of flags
-##         self.ydim = 2
-
-##         # embedding params
-##         self.dim_feature = 128
-##         self.maxlen=100  # Sequence longer then this get ignored
-##         self.n_words=10000  # Vocabulary size
-
-##         # regularization
-##         self.decay_c=0. # Weight decay for the classifier applied to the U weights.
-
-##         # classification params
-##         self.use_dropout=True
-
-##         # random seed
-##         self.trng = RandomStreams(123)
-##         np.random.seed(123)
-
-##         # initialize parameters
-##         self.__init_param()
-
-##     def __init_param(self):
-##         # parameters
-##         self.tparams = self.__init_params()
-##         self.best_params = self.tparams.copy()
-
-##     def __init_params(self):
-##         def ortho_w(ndim):
-##             """ generate random orthogonal weight"""
-##             W = np.random.randn(ndim, ndim)
-##             u, s, v = np.linalg.svd(W)
-##             return u.astype(th.config.floatX)
-        
-##         params = OrderedDict()
-
-##         # weight for embedding
-##         randn = np.random.rand(self.n_words, self.dim_feature)
-##         params['Wemb'] = (0.01 * randn).astype(th.config.floatX)
-
-##         # lstm
-##         params['lstm_W'] = np.concatenate([ortho_w(self.dim_feature),
-##                                            ortho_w(self.dim_feature),
-##                                            ortho_w(self.dim_feature),
-##                                            ortho_w(self.dim_feature)], axis=1)
-##         params['lstm_U'] = np.concatenate([ortho_w(self.dim_feature),
-##                                            ortho_w(self.dim_feature),
-##                                            ortho_w(self.dim_feature),
-##                                            ortho_w(self.dim_feature)], axis=1)
-##         params['lstm_b'] = np.zeros(4 * self.dim_feature,).astype(th.config.floatX)
-        
-##         # classifier
-##         params['U'] = 0.01 * np.random.randn(self.dim_feature, self.ydim).astype(th.config.floatX)
-##         params['b'] = np.zeros((self.ydim,)).astype(th.config.floatX)
-
-##         tparams = OrderedDict()
-##         for kk, pp in params.iteritems():
-##             tparams[kk] = th.shared(params[kk], name=kk, borrow = True)
-##         return tparams
-    
-##     def dropout_layer(self, state_before, use_noise, trng):
-##         proj = T.switch(use_noise,
-##                         (state_before * trng.binomial(state_before.shape,
-##                                                       p=0.5, n=1,
-##                                                       dtype=state_before.dtype)),
-##                         state_before * 0.5)
-##         return proj
-
-##     def lstm_layer(self, x, mask=None):
-##         n_steps = x.shape[0]
-##         if x.ndim == 3:
-##             n_samples = x.shape[1]
-##         else:
-##             n_samples = 1
-
-##         assert mask is not None
-##         def _slice(_x, n, dim):
-##             if _x.ndim == 3:
-##                 return _x[:, :, n * dim:(n + 1) * dim]
-##             return _x[:, n * dim:(n + 1) * dim]
-
-##         def _step(m_, x_, h_, c_):
-##             preact = x_ + T.dot(h_, self.tparams['lstm_U']) 
-
-##             i = T.nnet.sigmoid(_slice(preact, 0, self.dim_feature))
-##             f = T.nnet.sigmoid(_slice(preact, 1, self.dim_feature))
-##             o = T.nnet.sigmoid(_slice(preact, 2, self.dim_feature))
-##             c = T.tanh(_slice(preact, 3, self.dim_feature))
-
-##             c = f * c_ + i * c
-##             c = m_[:, None] * c + (1. - m_)[:, None] * c_
-##             # if mask = 1 then c, else c_prev
-
-##             h = o * T.tanh(c)
-##             h = m_[:, None] * h + (1. - m_)[:, None] * h_
-##             # if mask = 1 then h, else h_prev
-
-##             return h, c
-
-##         wx_b = T.dot(x, self.tparams['lstm_W'] ) + self.tparams['lstm_b']
-
-##         rval, updates = th.scan(_step,
-##                                 sequences=[mask, wx_b],
-##                                 outputs_info=[T.alloc(ar_float(0.),
-##                                                       n_samples,
-##                                                       self.dim_feature),
-##                                               T.alloc(ar_float(0.),
-##                                                       n_samples,
-##                                                       self.dim_feature)
-##                                               ],
-##                                 name='lstm_layers',
-##                                 n_steps=n_steps)
-##         return rval[0] #return only sequence of hidden
-
-##     def get_lstm_model_with_emb(self, x, mask, y):
-##         ## embedding
-##         emb = self.tparams['Wemb'][x.flatten()].reshape([x.shape[0],
-##                                                          x.shape[1],
-##                                                          self.dim_feature])
-
-##         ## lstm get sequence of hidden variable
-##         proj = self.lstm_layer(emb, mask=mask)
-
-##         ## calcurate_mean
-##         proj = (proj * mask[:, :, None]).sum(axis=0)
-##         proj = proj / mask.sum(axis=0)[:, None]
-
-##         ## dropout
-##         if self.use_dropout:
-##             use_noise = th.shared( ar_float(0.) )
-##             proj = self.dropout_layer(proj, use_noise, self.trng)
-        
-##         ## classification
-##         pred_prob = T.nnet.softmax(T.dot(proj, self.tparams['U']) +\
-##                                    self.tparams['b'])
-##         pred = pred_prob.argmax(axis = 1)
-        
-##         off = 1e-8
-##         if pred_prob.dtype == 'float16':
-##             off = 1e-6
-##         cost = -T.log(pred_prob[T.arange(x.shape[1]), y] + off).mean()
-
-##         return cost, pred
-
-##     def prediction_error(self, x, y):
-##         x, mask = l_tseries_to_ar(x)
-##         predicted_y = self.f_pred(x, mask)
-##         error_rate = 1. - calc_classification_result(predicted_y, y).acc
-##         return error_rate
-
-##     def split_train_and_valid(self, r_valid, train_x, train_y):
-##         if r_valid < 0 or r_valid > 1:
-##             raise ValueError('should be 0 <= r_valid <= 1')
-        
-##         n_valid = int(len(train_x) * r_valid)
-##         n_train = len(train_x) - n_valid
-##         valid_x = train_x[n_train:len(train_x)]
-##         valid_y = train_y[n_train:len(train_x)]
-
-##         train_x = train_x[0:n_train]
-##         train_y = train_y[0:n_train]
-
-##         return [train_x, train_y], [valid_x, valid_y]
-        
-##     def fit(self, train_x, train_y):
-
-##         print_info('Building model')
-
-##         # variables
-##         t_x = th_imatrix('t_x')
-##         t_y = th_ivector('t_y')
-##         t_mask = th_fmatrix('t_mask')
-##         t_lr = T.scalar(name='t_lr')
-
-##         # models
-##         m_cost, m_pred = self.get_lstm_model_with_emb(t_x, t_mask, t_y)
-
-##         if self.decay_c > 0.:
-##             t_decay_c = th.shared(ar_float(self.decay_c), name='decay_c')
-##             m_cost += (self.tparams['U'] ** 2).sum() * t_decay_c #add weight decay
-
-##         self.f_pred = th.function([t_x, t_mask], m_pred, name='f_pred')
-
-##         m_grads = T.grad(m_cost, wrt = self.tparams.values())
-##         f_cost, f_update = adadelta(t_lr, self.tparams, m_grads, t_x, t_mask, t_y, m_cost)
-
-##         print_info('Loop begins')
-##         [train_x, train_y], [valid_x, valid_y] = self.split_train_and_valid(0.05, train_x, train_y)
-        
-##         n_updates = 0  # the number of update done
-##         bad_count = 0
-
-##         l_errors = []
-##         b_estop = False
-##         kf_valid = get_minibatches_idx(len(valid_x), self.batch_size, True)
-
-##         for i_epoch in xrange(self.n_epochs):
-##             kf = get_minibatches_idx(len(train_x), self.batch_size, True)
-##             n_samples = 0
-##             l_costs = []
-
-##             for _, train_index in kf:
-##                 n_updates += 1
-##                 t_y = [train_y[i] for i in train_index]
-##                 t_x = [train_x[i] for i in train_index]
-
-##                 t_x, t_mask = l_tseries_to_ar(t_x)
-
-##                 cost = f_cost(t_x,t_mask,t_y)
-##                 l_costs.append(cost)
-##                 f_update(self.lrate)
-
-##                 if np.mod(n_updates, self.dispFreq) == 0:
-##                     print 'Epoch:', i_epoch, 'Update:', n_updates, 'Cost:', cost
-
-##                 if np.mod(n_updates, self.validFreq) == 0:
-##                     self.validation(train_x, train_y, valid_x, valid_y, l_errors)
-##                     b_estop = self.judge_early_stopping(l_errors)
-##                     if b_estop:
-##                         print_info('Early stopping')
-##                         break
-                    
-##             print "Averave m_cost in epoch %d: %f"%(i_epoch, np.mean(l_costs))
-##             if b_estop: break
-
-##         self.validation(train_x, train_y, valid_x, valid_y, l_errors)
-
-##         print l_errors
-##         print self.best_params
-
-##     def validation(self, train_x, train_y, valid_x, valid_y, l_errors):
-##         train_err = self.prediction_error(train_x, train_y)
-##         valid_err = self.prediction_error(valid_x, valid_y)
-##         print 'Train:' , train_err, 'Valid:', valid_err
-
-##         if (len(l_errors) > 0 and valid_err < np.array(l_errors)[:, 1].min()):
-##             self.best_params = self.tparams.copy()
-##             print_info('Save best parameters')
-##         l_errors.append([train_err, valid_err])
-
-##     def judge_early_stopping(self, l_errors):
-##         valid_errors = [error[1] for error in l_errors]
-##         min_index= valid_errors.index(min(valid_errors))
-##         print_info("Patience: %d/%d"%(len(valid_errors)-min_index, self.patience))
-##         if len(valid_errors) > min_index + self.patience:
-##             return True
-##         else:
-##             return False
-        
-##     def predict(self, test_x):
-##         if self.f_pred == None:
-##             raise ValueError("Fitting must be done before prediction")
-##         self.tparams = self.best_params
-##         test_x, mask = l_tseries_to_ar(test_x)
-##         return self.f_pred(test_x, mask)
-
 class LR_ts():
-    def __init__(self, n_dim = 10):
+    def __init__(self, n_dim = 50):
         self.clf = linear_model.LogisticRegression(random_state =0)
         self.n_dim = n_dim
 
-    def fit(self, train_x, train_y):
-        s_train_x = [ts[0: self.n_dim] for ts in train_x]
+    def fit(self, train_set):
+        train_x = train_set[0]
+        train_y = train_set[2]
+
+        n_sample = train_x.shape[1]
+        s_train_x = np.array([train_x[:self.n_dim, idx, :].flatten() for idx in range(n_sample)])
+                             
+        import ipdb
+        ipdb.set_trace()
         self.clf.fit(s_train_x, train_y)
 
-    def predict(self, test_x):
-        s_test_x = [ts[0:self.n_dim] for ts in test_x]
+    def predict(self, test_sample):
+        test_x = test_sample[0]
+        n_sample = test_x.shape[1]
+        s_test_x = np.array([test_x[:self.n_dim, idx, :].flatten() for idx in range(n_sample)])
         predict_y = self.clf.predict(s_test_x)
         return predict_y
 
@@ -682,14 +419,14 @@ class Cointoss():
     def __init__(self, seed = 0):
         np.random.seed(seed)
 
-    def fit(self, train_x, train_m, train_y):
+    def fit(self, train_set):
         pass
 
-    def predict(self, test_x, test_m):
-        predict_y = np.zeros( len(test_x))
+    def predict(self, test_sample):
+        n_sample = test_sample[0].shape[1]
+        predict_y = np.zeros( n_sample )
         
-        print 'not implemented'
-        for i in range(len(test_x)):
+        for i in range(n_sample):
             predict_y[i] = np.random.randint(2)
         return predict_y
         
@@ -724,11 +461,7 @@ if __name__ == '__main__':
     train_set = select_tseries( sample_set, range(0,n_train) )
     test_set = select_tseries( sample_set, range(n_train, n_train+n_test))
 
-    algorithm = 'lstm'
+    algorithm = 'coin'
     result = fit_and_test(train_set, test_set, algorithm)
 
     print result
-
-
-
-
