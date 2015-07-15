@@ -14,12 +14,11 @@ from alg_classification import ClassificationResult, calc_classification_result,
 import sys
 sys.path.append('../../deep_tutorial/sample_codes/')
 
+from mutil import print_info
+
 ## utility
 def ar_float(data):
     return np.asarray(data, dtype=th.config.floatX)
-
-def print_info(word):
-    print '[INFO] ' + word
 
 def th_imatrix(name):
     return T.matrix(name, dtype= 'int64')
@@ -180,7 +179,6 @@ def ortho_w(ndim):
     u, s, v = np.linalg.svd(W)
     return u.astype(th.config.floatX)
 
-#Lstm_params = namedtuple('Parameters', 'W_l U_l b_l W_c b_c')
 class Lstm():
     def __init__( self,
                   n_epochs = 100,
@@ -298,7 +296,6 @@ class Lstm():
         return error_rate
         
     def __validation(self, train_set, valid_set, l_errors):
-
         train_err = self.__prediction_error(train_set)
         valid_err = self.__prediction_error(valid_set)
         print 'Train:' , train_err, 'Valid:', valid_err
@@ -358,9 +355,7 @@ class Lstm():
 
             for _, train_index in kf:
                 n_updates += 1
-
                 [x, m, y] = select_tseries(train_set, train_index)
-
 
                 cost = f_cost(x, m, y)
                 l_costs.append(cost)
@@ -384,7 +379,6 @@ class Lstm():
 
         print l_errors
         print self.best_params
-
 
     def predict(self, test_sample):
         if self.f_pred == None:
