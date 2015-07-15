@@ -14,7 +14,7 @@ from alg_classification import ClassificationResult, calc_classification_result,
 import sys
 sys.path.append('../../deep_tutorial/sample_codes/')
 
-from mutil import print_info
+from mutil import p_info
 
 ## utility
 def ar_float(data):
@@ -301,14 +301,14 @@ class Lstm():
         print 'Train:' , train_err, 'Valid:', valid_err
 
         if (len(l_errors) == 0 or valid_err < np.array(l_errors)[:, 1].min()):
-            print_info('Save best parameters')
+            p_info('Save best parameters')
             self.__keep_params()
         l_errors.append([train_err, valid_err])
 
     def __judge_early_stopping(self, l_errors):
         valid_errors = [error[1] for error in l_errors]
         min_index= valid_errors.index(min(valid_errors))
-        print_info("Patience: %d/%d"%(len(valid_errors)-min_index, self.patience))
+        p_info("Patience: %d/%d"%(len(valid_errors)-min_index, self.patience))
         if len(valid_errors) > min_index + self.patience:
             return True
         else:
@@ -321,7 +321,7 @@ class Lstm():
         self.dim_class = 2
         self.__init_params(self.dim_feature, self.dim_class)
 
-        print_info('Building the model')
+        p_info('Building the model')
         t_x = th_ftensor3('t_x')
         t_m = th_fmatrix('t_m')
         t_y = th_ivector('t_y')
@@ -337,7 +337,7 @@ class Lstm():
         t_lr = T.scalar(name='t_lr')
         f_cost, f_update = myadadelta(t_lr, self.__l_params(), m_grads, t_x, t_m, t_y, m_cost)
 
-        print_info('Loop begins')
+        p_info('Loop begins')
         
         n_updates = 0  # the number of update done
         bad_count = 0
@@ -368,7 +368,7 @@ class Lstm():
                     self.__validation(train_set, valid_set, l_errors)
                     b_estop = self.__judge_early_stopping(l_errors)
                     if b_estop:
-                        print_info('Early stopping')
+                        p_info('Early stopping')
                         break
                     
             print "Averave m_cost in epoch %d: %f"%(i_epoch, np.mean(l_costs))
@@ -387,7 +387,7 @@ class Lstm():
         return self.f_pred(test_sample[0], test_sample[1])
     
 class LR_ts():
-    def __init__(self, n_dim = 50):
+    def __init__(self, n_dim = 10):
         self.clf = linear_model.LogisticRegression(random_state =0)
         self.n_dim = n_dim
 
@@ -397,9 +397,7 @@ class LR_ts():
 
         n_sample = train_x.shape[1]
         s_train_x = np.array([train_x[:self.n_dim, idx, :].flatten() for idx in range(n_sample)])
-                             
-        import ipdb
-        ipdb.set_trace()
+
         self.clf.fit(s_train_x, train_y)
 
     def predict(self, test_sample):
@@ -423,39 +421,57 @@ class Cointoss():
         for i in range(n_sample):
             predict_y[i] = np.random.randint(2)
         return predict_y
-        
+
 algorithm_list = ['lstm', 'lr', 'coin']
 def get_algorithm(algorithm):
     if algorithm is 'lstm':
         clf = Lstm(n_epochs = 20)
     elif algorithm is 'lr':
-        clf = LR_ts()
+        clf = LR_ts(n_dim = 40)
     elif algorithm is 'coin':
         clf = Cointoss()
     else:
         raise ValueError("algorithm has to be either %s"%algorithm_list)
     return clf
 
+def cv(sample_set, n_fold, algorithm = 'lr'):
+
+    n_sample = sample_set[0].shape[1]
+    
+    kf = cross_validation.KFold(sample_set[0].shape[1], n_folds = n_fold, shuffle = True, random_state = 0)
+    i_cv = 0
+    results = []
+    for train_idx, test_idx in kf:
+        i_cv = i_cv + 1
+        p_info("___cv%d___"%i_cv)
+        train_set = select_tseries( sample_set, train_idx)
+        test_set = select_tseries( sample_set, test_idx)
+        results.append(fit_and_test(train_set, test_set, algorithm))
+
+    cv_result = sumup_classification_result(results)
+    print cv_result
+
 def fit_and_test(train_set, test_set, algorithm = 'lr'):
     clf = get_algorithm(algorithm)
     clf.fit(train_set)
     predict_y = clf.predict(test_set[0:2])
 
-    print_info('Predicted Value')
+    p_info('Predicted Value')
     print predict_y
 
     return calc_classification_result(predict_y, test_set[2])
 
 if __name__ == '__main__':
     sample_set = generate_sample.time_series(0,2)
+    result = cv(sample_set, 4, 'lstm')
+    
+    ## n_train = int( sample_set[0].shape[1] * 0.75)
+    ## n_test = sample_set[0].shape[1] - n_train
 
-    n_train = int( sample_set[0].shape[1] * 0.75)
-    n_test = sample_set[0].shape[1] - n_train
+    ## train_set = select_tseries( sample_set, range(0,n_train) )
+    ## test_set = select_tseries( sample_set, range(n_train, n_train+n_test))
 
-    train_set = select_tseries( sample_set, range(0,n_train) )
-    test_set = select_tseries( sample_set, range(n_train, n_train+n_test))
-
-    algorithm = 'coin'
-    result = fit_and_test(train_set, test_set, algorithm)
+    ## algorithm = 'coin'
+    ## result = fit_and_test(train_set, test_set, algorithm)
 
     print result
