@@ -295,7 +295,7 @@ class evaluate_fetaure:
 
     def __tseries_preparation(self, cache_key = '__tseries_preparation'):
         param = self.__get_param_data_retrieval()
-        cache = mutil.cache(cache_key)
+        cache = mutil.Cache(cache_key)
 
         try:
             return cache.load(param)
@@ -344,7 +344,7 @@ class evaluate_fetaure:
         
     def __point_preparation(self, cache_key = '__point_preparation'):
         param = self.__get_param_data_retrieval()
-        cache = mutil.cache(cache_key)
+        cache = mutil.Cache(cache_key)
 
         try:
             return cache.load( param)

@@ -25,7 +25,7 @@ class control_mimic2db:
     def get_subject(self, subject_id):
 
         cache_key = "s%d"%subject_id
-        cache = mutil.cache(cache_key)
+        cache = mutil.Cache(cache_key)
         try:
             return cache.load()
         except IOError:

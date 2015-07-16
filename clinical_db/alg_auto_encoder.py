@@ -19,7 +19,7 @@ import alg_feature_selection
 
 def pca(train_x, test_x, n_components, cache_key = 'pca'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
 
     try:
         return cache.load(params)
@@ -30,7 +30,7 @@ def pca(train_x, test_x, n_components, cache_key = 'pca'):
 
 def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'pca_selected'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
 
     try:
         return cache.load(params)
@@ -44,7 +44,7 @@ def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = '
         
 def ica(train_x, test_x, n_components, cache_key = 'ica'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
     
     try:
         return cache.load( params)
@@ -55,7 +55,7 @@ def ica(train_x, test_x, n_components, cache_key = 'ica'):
 
 def ica_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'ica_selected'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
 
     try:
         return cache.load(params)
@@ -71,7 +71,7 @@ def ica_selected(train_x, train_y, test_x, n_components, n_select, cache_key = '
 def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, batch_size = 10, corruption_level = 0.0, return_train = False, cache_key = 'dae'):
 
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
     try:
         return cache.load( params)
     except IOError:
@@ -93,7 +93,7 @@ def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, ba
 def dae_selected(train_x, train_y, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
 
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
     try:
         return cache.load( params)
     except IOError:

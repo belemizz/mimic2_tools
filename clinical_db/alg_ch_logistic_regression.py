@@ -11,7 +11,7 @@ import generate_sample
 import control_graph
 import mutil
 graphs = control_graph.control_graph()
-sw = mutil.stopwatch()
+sw = mutil.Stopwatch()
 
 import sys
 sys.path.append('../../DeepLearningTutorials/code/')

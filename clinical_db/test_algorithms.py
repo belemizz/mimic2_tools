@@ -5,13 +5,19 @@ Test code for algorithm codes
 import unittest
 import alg_auto_encoder
 import alg_classification
-
 import generate_sample
-from mutil import cache
+
+from sys import exit
+from mutil import Cache, p_info
 
 from nose.tools import ok_, eq_
 
 save_result = False
+
+if save_result:
+    char = raw_input('This is the save mode. Continue[y/n]? ')
+    if char is not 'y':
+        exit()
 
 class TestSequenceFunctions(unittest.TestCase):
 
@@ -52,7 +58,7 @@ class TestSequenceFunctions(unittest.TestCase):
         alg_classification.cross_validate(x,y,4)
 
     def __check_data(self, cache_key, data):
-        cc = cache(cache_key, cache_dir = '../data/test/')
+        cc = Cache(cache_key, cache_dir = '../data/test/')
         if save_result:
             cc.save(data)
         else:
