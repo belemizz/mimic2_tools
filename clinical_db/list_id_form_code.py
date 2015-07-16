@@ -31,7 +31,7 @@ outpath = outpath + '.csv'
 import control_mimic2db as mimic2
 import control_csv as cc
 
-mimic2db = mimic2.control_mimic2db()
+mimic2db = mimic2.Mimic2()
 id_lists = []
 
 # extract from ICD 9 codes
@@ -39,7 +39,7 @@ id_lists.append(mimic2db.subject_with_icd9_codes(target_codes, ignore_order))
 
 # extract subjects who have matched waveform
 mimic2db.subject_matched_waveforms(tmppath)
-tmp_csv = cc.control_csv(tmppath);
+tmp_csv = cc.Csv(tmppath);
 read_list = tmp_csv.read_first_column()
 id_lists.append([int(item) for item in read_list])
 print id_lists
@@ -67,5 +67,5 @@ if add_icu_expire_flag:
     print "Expire Rate: %d/%d"%(expire_list.count('Y'),len(expire_list))
   
 # output to outpath
-output = cc.control_csv(outpath)
+output = cc.Csv(outpath)
 output.write_list(output_list)

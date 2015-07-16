@@ -5,7 +5,7 @@ Test code for algorithm codes
 import unittest
 import alg_auto_encoder
 import alg_classification
-import generate_sample
+import get_sample
 
 from sys import exit
 from mutil import Cache, p_info
@@ -25,7 +25,7 @@ class TestSequenceFunctions(unittest.TestCase):
         ok_(not save_result, 'this is save mode')
         
     def test_auto_encoder(self):
-        x, y = generate_sample.normal_dist(4)
+        x, y = get_sample.normal_dist(4)
 
         encoded = alg_auto_encoder.pca(x, x, 2, cache_key = '')
         self.__check_data('pca', encoded)
@@ -53,7 +53,7 @@ class TestSequenceFunctions(unittest.TestCase):
 
 
     def test_classification(self):
-        x, y = generate_sample.get_samples_with_target(0, 2)
+        x, y = get_sample.get_samples_with_target(0, 2)
         alg_classification.plot_2d(x, y, show_flag = False)
         alg_classification.cross_validate(x,y,4)
 

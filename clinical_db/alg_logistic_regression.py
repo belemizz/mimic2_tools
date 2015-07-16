@@ -3,8 +3,8 @@ import theano
 import theano.tensor as T
 import matplotlib.pyplot as plt
 
-import generate_sample
-import control_graph
+import get_sample
+import mutil.graph
 
 class BinaryClassifier():
     def __init__(self, input, n_dim):
@@ -53,7 +53,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
                     borrow = True
                     ), 'int32')
 
-    gr = control_graph.control_graph()
+    gr = mutil.graph.Graph()
     
     x = T.matrix('x') # design matrix
     y = T.ivectors('y') # answer
@@ -121,7 +121,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
 
 def main():
     # generate_samples
-    [x, y] = generate_sample.normal_dist(2, 100, 100, [3, 8], seed = 1 )
+    [x, y] = get_sample.normal_dist(2, 100, 100, [3, 8], seed = 1 )
     show_logistic_regression(x, y)
     plt.waitforbuttonpress()
             

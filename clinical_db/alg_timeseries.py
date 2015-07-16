@@ -7,8 +7,8 @@ import theano as th
 import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
-import generate_sample
-from generate_sample import select_tseries
+import get_sample
+from get_sample import select_tseries
 from alg_classification import ClassificationResult, calc_classification_result, sumup_classification_result
 
 import sys
@@ -457,7 +457,7 @@ def fit_and_test(train_set, test_set, algorithm = 'lr'):
     return calc_classification_result(predict_y, test_set[2])
 
 if __name__ == '__main__':
-    sample_set = generate_sample.time_series(0,2)
+    sample_set = get_sample.time_series(0,2)
     result = cv(sample_set, 4, 'lstm')
     
     ## n_train = int( sample_set[0].shape[1] * 0.75)

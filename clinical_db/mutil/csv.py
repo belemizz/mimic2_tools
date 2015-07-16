@@ -1,6 +1,6 @@
 import csv
 
-class control_csv:
+class Csv:
     def __init__(self, path):
         self.filepath = path
 
@@ -44,15 +44,15 @@ class control_csv:
 
     def __open_reader(self):
         self.__f = open(self.filepath, 'r')
-        return csv.reader(self.__f)
+        return mutil.csv.reader(self.__f)
 
     def __open_writer(self):
         self.__f = open(self.filepath, 'w')
-        return csv.writer(self.__f)
+        return mutil.csv.writer(self.__f)
 
     def __open_append(self):
         self.__f = open(self.filepath, 'a')
-        return csv.writer(self.__f)
+        return mutil.csv.writer(self.__f)
 
     def __close(self):
         self.__f.close()

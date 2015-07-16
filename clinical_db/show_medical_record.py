@@ -1,17 +1,16 @@
 """
 Script to show summery of  medical record of a subject.
 """
-
-import control_mimic2db
-import control_graph
-import control_csv
+import get_sample.mimic2
+import mutil.graph
+import mutil.csv
 
 import matplotlib.pyplot as plt
 subject_id = 2987
 #subject_id = 1855
 
-mimic2db = control_mimic2db.control_mimic2db()
-graph = control_graph.control_graph()
+mimic2db = get_sample.mimic2.Mimic2()
+mutil.graph = mutil.graph.Graph()
 
 subject = mimic2db.get_subject(subject_id)
 
@@ -32,7 +31,7 @@ for admission in subject.admissions:
 
     # Save Profile,ICD9 and Notes to a text file
     filename = "../data/Prof_Notes_%d_%d.txt"%(subject_id, admission.hadm_id)
-    outfile = control_csv.control_csv(filename)
+    outfile = mutil.csv.Csv(filename)
     outfile.write_single_list(["ICD9"])
     outfile.append_list(admission.icd9)
     outfile.append_single_list(["Notes"])
@@ -55,7 +54,7 @@ for admission in subject.admissions:
                 print (item.itemid, item.description, item.unit, len(item.values))
 
 #        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
-        graph.draw_selected_chart_icu(icustay, mimic2db.vital_charts, admission.admit_dt, title, filename)
+        mutil.graph.draw_selected_chart_icu(icustay, mimic2db.vital_charts, admission.admit_dt, title, filename)
 
         #Fluid IO
         filename = "Fluid_%d.png"%icustay.icustay_id

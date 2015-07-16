@@ -2,10 +2,15 @@ import cPickle
 import os
 import time
 
+from .csv import Csv
+from .graph import Graph
+
+
+
 class Cache:
     """ Cache class """
 
-    def __init__(self, cache_key, cache_dir = '../data/Cache/'):
+    def __init__(self, cache_key, cache_dir = '../data/cache/'):
         """ This class does nothing when cache_key is '' """
         
         self.dir = cache_dir

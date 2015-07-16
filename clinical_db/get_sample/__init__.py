@@ -2,14 +2,12 @@ import sys
 sys.path.append('../../deep_tutorial/sample_codes/')
 sys.path.append('../../DeepLearningTutorials/code/')
 
-
 import numpy as np
 import theano
 import theano.tensor as T
 
 import random
 import imdb
-
 
 def time_series(source_num = 0, n_dim = 2):
     """
@@ -124,7 +122,7 @@ def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
 
 def chop_data(all_data, all_target, data_dim, n_flag):
     """ reduce the number of category of the flags to n_flag """
-    all_flag = numpy.unique(all_target)
+    all_flag = np.unique(all_target)
     flags = all_flag[0: min(all_flag.shape[0], n_flag)]
 
     x_list = []

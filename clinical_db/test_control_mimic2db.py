@@ -4,12 +4,12 @@ Test code for scripts
 import unittest
 from nose.tools import ok_, eq_
 import datetime
+from  get_sample.mimic2 import Mimic2
 
 class TestSequenceFunctions(unittest.TestCase):
 
     def setUp(self):
-        import control_mimic2db as mimic2
-        self.mimic2 = mimic2.control_mimic2db()
+        self.mimic2 = Mimic2()
 
     #    def tearDown(self):
 
@@ -29,8 +29,6 @@ class TestSequenceFunctions(unittest.TestCase):
         eq_(patient_class.admissions[1].get_chart_in_span(datetime.datetime(3408,6,1), datetime.datetime(3408,6,4))[0][1], 'Sodium')
         eq_(patient_class.admissions[1].get_chart_in_span(datetime.datetime(3408,6,1), datetime.datetime(3408,6,5))[3][4], [38.0, 124.0])
 
-        
-        
                                                             
 if __name__ == '__main__':
     unittest.main()

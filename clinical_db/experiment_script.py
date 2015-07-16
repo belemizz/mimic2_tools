@@ -2,14 +2,14 @@
 Experiments are recorded in this script
 Experiment date, update date, and purpose should be recorded
 '''
-
 import matplotlib.pyplot as plt
+import mutil.graph
 
 
 # Experiment Date: 07/16/2015
 def classify_vital_and_lab_timeseries():
-    import control_graph
-    graphs = control_graph.control_graph()
+    import mutil.graph
+    graphs = mutil.graph.Graph()
 
     import evaluate_feature
     import alg_classification
@@ -51,8 +51,8 @@ def classify_vital_and_lab_timeseries():
 # Experiment Date: 07/01/2015
 # Update Deate
 def classify_vital_and_lab():
-    import control_graph
-    graphs = control_graph.control_graph()
+    import mutil.graph
+    graphs = mutil.graph.Graph()
 
     import evaluate_feature
     import alg_classification

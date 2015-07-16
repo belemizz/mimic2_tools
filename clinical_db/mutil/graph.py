@@ -7,7 +7,7 @@ import math
 from more_itertools import chunked
 import cPickle
 
-class control_graph:
+class Graph:
     def __init__(self):
         self.limit_timeseries = 25
         self.dir_to_save = "../data/"

@@ -7,30 +7,33 @@ from chainer import cuda
 import chainer.functions as F
 from chainer import optimizers
 
-import generate_sample
-import control_graph
+import get_sample
+import mutil.graph
 import mutil
-graphs = control_graph.control_graph()
-sw = mutil.Stopwatch()
 
 import sys
-sys.path.append('../../DeepLearningTutorials/code/')
-sys.path.append('../misc')
 
 import logistic_sgd
 import theano_wrapper
+
+graphs = mutil.graph.Graph()
+sw = mutil.Stopwatch()
+
+sys.path.append('../../DeepLearningTutorials/code/')
+sys.path.append('../misc')
+
 
 if __name__ == '__main__':
 
     sample_dim = 700
     output_dim = 5
-    [x, y] = generate_sample.get_samples_with_target(2,sample_dim,output_dim)
+    [x, y] = get_sample.get_samples_with_target(2,sample_dim,output_dim)
 
     n_epoch = 5
     batchsize = 50
 
     N = int(x.shape[0] * 0.8)
-    all_data = generate_sample.split_to_three_sets(x, y, 0., 0.2)
+    all_data = get_sample.split_to_three_sets(x, y, 0., 0.2)
     train_x = all_data[0]
     train_y = all_data[1]
     test_x = all_data[4]

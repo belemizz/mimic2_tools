@@ -1,10 +1,9 @@
 """
 classify patients based on lab tests
 """
-
-import control_mimic2db
-import control_graph
-import control_csv
+import get_sample.mimic2
+import mutil.graph
+import mutil.csv
 
 import time
 import datetime
@@ -16,8 +15,8 @@ import theano.tensor as T
 
 def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
 
-    mimic2db = control_mimic2db.control_mimic2db()
-    graph = control_graph.control_graph()
+    mimic2db = get_sample.mimic2.Mimic2()
+    graph = graph.Graph()
 
     ## Get Subject ID ##
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)

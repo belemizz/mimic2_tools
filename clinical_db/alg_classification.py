@@ -5,10 +5,10 @@ from sklearn import svm, tree, linear_model, ensemble
 from sklearn import cross_validation
 from collections import namedtuple
 
-import generate_sample
-import control_graph
+import get_sample
+import mutil.graph
 
-graph= control_graph.control_graph()
+mutil.graph= mutil.graph.Graph()
 ClassificationResult = namedtuple('ClassificationResult' , 'P N TP FP rec prec f acc')
 
 algorithm_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
@@ -59,7 +59,7 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
     z = clf.predict(numpy.c_[xx.ravel(), yy.ravel()])
     z = z.reshape(xx.shape)
 
-    graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
+    mutil.graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
     return clf
 
 def calc_classification_result(predict_y, test_y):
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     source_num = 2
     n_dim = 10
     n_flag = 2
-    [x,y]= generate_sample.get_samples_with_target(source_num, n_dim, n_flag)
+    [x,y]= get_sample.get_samples_with_target(source_num, n_dim, n_flag)
 
     algorithm = 'rsvm'
     try:

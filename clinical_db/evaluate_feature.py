@@ -1,14 +1,13 @@
 """
 Evaluate the importance of the feature
 """
-
 import numpy as np
 import collections 
 import datetime
 import matplotlib.pyplot as plt
 
-import control_mimic2db
-import control_graph
+import get_sample.mimic2
+import mutil.graph
 import alg_classification
 import alg_logistic_regression
 import alg_auto_encoder
@@ -19,8 +18,8 @@ from mutil import p_info
 
 from sklearn import cross_validation
 
-mimic2db = control_mimic2db.control_mimic2db()
-graphs = control_graph.control_graph()
+mimic2db = get_sample.mimic2.Mimic2()
+graphs = mutil.graph.Graph()
 
 class evaluate_fetaure:
     def __init__( self,
@@ -661,7 +660,6 @@ def float_list(l):
     return np.array(f_list)
 
 if __name__ == '__main__':
-
     
     ef = evaluate_fetaure(max_id = 200000, days_before_discharge = 0, n_lab = 20,
                           tseries_freq = 1.0, tseries_steps = 1,

@@ -14,7 +14,7 @@ from sklearn.decomposition import FastICA
 from sklearn.preprocessing import normalize
 
 import mutil
-import generate_sample
+import get_sample
 import alg_feature_selection
 
 def pca(train_x, test_x, n_components, cache_key = 'pca'):
@@ -204,7 +204,7 @@ def get_encoded_values(train_x, train_y, test_x,
 def main(sample_num = 0):
     ## get sample
     if sample_num == 0:
-        x, y = generate_sample.normal_dist(4)
+        x, y = get_sample.normal_dist(4)
     else:
         dataset = 'mnist.pkl.gz'
         datasets = load_data(dataset)
