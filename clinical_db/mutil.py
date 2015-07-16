@@ -87,7 +87,7 @@ class stopwatch:
         if stop: self.stop()
         print "Real Elapsed:%0.4f[sec]"%self.real_elapsed()
 
-def print_info(word):
+def p_info(word):
     print '[INFO]' + word
 
 def sample_func(a,b,c = 5):

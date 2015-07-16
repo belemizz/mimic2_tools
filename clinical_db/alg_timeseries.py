@@ -427,7 +427,7 @@ def get_algorithm(algorithm):
     if algorithm is 'lstm':
         clf = Lstm(n_epochs = 20)
     elif algorithm is 'lr':
-        clf = LR_ts(n_dim = 40)
+        clf = LR_ts(n_dim = 10)
     elif algorithm is 'coin':
         clf = Cointoss()
     else:
@@ -448,17 +448,12 @@ def cv(sample_set, n_fold, algorithm = 'lr'):
         test_set = select_tseries( sample_set, test_idx)
         results.append(fit_and_test(train_set, test_set, algorithm))
 
-    cv_result = sumup_classification_result(results)
-    print cv_result
+    return sumup_classification_result(results)
 
 def fit_and_test(train_set, test_set, algorithm = 'lr'):
     clf = get_algorithm(algorithm)
     clf.fit(train_set)
     predict_y = clf.predict(test_set[0:2])
-
-    p_info('Predicted Value')
-    print predict_y
-
     return calc_classification_result(predict_y, test_set[2])
 
 if __name__ == '__main__':
