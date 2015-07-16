@@ -2,9 +2,8 @@ import cPickle
 import os
 import time
 
-from .csv import Csv
+from .mycsv import Csv
 from .graph import Graph
-
 
 
 class Cache:

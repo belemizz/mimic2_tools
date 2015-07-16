@@ -9,6 +9,8 @@ import theano.tensor as T
 import random
 import imdb
 
+from .mimic2 import Mimic2
+
 def time_series(source_num = 0, n_dim = 2):
     """
     get timeseries data

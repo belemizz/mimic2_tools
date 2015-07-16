@@ -4,7 +4,8 @@ import cPickle
 import os
 import getpass
 
-import mutil.csv
+import mutil.mycsv
+import datetime
 
 class Mimic2:
     """ MIMIC2 Controller """

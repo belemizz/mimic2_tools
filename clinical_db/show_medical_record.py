@@ -2,15 +2,14 @@
 Script to show summery of  medical record of a subject.
 """
 import get_sample.mimic2
-import mutil.graph
-import mutil.csv
+from mutil import Graph, Csv
 
 import matplotlib.pyplot as plt
 subject_id = 2987
 #subject_id = 1855
 
 mimic2db = get_sample.mimic2.Mimic2()
-mutil.graph = mutil.graph.Graph()
+graph = Graph()
 
 subject = mimic2db.get_subject(subject_id)
 
@@ -31,7 +30,7 @@ for admission in subject.admissions:
 
     # Save Profile,ICD9 and Notes to a text file
     filename = "../data/Prof_Notes_%d_%d.txt"%(subject_id, admission.hadm_id)
-    outfile = mutil.csv.Csv(filename)
+    outfile = Csv(filename)
     outfile.write_single_list(["ICD9"])
     outfile.append_list(admission.icd9)
     outfile.append_single_list(["Notes"])

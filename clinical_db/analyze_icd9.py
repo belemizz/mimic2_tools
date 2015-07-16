@@ -1,5 +1,5 @@
 import control_mimic2db as mimic2
-import mutil.csv
+import mutil.mycsv
 savepath = '../data/tmp.csv'
 
 n_code_to_see = 2
@@ -12,7 +12,7 @@ mimic2db.icd9_eq_higher_than(n_code_to_see,savepath)
 
 # read csv and list code
 f = open(savepath, 'rb')
-dataReader = mutil.csv.reader(f)
+dataReader = mutil.mycsv.reader(f)
 
 prev_adm_id = 0
 all_codes = []

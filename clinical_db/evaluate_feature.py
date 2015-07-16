@@ -13,6 +13,7 @@ import alg.binary_logistic_regression
 import alg.auto_encoder
 import alg.feature_selection
 import alg.timeseries
+
 import mutil
 from mutil import p_info
 
@@ -661,7 +662,7 @@ def float_list(l):
 
 if __name__ == '__main__':
     
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge = 0, n_lab = 20,
+    ef = evaluate_fetaure(max_id = 2000, days_before_discharge = 0, n_lab = 20,
                           tseries_freq = 1.0, tseries_steps = 1,
                            dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
                            rp_learn_flag = False, class_alg = 'svm')

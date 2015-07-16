@@ -44,15 +44,15 @@ class Csv:
 
     def __open_reader(self):
         self.__f = open(self.filepath, 'r')
-        return mutil.csv.reader(self.__f)
+        return csv.reader(self.__f)
 
     def __open_writer(self):
         self.__f = open(self.filepath, 'w')
-        return mutil.csv.writer(self.__f)
+        return csv.writer(self.__f)
 
     def __open_append(self):
         self.__f = open(self.filepath, 'a')
-        return mutil.csv.writer(self.__f)
-
+        return csv.writer(self.__f)
+    
     def __close(self):
         self.__f.close()

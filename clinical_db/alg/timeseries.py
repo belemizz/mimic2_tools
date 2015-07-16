@@ -1,4 +1,4 @@
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
 import numpy as np
 from  sklearn import cross_validation, linear_model
@@ -9,7 +9,7 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
 import get_sample
 from get_sample import select_tseries
-from alg_classification import ClassificationResult, calc_classification_result, sumup_classification_result
+from . import ClassificationResult, calc_classification_result, sumup_classification_result
 
 import sys
 

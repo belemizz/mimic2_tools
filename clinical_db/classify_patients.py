@@ -3,7 +3,7 @@ classify patients based on lab tests
 """
 import get_sample.mimic2
 import mutil.graph
-import mutil.csv
+import mutil.mycsv
 
 import time
 import datetime
