@@ -7,7 +7,6 @@ import getpass
 import subject
 import mutil
 
-
 class control_mimic2db:
     """ MIMIC2 Controller """
     def __init__(self):

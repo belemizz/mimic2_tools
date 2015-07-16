@@ -62,7 +62,6 @@ class cache:
         return True
 
 class stopwatch:
-
     def __init__(self):
         self.reset()
         
@@ -88,7 +87,8 @@ class stopwatch:
         if stop: self.stop()
         print "Real Elapsed:%0.4f[sec]"%self.real_elapsed()
 
-
+def p_info(word):
+    print '[INFO]' + word
 
 def sample_func(a,b,c = 5):
     params = locals()

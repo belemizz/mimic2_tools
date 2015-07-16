@@ -6,8 +6,47 @@ Experiment date, update date, and purpose should be recorded
 import matplotlib.pyplot as plt
 
 
-def compare_dae_with_raw():
-    print 'hoge'
+# Experiment Date: 07/16/2015
+def classify_vital_and_lab_timeseries():
+    import control_graph
+    graphs = control_graph.control_graph()
+
+    import evaluate_feature
+    import alg_classification
+
+    l_dbd = [0,2]
+    l_nsteps = range(1, 6)
+    for dbd in l_dbd:
+        result = []
+        for n_steps in l_nsteps:
+            efo = evaluate_feature.evaluate_fetaure(
+                max_id = 200000,
+                n_lab = 20,
+                days_before_discharge = dbd,
+                rp_learn_flag = False,
+                n_cv_folds = 10,
+                tseries_freq = 1.0,
+                tseries_steps = n_steps,
+                )
+            result.append(efo.tseries_eval())
+
+        lab_rec = [item[0].rec for item in result]
+        lab_prec = [item[0].prec for item in result]
+        lab_f = [item[0].f for item in result]
+        title = "Lab_tseriess_dbd_%d"%(dbd)
+        filename = "Lab_tseries_dbd_%d"%(dbd)
+        graphs.bar_pl([lab_rec, lab_prec, lab_f], l_nsteps, ['recall', 'precision', 'F-measure'],
+                      xlim = [0,1], title = title, filename = filename)
+
+        vit_rec = [item[1].rec for item in result]
+        vit_prec = [item[1].prec for item in result]
+        vit_f = [item[1].f for item in result]
+        title = "Vital_tseriess_dbd_%d"%(dbd)
+        filename = "Vit_tseries_dbd_%d"%(dbd)
+
+        graphs.bar_pl([vit_rec, vit_prec, vit_f], l_nsteps, ['recall', 'precision', 'F-measure'],
+                      xlim = [0,1], title = title, filename = filename)
+
     
 # Experiment Date: 07/01/2015
 # Update Deate
@@ -82,6 +121,6 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
 #compare_lab_tests_and_vitals()
-    classify_vital_and_lab()
+    classify_vital_and_lab_timeseries()
     plt.waitforbuttonpress()
     

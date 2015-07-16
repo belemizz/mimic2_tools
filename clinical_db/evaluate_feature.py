@@ -2,7 +2,7 @@
 Evaluate the importance of the feature
 """
 
-import numpy
+import numpy as np
 import collections 
 import datetime
 import matplotlib.pyplot as plt
@@ -13,7 +13,9 @@ import alg_classification
 import alg_logistic_regression
 import alg_auto_encoder
 import alg_feature_selection
+import alg_timeseries
 import mutil
+from mutil import p_info
 
 from sklearn import cross_validation
 
@@ -27,6 +29,8 @@ class evaluate_fetaure:
                   n_lab = 20,
                   days_before_discharge = 0,
                   span = 2,
+                  tseries_freq = 1.0,
+                  tseries_steps = 10,
                   rp_learn_flag = True,
                   pca_components = 5,
                   ica_components = 5,
@@ -44,6 +48,10 @@ class evaluate_fetaure:
         self.n_lab = n_lab
         self.days_before_discharge = days_before_discharge
         self.span = span
+
+        # params for timeseries
+        self.tseries_freq = tseries_freq
+        self.tseries_steps = tseries_steps
         
         # params for evaluation
         self.rp_learn_flag = rp_learn_flag
@@ -62,7 +70,9 @@ class evaluate_fetaure:
                 'target_codes' : self.target_codes,
                 'n_lab' : self.n_lab,
                 'days_before_discharge' : self.days_before_discharge,
-                'span' : self.span
+                'span' : self.span,
+                'tseries_freq' : self.tseries_freq,
+                'tseries_steps' : self.tseries_steps
                 }
 
     def __param_code(self):
@@ -116,36 +126,12 @@ class evaluate_fetaure:
         self.dae_corruption = dae_corruption_temp
         return result
 
-    def __point_data_preperation(self, cache_key = '__point_data_preperation'):
-
-        param = self.__get_param_data_retrieval()
-        cache = mutil.cache(cache_key)
-
-        try:
-            return cache.load( param)
-        except IOError:
-            # Get candidate ids
-            print "[INFO] Getting candidate IDs and their data"
-            subject_ids, lab_ids_dict, patients, units, descs = self.__get_patient_data_form_codes()
-            # Find most common lab tests
-            print "[INFO] Finding most common lab tests"
-            most_common_tests, lab_descs, lab_units = self.__find_most_common_lab_tests(lab_ids_dict, descs, units)
-            # Get values of most commom tests
-            print "[INFO] Getting values of lab and vital"
-            lab_data, vital_data, flags = self.__get_lab_chart_values( patients,
-                                                                most_common_tests,
-                                                                mimic2db.vital_charts)
-            ret_val =  [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags]
-            return cache.save(ret_val, param)
-
-        
     def point_eval(self):
         ret_val = {'param': self.__dict__.copy()}
-        
         print self.__param_code()
 
         """ Basic evaluation method """
-        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
+        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_preparation()
 
         ## importance of each metrics
         lab_importance = alg_feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
@@ -163,7 +149,7 @@ class evaluate_fetaure:
             result = alg_classification.cross_validate(pri_lab, flags, self.n_cv_folds, self.class_alg)
             lab_class_result.append(result)
 
-        graph_data = numpy.transpose(numpy.array([ [item.rec, item.prec, item.f] for item in lab_class_result ]))
+        graph_data = np.transpose(np.array([ [item.rec, item.prec, item.f] for item in lab_class_result ]))
         graphs.line_series(graph_data, eval_n_input, ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
                            title = "%s Lab Tests"%self.class_alg, ylim = [0,1],
@@ -176,7 +162,7 @@ class evaluate_fetaure:
             pri_vital = vital_data[:, vital_priority[0: n_items]]
             vital_class_result.append(alg_classification.cross_validate(pri_vital, flags, self.n_cv_folds, self.class_alg))
 
-        graph_data = numpy.transpose(numpy.array([ [item.rec, item.prec, item.f] for item in vital_class_result ]))
+        graph_data = np.transpose(np.array([ [item.rec, item.prec, item.f] for item in vital_class_result ]))
         graphs.line_series(graph_data, range(1, 5) ,
                            ['recall', 'precision', 'f_measure'],
                            x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
@@ -246,68 +232,130 @@ class evaluate_fetaure:
                     sorted(lab_importance)
                     lab_imp_cv.append(lab_importance[0][0])
 
-                dae_top_importance.append(numpy.mean(dae_top_imp_cv))
-                lab_top_importance.append(numpy.mean(lab_imp_cv))
+                dae_top_importance.append(np.mean(dae_top_imp_cv))
+                lab_top_importance.append(np.mean(lab_imp_cv))
                 dae_result.append(alg_classification.sumup_classification_result(dae_cv))
                 dae_sel_result.append(alg_classification.sumup_classification_result(dae_sel_cv))
 
-            
-
-            graph_data_dae = numpy.transpose(numpy.array([[item.rec, item.prec, item.f] for item in dae_result]))
+            graph_data_dae = np.transpose(np.array([[item.rec, item.prec, item.f] for item in dae_result]))
             graphs.line_series(graph_data_dae, eval_n_input ,['recall', 'precision', 'f_measure'],
                                x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
                                ylim = [0,1], title = "%s DAE %0.1f"%(self.class_alg,self.dae_hidden_ratio),
                                filename = self.__param_code() + '_n_metric_dae.png' )
 
-            graph_data_dae_sel = numpy.transpose(numpy.array([[item.rec, item.prec, item.f] for item in dae_sel_result]))
+            graph_data_dae_sel = np.transpose(np.array([[item.rec, item.prec, item.f] for item in dae_sel_result]))
             graphs.line_series(graph_data_dae_sel, eval_n_input,  ['recall', 'precision', 'f_measure'],
                                x_label = "Number of Metrics Used", y_label = "Recall/ Precision/ F_measure",
                                ylim = [0,1], title = "%s DAE %0.1f select %0.1f"%(self.class_alg,self.dae_hidden_ratio, self.dae_select_ratio),
                                filename = self.__param_code() + '_n_metric_dae_sel.png' )
 
-            graphs.line_series(numpy.array([dae_top_importance, lab_top_importance]), eval_n_input ,
+            graphs.line_series(np.array([dae_top_importance, lab_top_importance]), eval_n_input ,
                                ['selected', 'lab_test'],
                                x_label = "Number of Metrics Used", y_label = "Entropy Reduction",
                                filename = self.__param_code() + '_top_dae_importance.png' )
 
-            f_base = numpy.transpose(numpy.array([ [item.f] for item in lab_class_result ]))
-            f_dae = numpy.transpose(numpy.array([ [item.f] for item in dae_result ]))
-            f_dae_sel = numpy.transpose(numpy.array([ [item.f] for item in dae_sel_result ]))
-            f_comp = numpy.vstack([f_base, f_dae, f_dae_sel])
+            f_base = np.transpose(np.array([ [item.f] for item in lab_class_result ]))
+            f_dae = np.transpose(np.array([ [item.f] for item in dae_result ]))
+            f_dae_sel = np.transpose(np.array([ [item.f] for item in dae_sel_result ]))
+            f_comp = np.vstack([f_base, f_dae, f_dae_sel])
             graphs.line_series(f_comp, eval_n_input ,['lab_raw','DAE', 'DAE_SEL'],
                                x_label = "Number of Metrics Used", y_label = "F_measure",
                                ylim = [0,1], title = "%s DAE %0.1f SEL %0.1f Comparison"%(self.class_alg,self.dae_hidden_ratio, self.dae_select_ratio),
                                filename = self.__param_code() + '_n_metric_dae_comp.png' )
-            
-            
 
         return ret_val
 
-            
-    def point_eval_orig(self):
-        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_data_preperation()
-        if self.classification:
-            if self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                self.__eval_with_classification(
-                    lab_data, vital_data, flags,
-                    most_common_tests, lab_descs, lab_units)
-            else:
-                raise ValueError("n_cv_fold should be 2 or larger")
-        else:
-            if self.n_cv_folds == 1:
-                print "[INFO] eval_as_single_set"
-                return self.__eval_as_single_set(
-                    lab_data, vital_data, flags,
-                    most_common_tests, lab_descs, lab_units,
-                    )
-            elif self.n_cv_folds > 1:
-                print "[INFO] eval cross validation"
-                return  self.__eval_cross_validation(
-                    lab_data, vital_data, flags, 
-                    most_common_tests, lab_descs, lab_units)
-            else:
-                raise ValueError("n_cv_fold should be 1 or larger")
+    def tseries_eval(self):
+        # parameter comfirmation
+        
+        # data preparation
+        [most_common_tests, lab_tseries, lab_descs, lab_units, vit_tseries, flags] = self.__tseries_preparation()
+
+        # classification
+        n_sample = len(flags)
+        n_train = int(n_sample * 0.75)
+        shuffled_index = range(n_sample)
+        np.random.shuffle(shuffled_index)
+        train_idx = shuffled_index[0:n_train]
+        test_idx = shuffled_index[n_train:n_sample]
+        
+        lab_set = [lab_tseries[0], lab_tseries[1], flags]
+        vit_set = [vit_tseries[0], vit_tseries[1], flags]
+
+        lab_result = alg_timeseries.cv(lab_set, self.n_cv_folds, 'lr')
+        vit_result = alg_timeseries.cv(vit_set, self.n_cv_folds, 'lr')
+        
+        p_info('lab')
+        print lab_result
+        p_info('vital')
+        print vit_result
+
+        return [lab_result, vit_result]
+
+
+    def __tseries_preparation(self, cache_key = '__tseries_preparation'):
+        param = self.__get_param_data_retrieval()
+        cache = mutil.cache(cache_key)
+
+        try:
+            return cache.load(param)
+        except IOError:
+            subject_ids, lab_ids_dict, patients, units, descs = self.__get_patient_data_form_codes()
+            most_common_tests, lab_descs, lab_units = self.__find_most_common_lab_tests(lab_ids_dict, descs, units)
+
+            l_results=[]
+            freq = self.tseries_freq
+            n_steps = self.tseries_steps
+            for idx in range(n_steps):
+                dbd = self.days_before_discharge + idx * freq
+                l_results.append( self.__get_lab_chart_values( patients, most_common_tests,
+                                                               mimic2db.vital_charts, dbd))
+
+            ids = l_results[0][3]
+            flags = l_results[0][2]
+
+            lab_x = np.zeros([n_steps, len(ids), len(most_common_tests)])
+            lab_m = np.zeros([n_steps, len(ids)])
+            vit_x = np.zeros([n_steps, len(ids), len(mimic2db.vital_charts)])
+            vit_m = np.zeros([n_steps, len(ids)])
+
+            for i_steps in range(n_steps):
+                s_lab = l_results[i_steps][0]
+                s_vit = l_results[i_steps][1]
+                s_id = l_results[i_steps][3]
+                
+                for i_id, id in enumerate(ids):
+                    try:
+                        lab_x[i_steps][i_id] = s_lab[s_id.index(id)]
+                        lab_m[i_steps][i_id] = 1.
+                    except ValueError:
+                        pass
+
+                    try:
+                        vit_x[i_steps][i_id] = s_vit[s_id.index(id)]
+                        vit_m[i_steps][i_id] = 1.
+                    except ValueError:
+                        pass
+            lab_tseries = [lab_x, lab_m]
+            vit_tseries = [vit_x, vit_m]
+
+            ret_val =  [most_common_tests, lab_tseries, lab_descs, lab_units, vit_tseries, flags]
+            return cache.save(ret_val, param)
+        
+    def __point_preparation(self, cache_key = '__point_preparation'):
+        param = self.__get_param_data_retrieval()
+        cache = mutil.cache(cache_key)
+
+        try:
+            return cache.load( param)
+        except IOError:
+            subject_ids, lab_ids_dict, patients, units, descs = self.__get_patient_data_form_codes()
+            most_common_tests, lab_descs, lab_units = self.__find_most_common_lab_tests(lab_ids_dict, descs, units)
+            lab_data, vital_data, flags, ids = self.__get_lab_chart_values( patients,
+                                                                most_common_tests,
+                                                                mimic2db.vital_charts)
+            ret_val =  [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags]
+            return cache.save(ret_val, param)
 
     def __eval_with_classification(self, lab_data, vital_data, flags, most_common_tests, lab_descs, lab_units):
         # lab test only
@@ -315,7 +363,7 @@ class evaluate_fetaure:
         # vital only
         alg_classification.cross_validate(vital_data, flags, self.n_cv_folds, self.class_alg)
         # Using both
-        all_data= numpy.hstack([lab_data, vital_data])
+        all_data= np.hstack([lab_data, vital_data])
         alg_classification.cross_validate(all_data, flags, self.n_cv_folds, self.class_alg)
 
         if self.rp_learn_flag:
@@ -363,7 +411,7 @@ class evaluate_fetaure:
             feature_desc = encoded_values.keys()
             feature_id = range( len(feature_desc))
             feature_unit = ['None'] * len(feature_desc)
-            feature_data = numpy.hstack(encoded_values.viewvalues())
+            feature_data = np.hstack(encoded_values.viewvalues())
             feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags, feature_id, feature_desc, feature_unit)
 
             lab_feature_importance = lab_importance + feature_importance
@@ -403,7 +451,7 @@ class evaluate_fetaure:
             feature_desc = encoded_values.keys()
             feature_id = range( len(feature_desc))
             feature_unit = ['None'] * len(feature_desc)
-            feature_data = numpy.hstack(encoded_values.viewvalues())
+            feature_data = np.hstack(encoded_values.viewvalues())
 
             lab_importance = alg_feature_selection.calc_entropy_reduction(set_test_lab, flags_test, most_common_tests, lab_descs, lab_units)
             feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags_test, feature_id, feature_desc, feature_unit)
@@ -414,7 +462,7 @@ class evaluate_fetaure:
 
         mean_reduction = alg_feature_selection.mean_entropy_reduction(results)
 
-        print numpy.array(mean_reduction)
+        print np.array(mean_reduction)
         self.__feature_importance_graph(mean_reduction[0:20],  self.__param_code() + "_cv_lab_feature.png")
         return mean_reduction
 
@@ -459,18 +507,35 @@ class evaluate_fetaure:
             lab_descs.append(descs[item_id])
             lab_units.append(units[item_id])
         return most_common_tests, lab_descs, lab_units
+
+    ## # Get the data of the tests
+    ## def __get_lab_chart_values2(self, patients, lab_ids, chart_ids, days_before_discharge):
+    ##     ''' 
+    ##     Get the value of labtest and values at the time definded by days_before_discharge
+    ##     '''
+
+    ##     for patient in patients
+    ##         final_adm = patient.get_final_admission()
+    ##         time_of_interest = final_adm.get_estimated_disch_time() - datetime.timedelta(days_before_discharge)
+    ##         lab_result =  final_adm.get_newest_lab_at_time(time_of_interest)
+    ##         chart_result =  final_adm.get_newest_chart_at_time(time_of_interest)
+
+    ##         lab_value = 
+        
     
-    # Get the data of the tests
-    def __get_lab_chart_values(self, patients, lab_ids, chart_ids):
+    def __get_lab_chart_values(self, patients, lab_ids, chart_ids, days_before_discharge = None):
+        ''' Get the value of labtest and values at the time definded by days_before_discharge '''
+
+        if days_before_discharge is None:
+            days_before_discharge = self.days_before_discharge
+            
         ids = []
         lab_values = []
         chart_values = []
         flags = []
         for patient in patients:
             final_adm = patient.get_final_admission()
-            estimated_disch_time = final_adm.get_estimated_disch_time()
-            
-            time_of_interest = estimated_disch_time - datetime.timedelta(self.days_before_discharge)
+            time_of_interest = final_adm.get_estimated_disch_time() - datetime.timedelta(days_before_discharge)
             lab_result =  final_adm.get_newest_lab_at_time(time_of_interest)
             chart_result =  final_adm.get_newest_chart_at_time(time_of_interest)
 
@@ -486,20 +551,20 @@ class evaluate_fetaure:
                     index = chart_ids.index(item[0])
                     chart_value[index] = float(item[4])
 
-            if True not in numpy.isnan(lab_value) and True not in numpy.isnan(chart_value) and patient.hospital_expire_flg in ['Y', 'N']:
+            if True not in np.isnan(lab_value) and True not in np.isnan(chart_value) and patient.hospital_expire_flg in ['Y', 'N']:
                 lab_values.append(lab_value)
                 chart_values.append(chart_value)
                 flags.append(patient.hospital_expire_flg)
                 ids.append(patient.subject_id)
 
-        lab_array = numpy.array(lab_values)
-        chart_array = numpy.array(chart_values)
-        flag_array = numpy.array(flags)
+        lab_array = np.array(lab_values)
+        chart_array = np.array(chart_values)
+        flag_array = np.array(flags)
 
-        y = numpy.zeros(len(flag_array))
+        y = np.zeros(len(flag_array))
         y[flag_array == 'Y'] = 1
 
-        return lab_array, chart_array, y
+        return lab_array, chart_array, y, ids
 
     def __feature_importance_graph(self,importance, filename):
         ent_reduction = [item[0] for item in importance]
@@ -555,7 +620,7 @@ class evaluate_fetaure:
 
             valid = True
             for item in lab_value + chart_value:
-                if numpy.isnan(item).any():
+                if np.isnan(item).any():
                     valid = False
                     break
 
@@ -565,11 +630,11 @@ class evaluate_fetaure:
                 flags.append(patient.hospital_expire_flg)
                 ids.append(patient.subject_id)
 
-        lab_array = numpy.array(lab_values)
-        chart_array = numpy.array(chart_values)
-        flag_array = numpy.array(flags)
+        lab_array = np.array(lab_values)
+        chart_array = np.array(chart_values)
+        flag_array = np.array(flags)
 
-        y = numpy.zeros(len(flag_array))
+        y = np.zeros(len(flag_array))
         y[flag_array == 'Y'] = 1
 
         return lab_array, chart_array, y
@@ -593,15 +658,17 @@ def float_list(l):
     f_list= []
     for s in l:
         f_list.append(float(s))
-    return numpy.array(f_list)
+    return np.array(f_list)
 
 if __name__ == '__main__':
 
     
-    ef = evaluate_fetaure(max_id = 200000, days_before_discharge =2, n_lab = 20,
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge = 0, n_lab = 20,
+                          tseries_freq = 1.0, tseries_steps = 1,
                            dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
                            rp_learn_flag = False, class_alg = 'svm')
-    ef.point_eval()
+    ef.tseries_eval()
+#    ef.point_eval()
 
 
     ## recall_20 =  [item['recall'][19] for item in result]
@@ -611,7 +678,7 @@ if __name__ == '__main__':
     ## print "n_lab == 10"
     ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 10, dae_hidden = 20, dae_n_epoch =  20000, rp_learn_flag = True)
     ## ef.point_eval()
-    
+
 
     ## ef = evaluate_fetaure(max_id = 200000, days_before_discharge =0, n_lab = 20,
     ##                       dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
@@ -634,4 +701,4 @@ if __name__ == '__main__':
     ## ef.point_eval()
 
 
-    plt.waitforbuttonpress()
+#    plt.waitforbuttonpress()
