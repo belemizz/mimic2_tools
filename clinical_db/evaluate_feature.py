@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 
 import get_sample.mimic2
 import mutil.graph
-import alg_classification
-import alg_logistic_regression
-import alg_auto_encoder
-import alg_feature_selection
-import alg_timeseries
+import alg.classification
+import alg.binary_logistic_regression
+import alg.auto_encoder
+import alg.feature_selection
+import alg.timeseries
 import mutil
 from mutil import p_info
 
@@ -133,8 +133,8 @@ class evaluate_fetaure:
         [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_preparation()
 
         ## importance of each metrics
-        lab_importance = alg_feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
-        vital_importance = alg_feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
+        lab_importance = alg.feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
+        vital_importance = alg.feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
         all_importance = lab_importance + vital_importance
         all_importance.sort(reverse = True)
 #        self.__feature_importance_graph(all_importance[0:20], self.__param_code() + "_all.png")
@@ -145,7 +145,7 @@ class evaluate_fetaure:
         eval_n_input = range(1,self.n_lab + 1)
         for n_items in eval_n_input:
             pri_lab = lab_data[:, lab_priority[0:n_items]]
-            result = alg_classification.cross_validate(pri_lab, flags, self.n_cv_folds, self.class_alg)
+            result = alg.classification.cross_validate(pri_lab, flags, self.n_cv_folds, self.class_alg)
             lab_class_result.append(result)
 
         graph_data = np.transpose(np.array([ [item.rec, item.prec, item.f] for item in lab_class_result ]))
@@ -159,7 +159,7 @@ class evaluate_fetaure:
         vital_priority = [item[1] for item in vital_importance]
         for n_items in range(1, 5):
             pri_vital = vital_data[:, vital_priority[0: n_items]]
-            vital_class_result.append(alg_classification.cross_validate(pri_vital, flags, self.n_cv_folds, self.class_alg))
+            vital_class_result.append(alg.classification.cross_validate(pri_vital, flags, self.n_cv_folds, self.class_alg))
 
         graph_data = np.transpose(np.array([ [item.rec, item.prec, item.f] for item in vital_class_result ]))
         graphs.line_series(graph_data, range(1, 5) ,
@@ -201,7 +201,7 @@ class evaluate_fetaure:
                     orig_test_lab = lab_data[test,:]
 
                     # encoding
-                    enc_test_x, enc_train_x = alg_auto_encoder.dae(
+                    enc_test_x, enc_train_x = alg.auto_encoder.dae(
                         train_lab, test_lab,
                         n_hidden = n_dae_hidden,
                         corruption_level = self.dae_corruption,
@@ -210,31 +210,31 @@ class evaluate_fetaure:
                         )
 
                     # classification
-                    dae_cv.append(alg_classification.fit_and_test(enc_train_x, train_y, enc_test_x, test_y, self.class_alg))
+                    dae_cv.append(alg.classification.fit_and_test(enc_train_x, train_y, enc_test_x, test_y, self.class_alg))
 
                     # classification_after_selection
                     n_sel = int(self.dae_select_ratio * n_input + 1)
-                    sel_index =  alg_feature_selection.select_feature_index(enc_train_x, train_y, n_sel)
+                    sel_index =  alg.feature_selection.select_feature_index(enc_train_x, train_y, n_sel)
                     sel_train_x = enc_train_x[:, sel_index]
                     sel_test_x = enc_test_x[:, sel_index]
-                    dae_sel_cv.append(alg_classification.fit_and_test(sel_train_x, train_y, sel_test_x, test_y, self.class_alg))
+                    dae_sel_cv.append(alg.classification.fit_and_test(sel_train_x, train_y, sel_test_x, test_y, self.class_alg))
 
                     # feature_importance
-                    i_index = alg_feature_selection.select_feature_index(enc_train_x, train_y, 1)
+                    i_index = alg.feature_selection.select_feature_index(enc_train_x, train_y, 1)
                     feature_data = enc_test_x[:, i_index]
-                    feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, test_y)                    
+                    feature_importance = alg.feature_selection.calc_entropy_reduction(feature_data, test_y)                    
                     dae_top_imp_cv.append(feature_importance[0][0])
 
                     # importance of each lab_test for comparison
                     test_all_lab = lab_data[test, :]
-                    lab_importance = alg_feature_selection.calc_entropy_reduction(test_all_lab, test_y)
+                    lab_importance = alg.feature_selection.calc_entropy_reduction(test_all_lab, test_y)
                     sorted(lab_importance)
                     lab_imp_cv.append(lab_importance[0][0])
 
                 dae_top_importance.append(np.mean(dae_top_imp_cv))
                 lab_top_importance.append(np.mean(lab_imp_cv))
-                dae_result.append(alg_classification.sumup_classification_result(dae_cv))
-                dae_sel_result.append(alg_classification.sumup_classification_result(dae_sel_cv))
+                dae_result.append(alg.classification.sumup_classification_result(dae_cv))
+                dae_sel_result.append(alg.classification.sumup_classification_result(dae_sel_cv))
 
             graph_data_dae = np.transpose(np.array([[item.rec, item.prec, item.f] for item in dae_result]))
             graphs.line_series(graph_data_dae, eval_n_input ,['recall', 'precision', 'f_measure'],
@@ -281,8 +281,8 @@ class evaluate_fetaure:
         lab_set = [lab_tseries[0], lab_tseries[1], flags]
         vit_set = [vit_tseries[0], vit_tseries[1], flags]
 
-        lab_result = alg_timeseries.cv(lab_set, self.n_cv_folds, 'lr')
-        vit_result = alg_timeseries.cv(vit_set, self.n_cv_folds, 'lr')
+        lab_result = alg.timeseries.cv(lab_set, self.n_cv_folds, 'lr')
+        vit_result = alg.timeseries.cv(vit_set, self.n_cv_folds, 'lr')
         
         p_info('lab')
         print lab_result
@@ -358,12 +358,12 @@ class evaluate_fetaure:
 
     def __eval_with_classification(self, lab_data, vital_data, flags, most_common_tests, lab_descs, lab_units):
         # lab test only
-        alg_classification.cross_validate(lab_data, flags, self.n_cv_folds, self.class_alg)
+        alg.classification.cross_validate(lab_data, flags, self.n_cv_folds, self.class_alg)
         # vital only
-        alg_classification.cross_validate(vital_data, flags, self.n_cv_folds, self.class_alg)
+        alg.classification.cross_validate(vital_data, flags, self.n_cv_folds, self.class_alg)
         # Using both
         all_data= np.hstack([lab_data, vital_data])
-        alg_classification.cross_validate(all_data, flags, self.n_cv_folds, self.class_alg)
+        alg.classification.cross_validate(all_data, flags, self.n_cv_folds, self.class_alg)
 
         if self.rp_learn_flag:
 
@@ -380,15 +380,15 @@ class evaluate_fetaure:
                 set_test_vital = vital_data[test, :]
                 flags_test = flags[test]
 
-                encoded_values = alg_auto_encoder.get_encoded_values(
+                encoded_values = alg.auto_encoder.get_encoded_values(
                     set_train_lab, flags_train, set_test_lab,
                     self.pca_components, 2,
                     self.ica_components, 2,
                     self.dae_hidden, 2,  self.dae_corruption )
 
-                result_list.append(alg_classification.fit_and_test(set_train_lab, flags_train, set_test_lab, flags_test, self.class_alg))
+                result_list.append(alg.classification.fit_and_test(set_train_lab, flags_train, set_test_lab, flags_test, self.class_alg))
 
-            all_result = alg_classification.sumup_classification_result(result_list)
+            all_result = alg.classification.sumup_classification_result(result_list)
             print all_result
                 
     def __eval_as_single_set(self, lab_data, vital_data, flags,
@@ -401,7 +401,7 @@ class evaluate_fetaure:
 
         if self.rp_learn_flag:
             ## Encoded Feature Evalation
-            encoded_values = alg_auto_encoder.get_encoded_values(
+            encoded_values = alg.auto_encoder.get_encoded_values(
                 lab_data, flags, lab_data,
                 self.pca_components, 1,
                 self.ica_components, 1,
@@ -411,7 +411,7 @@ class evaluate_fetaure:
             feature_id = range( len(feature_desc))
             feature_unit = ['None'] * len(feature_desc)
             feature_data = np.hstack(encoded_values.viewvalues())
-            feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags, feature_id, feature_desc, feature_unit)
+            feature_importance = alg.feature_selection.calc_entropy_reduction(feature_data, flags, feature_id, feature_desc, feature_unit)
 
             lab_feature_importance = lab_importance + feature_importance
             lab_feature_importance.sort(reverse = True)
@@ -441,7 +441,7 @@ class evaluate_fetaure:
             set_test_vital = vital_data[test, :]
             flags_test = flags[test]
 
-            encoded_values = alg_auto_encoder.get_encoded_values(
+            encoded_values = alg.auto_encoder.get_encoded_values(
                 train_lab, flag_train, set_test_lab,
                 self.pca_components, 1,
                 self.ica_components, 1,
@@ -452,14 +452,14 @@ class evaluate_fetaure:
             feature_unit = ['None'] * len(feature_desc)
             feature_data = np.hstack(encoded_values.viewvalues())
 
-            lab_importance = alg_feature_selection.calc_entropy_reduction(set_test_lab, flags_test, most_common_tests, lab_descs, lab_units)
-            feature_importance = alg_feature_selection.calc_entropy_reduction(feature_data, flags_test, feature_id, feature_desc, feature_unit)
+            lab_importance = alg.feature_selection.calc_entropy_reduction(set_test_lab, flags_test, most_common_tests, lab_descs, lab_units)
+            feature_importance = alg.feature_selection.calc_entropy_reduction(feature_data, flags_test, feature_id, feature_desc, feature_unit)
 
             lab_feature_importance = sorted(lab_importance + feature_importance, key = lambda item:item[2])
 
             results.append(lab_feature_importance)
 
-        mean_reduction = alg_feature_selection.mean_entropy_reduction(results)
+        mean_reduction = alg.feature_selection.mean_entropy_reduction(results)
 
         print np.array(mean_reduction)
         self.__feature_importance_graph(mean_reduction[0:20],  self.__param_code() + "_cv_lab_feature.png")
@@ -577,7 +577,7 @@ class evaluate_fetaure:
         y_label = "%s [%s]"%(lab_result[1][3],lab_result[1][4])
         x = lab_data[:, important_labs]
 
-        alg_classification.plot_2d(x, flags, x_label, y_label, filename = filename)
+        alg.classification.plot_2d(x, flags, x_label, y_label, filename = filename)
 
     # Get the data of the tests
     def __get_lab_chart_timeseries(self, patients, lab_ids, chart_ids):

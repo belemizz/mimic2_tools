@@ -12,6 +12,7 @@ import random
 import numpy
 import theano
 import theano.tensor as T
+import alg.binary_logistic_regression
 
 def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
 
@@ -89,8 +90,8 @@ def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
     y = numpy.array([item[1] for item in data])
 
     ## classification
-    import alg_logistic_regression
-    alg_logistic_regression.show_logistic_regression(x, y, 0.002, 10000, 10000)
+    import alg.binary_logistic_regression
+    alg.binary_logistic_regression.show_logistic_regression(x, y, 0.002, 10000, 10000)
 
 if __name__ == '__main__':
     main()

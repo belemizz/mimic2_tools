@@ -12,9 +12,11 @@ from get_sample import select_tseries
 from alg_classification import ClassificationResult, calc_classification_result, sumup_classification_result
 
 import sys
-sys.path.append('../../deep_tutorial/sample_codes/')
 
 from mutil import p_info
+
+sys.path.append('../../deep_tutorial/sample_codes/')
+
 
 ## utility
 def ar_float(data):

@@ -4,6 +4,7 @@ Experiment date, update date, and purpose should be recorded
 '''
 import matplotlib.pyplot as plt
 import mutil.graph
+import alg.classification
 
 
 # Experiment Date: 07/16/2015
@@ -12,7 +13,7 @@ def classify_vital_and_lab_timeseries():
     graphs = mutil.graph.Graph()
 
     import evaluate_feature
-    import alg_classification
+    import alg.classification
 
     l_dbd = [0,2]
     l_nsteps = range(1, 6)
@@ -55,12 +56,12 @@ def classify_vital_and_lab():
     graphs = mutil.graph.Graph()
 
     import evaluate_feature
-    import alg_classification
+    import alg.classification
 
     dbd_list = [0,2]
     for dbd in dbd_list:
         result = []
-        for alg in alg_classification.algorithm_list:
+        for alg in alg.classification.algorithm_list:
             efo = evaluate_feature.evaluate_fetaure(
                 max_id = 200000,
                 n_lab = 20,

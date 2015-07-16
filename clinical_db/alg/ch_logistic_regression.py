@@ -40,10 +40,6 @@ if __name__ == '__main__':
     test_y = all_data[5]
     theano_wrapper.simple_lr(train_x, train_y, test_x, test_y, batch_size = 50, n_epochs = 5)
 
-    import ipdb
-    ipdb.set_trace()
-
-
 
     # chainer model
     model = chainer.FunctionSet(l1 = F.Linear(sample_dim, output_dim))

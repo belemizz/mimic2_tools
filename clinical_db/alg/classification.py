@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn import svm, tree, linear_model, ensemble
@@ -6,12 +6,13 @@ from sklearn import cross_validation
 from collections import namedtuple
 
 import get_sample
-import mutil.graph
+import mutil
 
-mutil.graph= mutil.graph.Graph()
+graph = mutil.Graph()
+
 ClassificationResult = namedtuple('ClassificationResult' , 'P N TP FP rec prec f acc')
 
-algorithm_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
+class_alg_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
 
 def get_algorithm(algorithm):
     if algorithm == 'svm':
@@ -29,7 +30,7 @@ def get_algorithm(algorithm):
     elif algorithm == 'ab':
         clf = ensemble.AdaBoostClassifier(random_state = 0)
     else:
-        raise ValueError("algorithm has to be either %s"%algorithm_list)
+        raise ValueError("algorithm has to be either %s"%class_alg_list)
     return clf
 
 def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, algorithm = 'svm'):
@@ -53,18 +54,18 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
     h_x = x_range/grid_num
     h_y = y_range/grid_num
 
-    xx, yy = numpy.meshgrid(numpy.arange(x_min, x_max, h_x),
-                            numpy.arange(y_min, y_max, h_y))
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h_x),
+                            np.arange(y_min, y_max, h_y))
 
-    z = clf.predict(numpy.c_[xx.ravel(), yy.ravel()])
+    z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     z = z.reshape(xx.shape)
 
-    mutil.graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
+    graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
     return clf
 
 def calc_classification_result(predict_y, test_y):
-    predict_y = numpy.array(predict_y)
-    test_y = numpy.array(test_y)
+    predict_y = np.array(predict_y)
+    test_y = np.array(test_y)
     
     n_positive = sum(test_y == 1)
     n_negative = sum(test_y == 0)
@@ -126,12 +127,12 @@ def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
 
 if __name__ == '__main__':
-    source_num = 2
-    n_dim = 10
+    source_num = 1
+    n_dim = 2
     n_flag = 2
     [x,y]= get_sample.get_samples_with_target(source_num, n_dim, n_flag)
 
-    algorithm = 'rsvm'
+    algorithm = 'ab'
     try:
         plot_2d(x,y, algorithm = algorithm)
         plt.waitforbuttonpress()
@@ -139,10 +140,6 @@ if __name__ == '__main__':
         print detail
     
     cross_validation_num = 2
-
-    print '----using library for cross validation---'
-    print cross_validate(x, y, cross_validation_num, algorithm)
-
     print '----own library for cross validation---'
     kf = cross_validation.KFold(x.shape[0], n_folds = 4, shuffle = True, random_state = 0)
     result_list = []
