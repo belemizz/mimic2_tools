@@ -1,6 +1,6 @@
 import csv
 
-class control_csv:
+class Csv:
     def __init__(self, path):
         self.filepath = path
 
@@ -53,6 +53,6 @@ class control_csv:
     def __open_append(self):
         self.__f = open(self.filepath, 'a')
         return csv.writer(self.__f)
-
+    
     def __close(self):
         self.__f.close()

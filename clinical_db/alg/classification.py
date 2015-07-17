@@ -1,17 +1,17 @@
-import numpy
+import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn import svm, tree, linear_model, ensemble
 from sklearn import cross_validation
 from collections import namedtuple
 
-import generate_sample
-import control_graph
+import get_sample
+from mutil import Graph
+from . import recall_precision, ClassificationResult, sumup_classification_result, calc_classification_result
 
-graph= control_graph.control_graph()
-ClassificationResult = namedtuple('ClassificationResult' , 'P N TP FP rec prec f acc')
+graph = Graph()
 
-algorithm_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
+class_alg_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
 
 def get_algorithm(algorithm):
     if algorithm == 'svm':
@@ -29,7 +29,7 @@ def get_algorithm(algorithm):
     elif algorithm == 'ab':
         clf = ensemble.AdaBoostClassifier(random_state = 0)
     else:
-        raise ValueError("algorithm has to be either %s"%algorithm_list)
+        raise ValueError("algorithm has to be either %s"%class_alg_list)
     return clf
 
 def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, algorithm = 'svm'):
@@ -53,65 +53,21 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
     h_x = x_range/grid_num
     h_y = y_range/grid_num
 
-    xx, yy = numpy.meshgrid(numpy.arange(x_min, x_max, h_x),
-                            numpy.arange(y_min, y_max, h_y))
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h_x),
+                            np.arange(y_min, y_max, h_y))
 
-    z = clf.predict(numpy.c_[xx.ravel(), yy.ravel()])
+    z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     z = z.reshape(xx.shape)
 
     graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
     return clf
 
-def calc_classification_result(predict_y, test_y):
-    predict_y = numpy.array(predict_y)
-    test_y = numpy.array(test_y)
-    
-    n_positive = sum(test_y == 1)
-    n_negative = sum(test_y == 0)
-    n_true_positive = sum(predict_y[test_y == 1])
-    n_false_positive = sum(predict_y[test_y == 0])
-    recall, precision, f, acc = recall_precision(n_positive, n_negative, n_true_positive, n_false_positive)
-    return ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
-
-def recall_precision(n_positive, n_negative, n_true_positive, n_false_positive):
-    if n_positive > 0:
-        recall = float(n_true_positive) / n_positive
-    else:
-        recall = 0.0
-
-    if (n_true_positive + n_false_positive) > 0:
-        precision = float(n_true_positive) / (n_true_positive + n_false_positive)
-    else:
-        precision = 0.0
-
-    if (precision + recall > 0.0):
-        f_measure = 2 * precision * recall / (precision + recall)
-    else:
-        f_measure = 0.0
-
-    n_true_negative = n_negative - n_false_positive
-    
-    accuracy = float(n_true_positive + n_true_negative) / (n_positive + n_negative)
-    return recall, precision, f_measure, accuracy
 
 def fit_and_test(train_x, train_y, test_x, test_y, algorithm = 'dt'):
     clf = get_algorithm(algorithm)
     clf.fit(train_x, train_y)
     predict_y = clf.predict(test_x)
     return calc_classification_result(predict_y, test_y)
-
-def sumup_classification_result(result_list):
-    n_p = 0
-    n_n = 0
-    n_tp = 0
-    n_fp = 0
-    for result in result_list:
-        n_p = n_p + result.P
-        n_n = n_n + result.N
-        n_tp = n_tp + result.TP
-        n_fp = n_fp + result.FP
-    recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
-    return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
 
 def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     clf = get_algorithm(algorithm)
@@ -126,12 +82,12 @@ def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
 
 if __name__ == '__main__':
-    source_num = 2
-    n_dim = 10
+    source_num = 1
+    n_dim = 2
     n_flag = 2
-    [x,y]= generate_sample.get_samples_with_target(source_num, n_dim, n_flag)
+    [x,y]= get_sample.get_samples_with_target(source_num, n_dim, n_flag)
 
-    algorithm = 'rsvm'
+    algorithm = 'ab'
     try:
         plot_2d(x,y, algorithm = algorithm)
         plt.waitforbuttonpress()
@@ -139,10 +95,6 @@ if __name__ == '__main__':
         print detail
     
     cross_validation_num = 2
-
-    print '----using library for cross validation---'
-    print cross_validate(x, y, cross_validation_num, algorithm)
-
     print '----own library for cross validation---'
     kf = cross_validation.KFold(x.shape[0], n_folds = 4, shuffle = True, random_state = 0)
     result_list = []

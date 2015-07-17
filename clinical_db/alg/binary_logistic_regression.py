@@ -1,10 +1,10 @@
-import numpy
+import numpy as np
 import theano
 import theano.tensor as T
 import matplotlib.pyplot as plt
 
-import generate_sample
-import control_graph
+import get_sample
+import mutil.graph
 
 class BinaryClassifier():
     def __init__(self, input, n_dim):
@@ -18,13 +18,13 @@ class BinaryClassifier():
 
         ## Parameters 
         self.W = theano.shared(
-            value = numpy.ones(n_dim, dtype = theano.config.floatX),
+            value = np.ones(n_dim, dtype = theano.config.floatX),
             name = 'W',
             borrow = True
         )
 
         self.b = theano.shared(
-            value = numpy.ones(1, dtype = theano.config.floatX),
+            value = np.ones(1, dtype = theano.config.floatX),
             name = 'b',
             borrow = True,
             broadcastable = [True]
@@ -46,14 +46,14 @@ class BinaryClassifier():
 def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000, show_span = 500, filename = "", show_flag=True, x_label="", y_label=""):
     
     train_set_x = theano.shared(
-        numpy.asarray(set_x, dtype=theano.config.floatX),
+        np.asarray(set_x, dtype=theano.config.floatX),
                              borrow = True)
     train_set_y = T.cast( theano.shared(
-                    numpy.asarray(set_y, dtype = theano.config.floatX),
+                    np.asarray(set_y, dtype = theano.config.floatX),
                     borrow = True
                     ), 'int32')
 
-    gr = control_graph.control_graph()
+    gr = mutil.graph.Graph()
     
     x = T.matrix('x') # design matrix
     y = T.ivectors('y') # answer
@@ -85,7 +85,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
     positive_x = x[y==1]
     negative_x = x[y==0]
 
-    cost_prev = numpy.inf
+    cost_prev = np.inf
     improve_th = 0.001
     
     while epoch < n_epochs:
@@ -121,7 +121,7 @@ def show_logistic_regression(set_x, set_y, learning_rate = 0.2, n_epochs = 1000,
 
 def main():
     # generate_samples
-    [x, y] = generate_sample.normal_dist(2, 100, 100, [3, 8], seed = 1 )
+    [x, y] = get_sample.normal_dist(2, 100, 100, [3, 8], seed = 1 )
     show_logistic_regression(x, y)
     plt.waitforbuttonpress()
             

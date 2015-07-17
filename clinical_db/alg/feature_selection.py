@@ -1,7 +1,6 @@
-import numpy
+import numpy as np
 import collections
 import math
-
 
 def select_feature_index(data_x, data_y, n_select):
     entropy_reduction = calc_entropy_reduction(data_x, data_y)
@@ -21,7 +20,7 @@ def mean_entropy_reduction(reduction_results):
         else:
             raise ValueError
 
-    mean_score = numpy.mean(numpy.array(mean_scores),0)
+    mean_score = np.mean(np.array(mean_scores),0)
 
     mean_result = []
     for index in range(len(base_result)):
@@ -84,7 +83,7 @@ def entropy_after_divide(flag, value, threshold):
     return (p_r * entropy(flag_r)) + (p_l * entropy(flag_l))
 
 def entropy_after_optimal_divide(flag, value):
-    min_entropy = numpy.inf
+    min_entropy = np.inf
     opt_th = 0
     for item in value:
         t_entropy = entropy_after_divide(flag, value, item)

@@ -3,15 +3,26 @@ Test code for scripts
 """
 import unittest
 from nose.tools import ok_, eq_
-import datetime
 
-class TestSequenceFunctions(unittest.TestCase):
+import datetime
+from get_sample import Mimic2, Mimic2m
+
+class TestMimic2m(unittest.TestCase):
+    def setUp(self):
+        self.mimic2m = Mimic2m()
+
+    def test_numerics(self):
+        l_numeric = self.mimic2m.get_numerics()
+        l_id = self.mimic2m.get_id_numerics()
+        eq_( len(l_numeric), 5266, 'Number of numeric records')
+        eq_( len(l_id), 2808, 'Number of id who have numeric records')
+        eq_( l_id[0], 1, 'First id')
+        eq_( l_id[len(l_id)-1], 32805, 'First id')
+    
+class TestMimic2(unittest.TestCase):
 
     def setUp(self):
-        import control_mimic2db as mimic2
-        self.mimic2 = mimic2.control_mimic2db()
-
-    #    def tearDown(self):
+        self.mimic2 = Mimic2()
 
     def test_patient_class(self):
         patient_class = self.mimic2.get_subject(1855)
@@ -28,9 +39,7 @@ class TestSequenceFunctions(unittest.TestCase):
 
         eq_(patient_class.admissions[1].get_chart_in_span(datetime.datetime(3408,6,1), datetime.datetime(3408,6,4))[0][1], 'Sodium')
         eq_(patient_class.admissions[1].get_chart_in_span(datetime.datetime(3408,6,1), datetime.datetime(3408,6,5))[3][4], [38.0, 124.0])
-
-        
-        
                                                             
 if __name__ == '__main__':
     unittest.main()
+    

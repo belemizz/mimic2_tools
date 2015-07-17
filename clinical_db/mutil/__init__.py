@@ -2,8 +2,12 @@ import cPickle
 import os
 import time
 
-class cache:
-    """ cache class """
+from .mycsv import Csv
+from .graph import Graph
+
+
+class Cache:
+    """ Cache class """
 
     def __init__(self, cache_key, cache_dir = '../data/cache/'):
         """ This class does nothing when cache_key is '' """
@@ -61,7 +65,7 @@ class cache:
                     return False
         return True
 
-class stopwatch:
+class Stopwatch:
     def __init__(self):
         self.reset()
         
@@ -89,34 +93,4 @@ class stopwatch:
 
 def p_info(word):
     print '[INFO]' + word
-
-def sample_func(a,b,c = 5):
-    params = locals()
-    cache_ = cache('sample_func')
-
-    try:
-        return cache_.load( params)
-    except IOError:
-        ret_val = a + b + c
-        return cache_.save( ret_val, params)
-    
-def sample_func2(message):
-    cache_ = cache('sample_func2')
-
-    try:
-        return cache_.load()
-    except IOError:
-        ret_val = message
-        return cache_.save( ret_val)
-    
-if __name__ == '__main__':
-    print sample_func(1,4)
-    print sample_func2('Message')
-
-    stopwatch_ = stopwatch()
-    time.sleep(0.01)
-    stopwatch_.stop()
-
-    stopwatch_.print_cpu_elapsed()
-    stopwatch_.print_real_elapsed()
 

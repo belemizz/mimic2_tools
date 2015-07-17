@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import theano
 import theano.tensor as T
 
@@ -6,6 +6,7 @@ from theano.tensor.shared_randomstreams import RandomStreams
 
 import sys
 sys.path.append('../../DeepLearningTutorials/code/')
+
 import dA
 from logistic_sgd import load_data
 
@@ -14,12 +15,15 @@ from sklearn.decomposition import FastICA
 from sklearn.preprocessing import normalize
 
 import mutil
-import generate_sample
-import alg_feature_selection
+import get_sample
+import alg.feature_selection
+
+
+
 
 def pca(train_x, test_x, n_components, cache_key = 'pca'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
 
     try:
         return cache.load(params)
@@ -30,7 +34,7 @@ def pca(train_x, test_x, n_components, cache_key = 'pca'):
 
 def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'pca_selected'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
 
     try:
         return cache.load(params)
@@ -38,13 +42,13 @@ def pca_selected(train_x, train_y, test_x, n_components, n_select, cache_key = '
         pca = PCA(n_components = n_components).fit(train_x)
         pca_train = pca.transform(train_x)
         pca_test = pca.transform(test_x)
-        entropy_reduction = alg_feature_selection.calc_entropy_reduction(pca_train, train_y)
+        entropy_reduction = alg.feature_selection.calc_entropy_reduction(pca_train, train_y)
         select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
         return pca_test[:,select_feature_index]
         
 def ica(train_x, test_x, n_components, cache_key = 'ica'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
     
     try:
         return cache.load( params)
@@ -55,7 +59,7 @@ def ica(train_x, test_x, n_components, cache_key = 'ica'):
 
 def ica_selected(train_x, train_y, test_x, n_components, n_select, cache_key = 'ica_selected'):
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
 
     try:
         return cache.load(params)
@@ -64,14 +68,14 @@ def ica_selected(train_x, train_y, test_x, n_components, n_select, cache_key = '
         ica_train = ica.transform(train_x)
         ica_test = ica.transform(test_x)
 
-        entropy_reduction = alg_feature_selection.calc_entropy_reduction(ica_train, train_y)
+        entropy_reduction = alg.feature_selection.calc_entropy_reduction(ica_train, train_y)
         select_feature_index = [item[1] for item in entropy_reduction[0:n_select]]
         return ica_test[:,select_feature_index]
 
 def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, batch_size = 10, corruption_level = 0.0, return_train = False, cache_key = 'dae'):
 
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
     try:
         return cache.load( params)
     except IOError:
@@ -93,7 +97,7 @@ def dae(train_x, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, ba
 def dae_selected(train_x, train_y, test_x, learning_rate = 0.1, n_epochs = 2000, n_hidden = 20, batch_size = 10, corruption_level = 0.0, n_select = 5, cache_key = 'dae_selected'):
 
     params = locals()
-    cache = mutil.cache(cache_key)
+    cache = mutil.Cache(cache_key)
     try:
         return cache.load( params)
     except IOError:
@@ -109,7 +113,7 @@ def dae_selected(train_x, train_y, test_x, learning_rate = 0.1, n_epochs = 2000,
         da_train = func_hidden_values(shared_train.get_value())
         da_test = func_hidden_values(shared_test.get_value())
         
-        select_feature_index = alg_feature_selection.select_feature_index(da_train, train_y, n_select)
+        select_feature_index = alg.feature_selection.select_feature_index(da_train, train_y, n_select)
         return da_test[:,select_feature_index]
 
 
@@ -125,7 +129,7 @@ def da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_le
     ## model description
     index = T.lscalar()
     x = T.matrix('x')
-    numpy_rng = numpy.random.RandomState(123)
+    numpy_rng = np.random.RandomState(123)
     theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
 
     da = dA.dA(
@@ -155,7 +159,7 @@ def da_fit(train_x, learning_rate, n_epochs, n_hidden, batch_size, corruption_le
         c = []
         for batch_index in xrange(n_train_batches):
             c.append(train_da(batch_index))
-#        print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, numpy.mean(c))
+#        print 'Epoch %d/%d, Cost %f'%(epoch+1,n_epochs, np.mean(c))
 
     hidden_values = da.get_hidden_values(x)
     func_hidden_values = theano.function([x], hidden_values)
@@ -166,12 +170,12 @@ def convert_to_tensor_shared_variable(set_x):
     ## Check type and convert to the shared valuable
     if type(set_x) is T.sharedvar.TensorSharedVariable:
         shared_x = set_x
-    elif type(set_x) is numpy.ndarray:
+    elif type(set_x) is np.ndarray:
         shared_x = theano.shared(
-            numpy.asarray(set_x, dtype = theano.config.floatX),
+            np.asarray(set_x, dtype = theano.config.floatX),
             borrow = True)
     else:
-        raise TypeError("Sample set, set_x should be TensorSharedValuable or numpy.ndarray")
+        raise TypeError("Sample set, set_x should be TensorSharedValuable or np.ndarray")
     return shared_x
 
 def get_encoded_values(train_x, train_y, test_x,
@@ -204,7 +208,7 @@ def get_encoded_values(train_x, train_y, test_x,
 def main(sample_num = 0):
     ## get sample
     if sample_num == 0:
-        x, y = generate_sample.normal_dist(4)
+        x, y = get_sample.normal_dist(4)
     else:
         dataset = 'mnist.pkl.gz'
         datasets = load_data(dataset)
