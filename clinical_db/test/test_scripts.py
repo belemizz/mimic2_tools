@@ -11,9 +11,6 @@ class TestSequenceFunctions(unittest.TestCase):
     def test_list_id_from_code(self):
         import list_id_form_code
 
-    def test_icu_admission_info(self):
-        import icu_admission_info
-        
     def test_analyze_icd9(self):
         import analyze_icd9
 

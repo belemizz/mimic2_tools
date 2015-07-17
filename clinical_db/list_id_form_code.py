@@ -2,7 +2,6 @@
 Script to generate subject id list who have target icd9 code.
 """
 
-
 tmppath = '../data/tmp.csv'
 #outpath = '../data/out.csv'
 outfolder = '../data/'
