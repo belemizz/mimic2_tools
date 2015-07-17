@@ -14,7 +14,6 @@ def classify_vital_and_lab_timeseries():
 
     import evaluate_feature
     import alg.classification
-
     l_dbd = [0,2]
     l_nsteps = range(1, 6)
     for dbd in l_dbd:
@@ -31,22 +30,16 @@ def classify_vital_and_lab_timeseries():
                 )
             result.append(efo.tseries_eval())
 
-        lab_rec = [item[0].rec for item in result]
-        lab_prec = [item[0].prec for item in result]
-        lab_f = [item[0].f for item in result]
-        title = "Lab_tseriess_dbd_%d"%(dbd)
-        filename = "Lab_tseries_dbd_%d"%(dbd)
-        graphs.bar_pl([lab_rec, lab_prec, lab_f], l_nsteps, ['recall', 'precision', 'F-measure'],
-                      xlim = [0,1], title = title, filename = filename)
-
-        vit_rec = [item[1].rec for item in result]
-        vit_prec = [item[1].prec for item in result]
-        vit_f = [item[1].f for item in result]
-        title = "Vital_tseriess_dbd_%d"%(dbd)
-        filename = "Vit_tseries_dbd_%d"%(dbd)
-
-        graphs.bar_pl([vit_rec, vit_prec, vit_f], l_nsteps, ['recall', 'precision', 'F-measure'],
-                      xlim = [0,1], title = title, filename = filename)
+        long_label = ['Lab', 'Vital']
+        short_label = ['Lab', 'Vit']
+        for i in range(2):
+            rec = [item[i].rec for item in result]
+            prec = [item[i].prec for item in result]
+            f = [item[i].f for item in result]
+            title = "%s_tseriess_dbd_%d"%(short_label[i], dbd)
+            filename = "%s_tseries_dbd_%d"%(short_label[i], dbd)
+            graphs.bar_pl([lab_rec, lab_prec, lab_f], l_nsteps, ['recall', 'precision', 'F-measure'],
+                          xlim = [0,1], title = title, filename = filename)    
 
     
 # Experiment Date: 07/01/2015
@@ -109,9 +102,8 @@ def compare_lab_tests_and_vitals():
                                              dae_corruption = 0.3)
                                              
     efo.compare_dbd([0., 0.25, 0.5, 1., 2., 3.])
-
-    efo.rp_learn_flag = True
     
+    efo.rp_learn_flag = True
     efo.n_cv_folds = 4
     efo.point_eval()
 
@@ -119,9 +111,9 @@ def compare_lab_tests_and_vitals():
     efo.dae_hidden = 20
     efo.point_eval()
 
-
 if __name__ == '__main__':
 #compare_lab_tests_and_vitals()
     classify_vital_and_lab_timeseries()
     plt.waitforbuttonpress()
+    
     

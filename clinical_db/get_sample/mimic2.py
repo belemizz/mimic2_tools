@@ -28,7 +28,7 @@ class Mimic2:
         try:
             return cache.load()
         except IOError:
-            patient = self.patent(subject_id)
+            patient = self.patient(subject_id)
             print patient
             if len(patient) > 0:
                 subject_ins = subject(subject_id, patient[0][1], patient[0][2], patient[0][3], patient[0][4])
@@ -126,7 +126,6 @@ class Mimic2:
 
     def get_ios(self, icustay_id):
         events = self.io_events_in_icustay(icustay_id)
-        
         itemid_list = set([item[2] for item in events])
         trends = []
         for itemid in itemid_list:
@@ -140,14 +139,10 @@ class Mimic2:
                 trends.append(trend)
         return trends
 
-    def lab_items(self, item_id):
-        select_seq = "SELECT * "+\
-                     "FROM mimic2v26.D_LABITEMS "+\
-                     "WHERE itemid =%d "%(item_id)
-        return self.__select_and_save(select_seq)
-
-    ## Search subject ID based on conditions ##
     def subject_with_icd9_codes(self, target_codes, ignore_order = True):
+        ''' Search subject ID the target ICD9 codes
+        :return:  list of ids
+        '''
         id_lists = []
         for index, code in enumerate(target_codes):
             if ignore_order:
@@ -163,8 +158,13 @@ class Mimic2:
 
         return sorted(list(id_set))
 
+    def subject_with_numeric(self):
+        ''' Search subject ID who have one or more numeric record
+        :return:  list of ids
+        '''
+
     ##  Basic queries to get items for a patient ##
-    def patent(self, patient_id, savepath = ""):
+    def patient(self, patient_id, savepath = ""):
         if len(savepath) == 0:
             savepath = "../data/%d_patient.csv"%patient_id
 
@@ -224,6 +224,12 @@ class Mimic2:
                      "WHERE subject_id =%d "%(patient_id)+\
                      "AND M.ITEMID = T.ITEMID ORDER BY ITEMID, REALTIME";
         return self.__select_and_save(select_seq, savepath)
+
+    def lab_items(self, item_id):
+        select_seq = "SELECT * "+\
+                     "FROM mimic2v26.D_LABITEMS "+\
+                     "WHERE itemid =%d "%(item_id)
+        return self.__select_and_save(select_seq)
 
     def note_events(self, patient_id, savepath = ""):
         if len(savepath) == 0:
@@ -358,8 +364,6 @@ class Mimic2:
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq, savepath)
 
-        
-    
     def __subject_with_icd9(self, code, seq_cond):
         select_seq = "SELECT subject_id "+\
                      "FROM mimic2v26.icd9 "+\
@@ -367,7 +371,6 @@ class Mimic2:
                      "GROUP BY subject_id " +\
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq)
-
 
     def __select_and_save(self, select_seq, filepath="", print_query = False):
 

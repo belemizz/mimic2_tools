@@ -44,18 +44,3 @@ for code in all_codes:
 
 for code, count in sorted(codes_and_counts.iteritems(), key=lambda x: x[1], reverse=False):
     print code, count
-
-
-#code = '428.0'
-#mimic2db.icd9_incl(code, savepath)
-#mimic2db.icd9_of_subject(10, savepath)
-
-#rank = 1
-#mimic2db.count_icd9_eq_higher_than(rank, savepath)
-
-#mimic2db.count_sequence_of_icd9_eq(code, savepath)
-#mimic2db.count_entry_of("d_patients", savepath)
-
-#mimic2db.count_icd9(savepath)
-
-#mimic2db.subject_matched_waveforms(savepath)

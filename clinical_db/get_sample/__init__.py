@@ -10,6 +10,7 @@ import random
 import imdb
 
 from .mimic2 import Mimic2
+from .mimic2m import Mimic2m
 
 def time_series(source_num = 0, n_dim = 2):
     """
