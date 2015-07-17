@@ -62,7 +62,6 @@ def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, a
     graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
     return clf
 
-
 def fit_and_test(train_x, train_y, test_x, test_y, algorithm = 'dt'):
     clf = get_algorithm(algorithm)
     clf.fit(train_x, train_y)
@@ -81,11 +80,11 @@ def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
     return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
 
-if __name__ == '__main__':
+def main():
     source_num = 1
     n_dim = 2
     n_flag = 2
-    [x,y]= get_sample.get_samples_with_target(source_num, n_dim, n_flag)
+    [x,y]= get_sample.vector(source_num, n_dim, n_flag)
 
     algorithm = 'ab'
     try:

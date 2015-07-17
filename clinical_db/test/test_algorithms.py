@@ -51,7 +51,7 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_classification(self):
         import alg.classification
-        x, y = get_sample.get_samples_with_target(0, 2)
+        x, y = get_sample.vector(0, 2)
         alg.classification.plot_2d(x, y, show_flag = False)
         alg.classification.cross_validate(x,y,4)
 

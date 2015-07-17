@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     sample_dim = 700
     output_dim = 5
-    [x, y] = get_sample.get_samples_with_target(2,sample_dim,output_dim)
+    [x, y] = get_sample.vector(2,sample_dim,output_dim)
 
     n_epoch = 5
     batchsize = 50

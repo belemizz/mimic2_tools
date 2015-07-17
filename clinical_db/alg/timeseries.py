@@ -458,10 +458,10 @@ def fit_and_test(train_set, test_set, algorithm = 'lr'):
     predict_y = clf.predict(test_set[0:2])
     return calc_classification_result(predict_y, test_set[2])
 
-if __name__ == '__main__':
-    sample_set = get_sample.time_series(0,2)
-    result = cv(sample_set, 4, 'lstm')
-    
+def main():
+    sample_set = get_sample.tseries(0,2)
+    result = cv(sample_set, 4, 'lr')
+
     ## n_train = int( sample_set[0].shape[1] * 0.75)
     ## n_test = sample_set[0].shape[1] - n_train
 
