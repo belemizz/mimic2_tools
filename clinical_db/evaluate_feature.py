@@ -6,8 +6,9 @@ import collections
 import datetime
 import matplotlib.pyplot as plt
 
-import get_sample.mimic2
-import mutil.graph
+from get_sample import Mimic2
+from mutil import Graph
+
 import alg.classification
 import alg.binary_logistic_regression
 import alg.auto_encoder
@@ -19,8 +20,8 @@ from mutil import p_info
 
 from sklearn import cross_validation
 
-mimic2db = get_sample.mimic2.Mimic2()
-graphs = mutil.graph.Graph()
+mimic2db = Mimic2()
+graphs = Graph()
 
 class evaluate_fetaure:
     def __init__( self,

@@ -13,7 +13,6 @@ from .mimic2 import Mimic2
 from .mimic2m import Mimic2m
 
 
-
 def vector(source_num = 0, n_dim = 0, n_flag=2):
     """ get n-dim vector samples 
     :return: [x,y]
@@ -49,7 +48,7 @@ def tseries(source_num = 0, n_dim = 2):
     y: 1-d array of labels
     """
     if source_num is 0:
-        [x, mask, y] = normal_timeseries(n_dim = n_dim, bias = [-0.3, 0.3])
+        [x, mask, y] = normal_timeseries(n_dim = n_dim, bias = [-10, -9], length = 5)
     elif source_num is 1:
         [x, mask, y] = imdb_data()
     else:

@@ -17,6 +17,11 @@ from mutil import p_info
 
 sys.path.append('../../deep_tutorial/sample_codes/')
 
+def example(algorithm = 'lr'):
+    ''' Function for showing how to use this module '''
+    sample_set = get_sample.tseries(0,2)
+    result = cv(sample_set, 4, algorithm)
+    print result
 
 ## utility
 def ar_float(data):
@@ -389,23 +394,57 @@ class Lstm():
         return self.f_pred(test_sample[0], test_sample[1])
     
 class LR_ts():
-    def __init__(self, n_dim = 10):
+    def __init__(self, max_step= 10):
         self.clf = linear_model.LogisticRegression(random_state =0)
-        self.n_dim = n_dim
+        self.max_step = max_step
+
+    def fill_missing(self, x, m, algorithm = 'fv'):
+
+        if algorithm == 'none':
+            pass
+        elif algorithm == 'fv':
+            fill_mat = np.zeros( x.shape[1:3] )
+            """ fill by final available value """
+            for s in range( x.shape[0] ):
+                for i in range( x.shape[1] ):
+                    if m[s, i] == 1:
+                        fill_mat[i] = x[s, i]
+                    else:
+                        x[s, i] = fill_mat[i]
+                        
+        elif algorithm == 'sample_ave':
+            count_m = m.sum(axis = 0)
+            sum_x = x.sum(axis = 0)
+            ave_x = np.zeros(sum_x.shape)
+
+            for dim in range(x.shape[2]):
+                ave_x[:,dim] = np.divide(sum_x[:, dim] , count_m)
+
+            """ fill by final available value """
+            for s in range( x.shape[0] ):
+                for i in range( x.shape[1] ):
+                    if m[s, i] == 0:
+                        x[s, i] = ave_x[i]
+        else:
+            ValueError
 
     def fit(self, train_set):
+        self.fill_missing(train_set[0], train_set[1])
         train_x = train_set[0]
         train_y = train_set[2]
-
+        
         n_sample = train_x.shape[1]
-        s_train_x = np.array([train_x[:self.n_dim, idx, :].flatten() for idx in range(n_sample)])
+        s_train_x = np.array([train_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
 
         self.clf.fit(s_train_x, train_y)
 
     def predict(self, test_sample):
+        self.fill_missing(test_sample[0], test_sample[1])
         test_x = test_sample[0]
+
         n_sample = test_x.shape[1]
-        s_test_x = np.array([test_x[:self.n_dim, idx, :].flatten() for idx in range(n_sample)])
+        s_test_x = np.array([test_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
+        
         predict_y = self.clf.predict(s_test_x)
         return predict_y
 
@@ -429,7 +468,7 @@ def get_algorithm(algorithm):
     if algorithm is 'lstm':
         clf = Lstm(n_epochs = 20)
     elif algorithm is 'lr':
-        clf = LR_ts(n_dim = 10)
+        clf = LR_ts(max_step = 10)
     elif algorithm is 'coin':
         clf = Cointoss()
     else:
@@ -458,17 +497,3 @@ def fit_and_test(train_set, test_set, algorithm = 'lr'):
     predict_y = clf.predict(test_set[0:2])
     return calc_classification_result(predict_y, test_set[2])
 
-def main():
-    sample_set = get_sample.tseries(0,2)
-    result = cv(sample_set, 4, 'lr')
-
-    ## n_train = int( sample_set[0].shape[1] * 0.75)
-    ## n_test = sample_set[0].shape[1] - n_train
-
-    ## train_set = select_tseries( sample_set, range(0,n_train) )
-    ## test_set = select_tseries( sample_set, range(n_train, n_train+n_test))
-
-    ## algorithm = 'coin'
-    ## result = fit_and_test(train_set, test_set, algorithm)
-
-    print result
