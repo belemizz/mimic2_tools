@@ -1,5 +1,5 @@
-import control_mimic2db as mimic2
-import mutil.mycsv
+from get_sample import Mimic2
+import csv
 savepath = '../data/tmp.csv'
 
 n_code_to_see = 2
@@ -7,12 +7,12 @@ ignore_order = False
 target_code = '428.0' #only count codes includes this code, set '' to ignore
 
 # select icd code entries
-mimic2db = mimic2.Mimic2()
+mimic2db = Mimic2()
 mimic2db.icd9_eq_higher_than(n_code_to_see,savepath)
 
 # read csv and list code
 f = open(savepath, 'rb')
-dataReader = mutil.mycsv.reader(f)
+dataReader = csv.reader(f)
 
 prev_adm_id = 0
 all_codes = []

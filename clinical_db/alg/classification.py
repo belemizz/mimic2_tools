@@ -7,7 +7,7 @@ from collections import namedtuple
 
 import get_sample
 from mutil import Graph
-from . import recall_precision, ClassificationResult, sumup_classification_result
+from . import recall_precision, ClassificationResult, sumup_classification_result, calc_classification_result
 
 graph = Graph()
 

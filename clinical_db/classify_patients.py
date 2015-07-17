@@ -2,22 +2,23 @@
 classify patients based on lab tests
 """
 import get_sample.mimic2
-import mutil.graph
+from mutil import Graph
+
 import mutil.mycsv
 
 import time
 import datetime
 import random
 
-import numpy
+import numpy as np
 import theano
 import theano.tensor as T
-import alg.binary_logistic_regression
+import alg.classification
 
 def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
 
     mimic2db = get_sample.mimic2.Mimic2()
-    graph = graph.Graph()
+    graph = Graph()
 
     ## Get Subject ID ##
     id_list =  mimic2db.subject_with_icd9_codes(target_codes)
@@ -77,7 +78,7 @@ def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
         for item in input_values:
             if len(item[0])>0 and len(item[1])>0:
                 temp.append([float(item[0][0]), float(item[1][0])])
-        return numpy.array(temp)
+        return np.array(temp)
 
     positive_x = transform_values(expire_values[0])
     negative_x = transform_values(recover_values[0])
@@ -86,12 +87,8 @@ def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
     data.extend([[item, 0] for item in negative_x])
     random.shuffle(data)
 
-    x = numpy.array([item[0] for item in data])
-    y = numpy.array([item[1] for item in data])
-
-    ## classification
-    import alg.binary_logistic_regression
-    alg.binary_logistic_regression.show_logistic_regression(x, y, 0.002, 10000, 10000)
+    x = np.array([item[0] for item in data])
+    y = np.array([item[1] for item in data])
 
 if __name__ == '__main__':
     main()
