@@ -283,11 +283,11 @@ class evaluate_fetaure:
         lab_set = [lab_tseries[0], lab_tseries[1], flags]
         vit_set = [vit_tseries[0], vit_tseries[1], flags]
 
-        lab_result = alg.timeseries.cv(lab_set, self.n_cv_folds, 'lr')
-        vit_result = alg.timeseries.cv(vit_set, self.n_cv_folds, 'lr')
-        
+        lab_result = alg.timeseries.cv(lab_set, self.n_cv_folds, 'lstm')
         p_info('lab')
         print lab_result
+
+        vit_result = alg.timeseries.cv(vit_set, self.n_cv_folds, 'lstm')
         p_info('vital')
         print vit_result
 
@@ -337,6 +337,7 @@ class evaluate_fetaure:
                         vit_m[i_steps][i_id] = 1.
                     except ValueError:
                         pass
+
             lab_tseries = [lab_x, lab_m]
             vit_tseries = [vit_x, vit_m]
 
@@ -509,20 +510,6 @@ class evaluate_fetaure:
             lab_units.append(units[item_id])
         return most_common_tests, lab_descs, lab_units
 
-    ## # Get the data of the tests
-    ## def __get_lab_chart_values2(self, patients, lab_ids, chart_ids, days_before_discharge):
-    ##     ''' 
-    ##     Get the value of labtest and values at the time definded by days_before_discharge
-    ##     '''
-
-    ##     for patient in patients
-    ##         final_adm = patient.get_final_admission()
-    ##         time_of_interest = final_adm.get_estimated_disch_time() - datetime.timedelta(days_before_discharge)
-    ##         lab_result =  final_adm.get_newest_lab_at_time(time_of_interest)
-    ##         chart_result =  final_adm.get_newest_chart_at_time(time_of_interest)
-
-    ##         lab_value = 
-        
     
     def __get_lab_chart_values(self, patients, lab_ids, chart_ids, days_before_discharge = None):
         ''' Get the value of labtest and values at the time definded by days_before_discharge '''
@@ -555,14 +542,14 @@ class evaluate_fetaure:
             if True not in np.isnan(lab_value) and True not in np.isnan(chart_value) and patient.hospital_expire_flg in ['Y', 'N']:
                 lab_values.append(lab_value)
                 chart_values.append(chart_value)
-                flags.append(patient.hospital_expire_flg)
+                flags.append( patient.hospital_expire_flg)
                 ids.append(patient.subject_id)
 
         lab_array = np.array(lab_values)
         chart_array = np.array(chart_values)
-        flag_array = np.array(flags)
+        flag_array = np.array(flags )
 
-        y = np.zeros(len(flag_array))
+        y = np.zeros(len(flag_array), dtype = 'int')
         y[flag_array == 'Y'] = 1
 
         return lab_array, chart_array, y, ids
@@ -663,9 +650,9 @@ def float_list(l):
 
 if __name__ == '__main__':
     
-    ef = evaluate_fetaure(max_id = 2000, days_before_discharge = 0, n_lab = 20,
-                          tseries_freq = 1.0, tseries_steps = 1,
-                           dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
+    ef = evaluate_fetaure(max_id = 200000, days_before_discharge = 0, n_lab = 20,
+                          tseries_freq = 1, tseries_steps = 3,
+                          dae_hidden_ratio = 2, dae_n_epoch = 20000, dae_corruption = 0.3, dae_select_ratio = 0.4,
                            rp_learn_flag = False, class_alg = 'svm')
     ef.tseries_eval()
 #    ef.point_eval()

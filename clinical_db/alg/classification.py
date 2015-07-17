@@ -102,4 +102,3 @@ def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
     n_fp = sum(predicted[y == 0])
     recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
     return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
-

@@ -188,15 +188,15 @@ def ortho_w(ndim):
 
 class Lstm():
     def __init__( self,
-                  n_epochs = 100,
-                  patience = 20
+                  n_epochs = 2000,
+                  patience = 50
                   ):
 
         # loop
         self.n_epochs = n_epochs
         self.patience = patience
-        self.validFreq = 100
-        self.dispFreq = 10
+        self.validFreq = 300
+        self.dispFreq = 1000
         self.batch_size = 10
 
         # random seed
@@ -227,10 +227,14 @@ class Lstm():
 
     def __keep_params(self):
         params = self.__l_params()
-        self.best_params = [param.copy() for param in params]
+        self.best_params = [param.eval().copy() for param in params]
 
     def __retrieve_best_params(self):
-        [self.p_Wl, self.p_Ul, self.p_bl, self.p_Wc, self.p_bc] = self.best_params
+        self.p_Wl.set_value(self.best_params[0])
+        self.p_Ul.set_value(self.best_params[1])
+        self.p_bl.set_value(self.best_params[2])
+        self.p_Wc.set_value(self.best_params[3])
+        self.p_bc.set_value(self.best_params[4])
 
     def __lstm_layer(self, t_x, t_m):
 
@@ -288,9 +292,11 @@ class Lstm():
     def __split_train_and_valid(self, r_valid, train_set):
         if r_valid < 0 or r_valid > 1:
             raise ValueError('should be 0 <= r_valid <= 1')
-        
-        n_valid = int(len(train_set[0]) * r_valid)
-        n_train = len(train_set[0]) - n_valid
+
+        n_valid = int(train_set[0].shape[1] * r_valid)
+
+#        n_valid = int(len(train_set[0]) * r_valid)
+        n_train = train_set[0].shape[1] - n_valid
 
         valid_set = select_tseries(train_set, range(n_train, n_train+n_valid))
         train_set = select_tseries(train_set, range(0, n_train))
@@ -308,6 +314,7 @@ class Lstm():
         print 'Train:' , train_err, 'Valid:', valid_err
 
         if (len(l_errors) == 0 or valid_err < np.array(l_errors)[:, 1].min()):
+
             p_info('Save best parameters')
             self.__keep_params()
         l_errors.append([train_err, valid_err])
@@ -321,12 +328,23 @@ class Lstm():
         else:
             return False
 
+    ## def __normalize(self, x, m):
+    ##     record_sum = x.sum(axis = (0,1))
+    ##     record_count = m.sum()
+    ##     record_ave = record_sum / record_count
+
+    ##     import ipdb
+    ##     ipdb.set_trace()
+        
+        
     def fit(self, train_set):
         """ train the model by training set """
 
         self.dim_feature = len(train_set[0][0][0])
         self.dim_class = 2
         self.__init_params(self.dim_feature, self.dim_class)
+
+        train_set, valid_set = self.__split_train_and_valid(0.2, train_set)
 
         p_info('Building the model')
         t_x = th_ftensor3('t_x')
@@ -352,8 +370,6 @@ class Lstm():
         l_errors = []
         b_estop = False
         
-        train_set, valid_set = self.__split_train_and_valid(0.1, train_set)
-
         self.__validation(train_set, valid_set, l_errors)
         for i_epoch in xrange(self.n_epochs):
             kf = get_minibatches_idx(train_set[0].shape[1], self.batch_size, True)
@@ -363,8 +379,8 @@ class Lstm():
             for _, train_index in kf:
                 n_updates += 1
                 [x, m, y] = select_tseries(train_set, train_index)
-
                 cost = f_cost(x, m, y)
+                
                 l_costs.append(cost)
                 f_update(0.01)
 
@@ -378,14 +394,12 @@ class Lstm():
                         p_info('Early stopping')
                         break
                     
-            print "Averave m_cost in epoch %d: %f"%(i_epoch, np.mean(l_costs))
             if b_estop: break
 
         self.__retrieve_best_params()
         self.__validation(train_set, valid_set, l_errors)
 
         print l_errors
-        print self.best_params
 
     def predict(self, test_sample):
         if self.f_pred == None:
@@ -466,7 +480,7 @@ class Cointoss():
 algorithm_list = ['lstm', 'lr', 'coin']
 def get_algorithm(algorithm):
     if algorithm is 'lstm':
-        clf = Lstm(n_epochs = 20)
+        clf = Lstm()
     elif algorithm is 'lr':
         clf = LR_ts(max_step = 10)
     elif algorithm is 'coin':
@@ -474,6 +488,12 @@ def get_algorithm(algorithm):
     else:
         raise ValueError("algorithm has to be either %s"%algorithm_list)
     return clf
+
+def fit_and_test(train_set, test_set, algorithm = 'lr'):
+    clf = get_algorithm(algorithm)
+    clf.fit(train_set)
+    predict_y = clf.predict(test_set[0:2])
+    return calc_classification_result(predict_y, test_set[2])
 
 def cv(sample_set, n_fold, algorithm = 'lr'):
 
@@ -490,10 +510,4 @@ def cv(sample_set, n_fold, algorithm = 'lr'):
         results.append(fit_and_test(train_set, test_set, algorithm))
 
     return sumup_classification_result(results)
-
-def fit_and_test(train_set, test_set, algorithm = 'lr'):
-    clf = get_algorithm(algorithm)
-    clf.fit(train_set)
-    predict_y = clf.predict(test_set[0:2])
-    return calc_classification_result(predict_y, test_set[2])
 

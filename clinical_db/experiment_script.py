@@ -8,6 +8,7 @@ import alg.classification
 
 
 # Experiment Date: 07/16/2015
+# Update Date: 07/17/2015
 def classify_vital_and_lab_timeseries():
     import mutil.graph
     graphs = mutil.graph.Graph()
@@ -112,7 +113,7 @@ def compare_lab_tests_and_vitals():
     efo.point_eval()
 
 if __name__ == '__main__':
-#compare_lab_tests_and_vitals()
+#    compare_lab_tests_and_vitals()
     classify_vital_and_lab_timeseries()
     plt.waitforbuttonpress()
     
