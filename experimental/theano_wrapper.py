@@ -1,3 +1,4 @@
+"""Hogeho."""
 import sys
 sys.path.append('../../DeepLearningTutorials/code/')
 sys.path.append('../clinical_db')
@@ -7,7 +8,7 @@ import theano
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 
-import generate_sample
+import get_sample
 import mutil
 
 from logistic_sgd import LogisticRegression
@@ -26,16 +27,15 @@ def stacked_denoising_auto_encoder(x, y,
                                    corruption_levels = [.0],
                                    batch_size=25):
 
-#    norm_x = normalize(x)
-    [ar_train_x, ar_train_y, ar_valid_x, ar_valid_y, ar_test_x, ar_test_y] = generate_sample.split_to_three_sets(x, y)
+    [ar_train_x, ar_train_y, ar_valid_x, ar_valid_y, ar_test_x, ar_test_y] = get_sample.split_to_three_sets(x, y)
 
-    train_x = generate_sample.shared_array(ar_train_x)
-    train_y = generate_sample.shared_flag(ar_train_y)
-    valid_x = generate_sample.shared_array(ar_valid_x)
-    valid_y = generate_sample.shared_flag(ar_valid_y)
-    test_x = generate_sample.shared_array(ar_test_x)
-    test_y = generate_sample.shared_flag(ar_test_y)
-    
+    train_x = get_sample.shared_array(ar_train_x)
+    train_y = get_sample.shared_flag(ar_train_y)
+    valid_x = get_sample.shared_array(ar_valid_x)
+    valid_y = get_sample.shared_flag(ar_valid_y)
+    test_x = get_sample.shared_array(ar_test_x)
+    test_y = get_sample.shared_flag(ar_test_y)
+
     n_train_batches = ar_train_x.shape[0] / batch_size
     n_valid_batches = ar_valid_x.shape[0] / batch_size
     n_test_batches = ar_test_x.shape[0] / batch_size
@@ -70,7 +70,7 @@ def stacked_denoising_auto_encoder(x, y,
             print 'Pre-training layer %i, epoch %d, cost '%(i,epoch),
             print numpy.mean(c)
     sw.stop()
-    
+
     print >> sys.stderr, ('The pretraining code for file ' +
                           os.path.split(__file__)[1] +
                           ' ran for %.2fm' % (sw.real_elapsed() / 60.))
@@ -91,11 +91,11 @@ def stacked_denoising_auto_encoder(x, y,
     validation_frequency = min(n_train_batches, patience / 2)
     best_validation_loss = numpy.inf
     test_score = 0.
-    
+
     sw.reset()
     done_looping = False
     epoch = 0
-    
+
     while (epoch < training_epochs) and (not done_looping):
         epoch = epoch + 1
         for minibatch_index in xrange(n_train_batches):
@@ -147,17 +147,17 @@ def stacked_denoising_auto_encoder(x, y,
     print >> sys.stderr, ('The training code for file ' +
                           os.path.split(__file__)[1] +
                           ' ran for %.2fm' % (sw.real_elapsed()/ 60.))
-    
+
 def simple_lr(train_x_data, train_y_data,
               test_x_data, test_y_data,
               learning_rate = 0.13,
               n_epochs = 1000,
               batch_size = 600):
 
-    train_x = generate_sample.shared_array(train_x_data)
-    train_y = generate_sample.shared_flag(train_y_data)
-    test_x = generate_sample.shared_array(test_x_data)
-    test_y = generate_sample.shared_flag(test_y_data)
+    train_x = get_sample.shared_array(train_x_data)
+    train_y = get_sample.shared_flag(train_y_data)
+    test_x = get_sample.shared_array(test_x_data)
+    test_y = get_sample.shared_flag(test_y_data)
 
     n_train_batches = train_x_data.shape[0] / batch_size
     n_test_batches = test_x_data.shape[0] / batch_size
@@ -167,8 +167,8 @@ def simple_lr(train_x_data, train_y_data,
     y = T.ivector('y')
 
     n_in = train_x.get_value().shape[1]
-    n_out = len( set(train_y.eval()))
-    
+    n_out = len(set(train_y.eval()))
+
     classifier = LogisticRegression(input = x, n_in = n_in, n_out = n_out)
 
     cost = classifier.negative_log_likelihood(y)
@@ -182,7 +182,7 @@ def simple_lr(train_x_data, train_y_data,
             y: test_y[index * batch_size: (index+1) * batch_size]
         }
     )
-    
+
     g_W = T.grad(cost = cost, wrt=classifier.W)
     g_b = T.grad(cost = cost, wrt=classifier.b)
 
@@ -191,7 +191,6 @@ def simple_lr(train_x_data, train_y_data,
 
     train_model = theano.function(
         inputs=[index],
-#        outputs=cost,
         outputs=classifier.errors(y),
         updates=updates,
         givens={
@@ -216,15 +215,15 @@ def simple_lr(train_x_data, train_y_data,
 
         test_score = 1.0 - numpy.mean(test_errors)
         print (train_score, test_score)
-        
+
         done_looping = False
         if done_looping: break
 
-        
-        
 
 
-    
+
+
+
 
 
 def logistic_regression(x, y,
@@ -232,22 +231,22 @@ def logistic_regression(x, y,
                         n_epochs = 1000,
                         batch_size = 600):
 
-    [ar_train_x, ar_train_y, ar_valid_x, ar_valid_y, ar_test_x, ar_test_y] = generate_sample.split_to_three_sets(x, y)
+    [ar_train_x, ar_train_y, ar_valid_x, ar_valid_y, ar_test_x, ar_test_y] = get_sample.split_to_three_sets(x, y)
 
-    train_x = generate_sample.shared_array(ar_train_x)
-    train_y = generate_sample.shared_flag(ar_train_y)
-    valid_x = generate_sample.shared_array(ar_valid_x)
-    valid_y = generate_sample.shared_flag(ar_valid_y)
-    test_x = generate_sample.shared_array(ar_test_x)
-    test_y = generate_sample.shared_flag(ar_test_y)
-    
+    train_x = get_sample.shared_array(ar_train_x)
+    train_y = get_sample.shared_flag(ar_train_y)
+    valid_x = get_sample.shared_array(ar_valid_x)
+    valid_y = get_sample.shared_flag(ar_valid_y)
+    test_x = get_sample.shared_array(ar_test_x)
+    test_y = get_sample.shared_flag(ar_test_y)
+
     n_train_batches = ar_train_x.shape[0] / batch_size
     n_valid_batches = ar_valid_x.shape[0] / batch_size
     n_test_batches = ar_test_x.shape[0] / batch_size
 
 
     print '[INFO] building the model'
-    
+
     index = T.lscalar()
     x = T.matrix('x')
     y = T.ivector('y')
@@ -267,7 +266,7 @@ def logistic_regression(x, y,
             y: test_y[index * batch_size: (index+1) * batch_size]
         }
     )
-    
+
     validate_model = theano.function(
         inputs = [index],
         outputs = classifier.errors(y),
@@ -382,9 +381,9 @@ def denoising_auto_encoder(x,
                            n_hidden = 8,
                            corruption_level = 0.
                            ):
-    
+
     norm_x = normalize(x)
-    train_x = generate_sample.shared_array(norm_x)
+    train_x = get_sample.shared_array(norm_x)
     n_train_batches = x.shape[0] / batch_size
 
     print '[INFO] building the model'
@@ -437,12 +436,12 @@ def denoising_auto_encoder(x,
 
 
 if __name__ == '__main__':
-    x, y = generate_sample.get_samples_with_target(1, 0)
+    x, y = get_sample.get_samples_with_target(1, 0)
 
     algorithm = 5
     if algorithm is 0:
         logistic_regression(x,y, n_epochs = 5, batch_size = 5)
-        
+
 #    elif algorithm is 1:
 #        # multi-layer perceptron
 #        import mlp
@@ -460,5 +459,3 @@ if __name__ == '__main__':
     elif algorithm is 5:
         import rbm
         rbm.test_rbm()
-        
-
