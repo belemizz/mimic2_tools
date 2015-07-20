@@ -21,10 +21,10 @@ def calc_classification_result(predict_y, test_y):
     predict_y = np.array(predict_y)
     test_y = np.array(test_y)
     
-    n_positive = sum(test_y == 1)
-    n_negative = sum(test_y == 0)
-    n_true_positive = sum(predict_y[test_y == 1])
-    n_false_positive = sum(predict_y[test_y == 0])
+    n_positive = int( sum(test_y == 1))
+    n_negative = int( sum(test_y == 0))
+    n_true_positive = int( sum(predict_y[test_y == 1]))
+    n_false_positive = int( sum(predict_y[test_y == 0]))
     recall, precision, f, acc = recall_precision(n_positive, n_negative, n_true_positive, n_false_positive)
     return ClassificationResult(n_positive, n_negative, n_true_positive, n_false_positive, recall, precision, f, acc)
 
@@ -45,6 +45,10 @@ def recall_precision(n_positive, n_negative, n_true_positive, n_false_positive):
         f_measure = 0.0
 
     n_true_negative = n_negative - n_false_positive
-    
-    accuracy = float(n_true_positive + n_true_negative) / (n_positive + n_negative)
+
+    if n_positive + n_negative > 0.0:
+        accuracy = float(n_true_positive + n_true_negative) / (n_positive + n_negative)
+    else:
+        accuracy = 0.0
+        
     return recall, precision, f_measure, accuracy

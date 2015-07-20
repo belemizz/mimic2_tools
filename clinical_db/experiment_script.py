@@ -8,6 +8,7 @@ import alg.classification
 
 
 # Experiment Date: 07/16/2015
+# Update Date: 07/17/2015
 def classify_vital_and_lab_timeseries():
     import mutil.graph
     graphs = mutil.graph.Graph()
@@ -38,7 +39,7 @@ def classify_vital_and_lab_timeseries():
             f = [item[i].f for item in result]
             title = "%s_tseriess_dbd_%d"%(short_label[i], dbd)
             filename = "%s_tseries_dbd_%d"%(short_label[i], dbd)
-            graphs.bar_pl([lab_rec, lab_prec, lab_f], l_nsteps, ['recall', 'precision', 'F-measure'],
+            graphs.bar_pl([rec, prec, f], l_nsteps, ['recall', 'precision', 'F-measure'],
                           xlim = [0,1], title = title, filename = filename)    
 
     
@@ -112,7 +113,7 @@ def compare_lab_tests_and_vitals():
     efo.point_eval()
 
 if __name__ == '__main__':
-#compare_lab_tests_and_vitals()
+#    compare_lab_tests_and_vitals()
     classify_vital_and_lab_timeseries()
     plt.waitforbuttonpress()
     

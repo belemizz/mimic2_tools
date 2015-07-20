@@ -14,22 +14,47 @@ import imdb
 from .mimic2 import Mimic2
 from .mimic2m import Mimic2m
 
-def time_series(source_num = 0, n_dim = 2):
-    """
-    get timeseries data
-    returns [x, y]:
-    x: list of data series
-        1st dim: time
-        2nd dim: sample
-        3rd dim: feature
-    y: list of labels
+
+def vector(source_num = 0, n_dim = 0, n_flag=2):
+    """ get n-dim vector samples 
+    :return: [x,y]
+    x: 2-d array [sample, feature]
+    y: 1-d array of labels
     """
     if source_num is 0:
-        [x, mask, y] = normal_timeseries(n_dim = n_dim, bias = [-0.3, 0.3])
+        l_amount = [100] * n_flag
+        bias = range(n_flag)
+        [x, y] = normal_dist(n_dim, l_amount,  bias, seed = 1)
+        
+    elif source_num is 1:
+        from sklearn import datasets
+        iris = datasets.load_iris()
+        x, y = chop_data(iris.data, iris.target, n_dim, n_flag)
+
+    elif source_num is 2:
+        from logistic_sgd import load_data
+        datasets = load_data('mnist.pkl.gz')
+        [shared_x, shared_y] = datasets[0]
+        x, y = chop_data(shared_x.get_value(), shared_y.eval(), n_dim, n_flag)
+
+    else:
+        raise ValueError
+    return x, y
+
+def tseries(source_num = 0, n_dim = 2):
+    """
+    get timeseries data
+    returns [x, m, y]:
+    x: 3-d array of [step, sample feature]
+    m: 2-d array of [step, sample]
+    y: 1-d array of labels
+    """
+    if source_num is 0:
+        [x, mask, y] = normal_timeseries(n_dim = n_dim, bias = [-10, -9], length = 5)
     elif source_num is 1:
         [x, mask, y] = imdb_data()
     else:
-        raise ValueError('source_num must be 0')
+        raise ValueError('source_num must be 0 or 1')
     return x, mask, y
 
 def select_tseries(sample_all, index):
@@ -103,26 +128,7 @@ def imdb_data():
     y = np.array(train[1] + valid[1] + test[1])
     return [x, mask,  y]
 
-def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
 
-    if source_num is 0:
-        [x, y] = normal_dist(data_dim, 100, 100, [2,8], seed = 1)
-
-    elif source_num is 1:
-        from sklearn import datasets
-        iris = datasets.load_iris()
-        x, y = chop_data(iris.data, iris.target, data_dim, n_flag)
-
-    elif source_num is 2:
-        from logistic_sgd import load_data
-        datasets = load_data('mnist.pkl.gz')
-        [shared_x, shared_y] = datasets[0]
-        x, y = chop_data(shared_x.get_value(), shared_y.eval(), data_dim, n_flag)
-
-    else:
-        raise ValueError
-
-    return x, y
 
 
 def chop_data(all_data, all_target, data_dim, n_flag):
@@ -181,23 +187,20 @@ def shared_flag(set_y):
         borrow=True)
     return T.cast(shared_y, 'int32')
 
-def normal_dist(n_dim = 2, n_neg_sample = 100, n_pos_sample = 100, bias = [-2, 2], seed = 1):
-
+def normal_dist(n_dim = 2, l_amount = [100,100], bias = [-2, 2], seed = 1):
+    
     """ Generate 2 element samples of normal distribution """
     data = []
 
     random.seed(seed)
     np.random.seed(seed)
 
-    for i in xrange(0,n_neg_sample):
-        vec = np.random.randn(1,n_dim) + bias[0]
-        flag = 0
-        data.append([vec,flag])
-    for i in range(0,n_pos_sample):
-        vec = np.random.randn(1,n_dim) + bias[1]
-        flag = 1
-        data.append([vec,flag])
-
+    for i, amount in enumerate(l_amount):
+        for j in xrange(amount):
+            vec = np.random.randn(1, n_dim) + bias[i]
+            flag = i
+            data.append([vec,flag])
+            
     random.shuffle(data)
 
     x = np.array([item[0][0] for item in data])
