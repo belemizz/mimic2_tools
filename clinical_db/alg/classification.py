@@ -1,104 +1,119 @@
+"""Algorithms for basic classification."""
 import numpy as np
-import matplotlib.pyplot as plt
 
 from sklearn import svm, tree, linear_model, ensemble
 from sklearn import cross_validation
 
 import get_sample
 from mutil import Graph, p_info
-from . import recall_precision, ClassificationResult, sumup_classification_result, calc_classification_result
+from . import (recall_precision, ClassificationResult,
+               sumup_classification_result, calc_classification_result)
 
 graph = Graph()
 
 class_alg_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
 
-def example(source_num = 1, n_dim = 2, n_flag = 2, algorithm = 'ab'):
 
-    [x,y]= get_sample.vector(source_num, n_dim, n_flag)
+def example(source_num=1, n_dim=2, n_flag=2, algorithm='ab'):
+    """Sample code for this package."""
+    [x, y] = get_sample.vector(source_num, n_dim, n_flag)
     try:
-        plot_2d(x,y, algorithm = algorithm)
+        plot_2d(x, y, algorithm=algorithm)
     except ValueError, detail:
         print detail
-    
-    cross_validation_num = 2
-    kf = cross_validation.KFold(x.shape[0], n_folds = 4, shuffle = True, random_state = 0)
+
+    kf = cross_validation.KFold(
+        x.shape[0], n_folds=4, shuffle=True, random_state=0)
     result_list = []
     for train, test in kf:
         train_x = x[train, :]
         train_y = y[train]
-        
+
         test_x = x[test, :]
         test_y = y[test]
 
-        result = fit_and_test(train_x, train_y, test_x, test_y, algorithm = algorithm)
+        result = fit_and_test(train_x, train_y, test_x, test_y, algorithm)
         result_list.append(result)
 
     p_info("Cross Validation Result")
     print sumup_classification_result(result_list)
 
+
 def get_algorithm(algorithm):
+    """Get an algorithm for classification."""
     if algorithm == 'svm':
-        clf = svm.SVC(random_state = 0, kernel = 'linear', max_iter = 200000)
+        clf = svm.SVC(random_state=0, kernel='linear', max_iter=200000)
     elif algorithm == 'rsvm':
-        clf = svm.SVC(random_state = 0, kernel = 'rbf', max_iter = 200000)
+        clf = svm.SVC(random_state=0, kernel='rbf', max_iter=200000)
     elif algorithm == 'psvm':
-        clf = svm.SVC(random_state = 0, kernel = 'poly', max_iter = 200000)
+        clf = svm.SVC(random_state=0, kernel='poly', max_iter=200000)
     elif algorithm == 'dt':
-        clf = tree.DecisionTreeClassifier(random_state = 0)
+        clf = tree.DecisionTreeClassifier(random_state=0)
     elif algorithm == 'lr':
-        clf = linear_model.LogisticRegression(random_state = 0)
+        clf = linear_model.LogisticRegression(random_state=0)
     elif algorithm == 'rf':
-        clf = ensemble.RandomForestClassifier(random_state = 0)
+        clf = ensemble.RandomForestClassifier(random_state=0)
     elif algorithm == 'ab':
-        clf = ensemble.AdaBoostClassifier(random_state = 0)
+        clf = ensemble.AdaBoostClassifier(random_state=0)
     else:
-        raise ValueError("algorithm has to be either %s"%class_alg_list)
+        raise ValueError("algorithm has to be either %s" % class_alg_list)
     return clf
 
-def plot_2d(x, y, x_label = "", y_label = "", filename = "", show_flag = True, algorithm = 'svm'):
 
+def plot_2d(x, y,
+            x_label="", y_label="", filename="",
+            show_flag=True, algorithm='svm'):
+    """Show the classification result."""
     clf = get_algorithm(algorithm)
 
     if x.shape[1] is not 2:
         raise ValueError("Can't show: x dimension is not 2")
 
     clf.fit(x, y)
-    
+
     # mesh
-    x_range = x[:,0].max() - x[:,0].min()
-    y_range = x[:,1].max() - x[:,1].min()
+    x_range = x[:, 0].max() - x[:, 0].min()
+    y_range = x[:, 1].max() - x[:, 1].min()
 
     margin_ratio = 0.1
-    x_min, x_max = x[:,0].min() - margin_ratio * x_range , x[:,0].max() + margin_ratio * x_range
-    y_min, y_max = x[:,1].min() - margin_ratio * y_range , x[:,1].max() + margin_ratio * y_range
+    x_min, x_max = x[:, 0].min() - margin_ratio * x_range, x[:, 0].max() +\
+        margin_ratio * x_range
+    y_min, y_max = x[:, 1].min() - margin_ratio * y_range, x[:, 1].max() +\
+        margin_ratio * y_range
 
     grid_num = 200.0
     h_x = x_range/grid_num
     h_y = y_range/grid_num
 
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h_x),
-                            np.arange(y_min, y_max, h_y))
+                         np.arange(y_min, y_max, h_y))
 
     z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     z = z.reshape(xx.shape)
 
-    graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label, filename, show_flag = show_flag)
+    graph.plot_classification_with_contour(x, y, xx, yy, z, x_label, y_label,
+                                           filename, show_flag=show_flag)
     return clf
 
-def fit_and_test(train_x, train_y, test_x, test_y, algorithm = 'dt'):
+
+def fit_and_test(train_x, train_y, test_x, test_y, algorithm='dt'):
+    """Fit and test the algorithm."""
     clf = get_algorithm(algorithm)
     clf.fit(train_x, train_y)
     predict_y = clf.predict(test_x)
     return calc_classification_result(predict_y, test_y)
 
-def cross_validate(x, y, n_cv_fold = 10, algorithm = 'dt'):
+
+def cross_validate(x, y, n_cv_fold=10, algorithm='dt'):
+    """Execute cross validation with samples."""
     clf = get_algorithm(algorithm)
 
-    scores = cross_validation.cross_val_score(clf, x, y, cv = n_cv_fold)
-    predicted = cross_validation.cross_val_predict(clf, x, y, cv = n_cv_fold)
+#    scores = cross_validation.cross_val_score(clf, x, y, cv=n_cv_fold)
+    predicted = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
     n_p = sum(y == 1)
     n_n = sum(y == 0)
     n_tp = sum(predicted[y == 1])
     n_fp = sum(predicted[y == 0])
     recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
-    return ClassificationResult(n_p, n_n, n_tp, n_fp, recall, precision, f, acc)
+    return ClassificationResult(n_p, n_n, n_tp, n_fp,
+                                recall, precision, f, acc)

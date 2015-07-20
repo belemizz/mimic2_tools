@@ -1,4 +1,4 @@
-"""package get_sample."""
+"""Get sample by accesssing database or generating."""
 
 import sys
 sys.path.append('../../DeepLearningTutorials/code/')
@@ -12,6 +12,8 @@ import imdb
 
 from .mimic2 import Mimic2
 from .mimic2m import Mimic2m
+
+__all__ = [Mimic2, Mimic2m]
 
 
 def vector(source_num=0, n_dim=0, n_flag=2):

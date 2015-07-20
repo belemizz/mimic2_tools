@@ -1,7 +1,7 @@
-from collections import OrderedDict
+"""Classification or timeseries data."""
 
 import numpy as np
-from  sklearn import cross_validation, linear_model
+from sklearn import cross_validation, linear_model
 
 import theano as th
 import theano.tensor as T
@@ -9,7 +9,7 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
 import get_sample
 from get_sample import select_tseries
-from . import ClassificationResult, calc_classification_result, sumup_classification_result
+from . import calc_classification_result, sumup_classification_result
 
 import sys
 
@@ -17,32 +17,32 @@ from mutil import p_info
 
 sys.path.append('../../deep_tutorial/sample_codes/')
 
-def example(algorithm = 'lr'):
-    ''' Function for showing how to use this module '''
-    sample_set = get_sample.tseries(0,2)
+
+def example(algorithm='lr'):
+    """Function for showing how to use this module."""
+    sample_set = get_sample.tseries(0, 2)
     result = cv(sample_set, 4, algorithm)
     print result
 
-## utility
+# utility
 def ar_float(data):
     return np.asarray(data, dtype=th.config.floatX)
 
 def th_imatrix(name):
-    return T.matrix(name, dtype= 'int64')
+    return T.matrix(name, dtype='int64')
 
 def th_ivector(name):
-    return T.vector(name, dtype= 'int64')
+    return T.vector(name, dtype='int64')
 
 def th_fmatrix(name):
-    return T.matrix(name, dtype= 'float64')
+    return T.matrix(name, dtype='float64')
 
 def th_ftensor3(name):
-    return T.tensor3(name, dtype= 'float64')
+    return T.tensor3(name, dtype='float64')
+
 
 def get_minibatches_idx(n, minibatch_size, shuffle=False):
-    """
-    Used to shuffle the dataset at each iteration.
-    """
+    """Used to shuffle the dataset at each iteration."""
     idx_list = np.arange(n, dtype="int32")
     if shuffle:
         np.random.shuffle(idx_list)
@@ -58,7 +58,7 @@ def get_minibatches_idx(n, minibatch_size, shuffle=False):
         minibatches.append(idx_list[minibatch_start:])
     return zip(range(len(minibatches)), minibatches)
 
-## Optimizer
+
 def adadelta(lr, tparams, grads, x, mask, y, cost):
     """
     An adaptive learning rate optimizer
@@ -202,7 +202,7 @@ class Lstm():
         # random seed
         self.trng = RandomStreams(123)
         np.random.seed(123)
-        
+
     def __init_params(self, dim_feature, dim_class):
         """ initialize the parameters to be optimized """
         self.p_Wl = th.shared( np.hstack([ortho_w(dim_feature),
@@ -257,7 +257,7 @@ class Lstm():
 
             h = o * T.tanh(c)
             h = m_[:, None] * h + (1. - m_)[:, None] * h_ # if mask = 1 then h, else h_prev
-            
+
             return h, c
 
         rval, updates = th.scan(_step,
@@ -273,7 +273,7 @@ class Lstm():
                                 n_steps = n_steps
                                 )
         return rval[0] # return only sequence of hidden
-                                                        
+
     def __get_lstm_model(self, x, m, y):
         hidden = self.__lstm_layer(x, m)
         mean = (hidden * m[:, :, None]).sum(axis=0) / m.sum(axis=0)[:, None]
@@ -288,7 +288,7 @@ class Lstm():
 
     def __get_test(self, t_x):
         return t_x.shape[0]
-    
+
     def __split_train_and_valid(self, r_valid, train_set):
         if r_valid < 0 or r_valid > 1:
             raise ValueError('should be 0 <= r_valid <= 1')
@@ -300,14 +300,14 @@ class Lstm():
 
         valid_set = select_tseries(train_set, range(n_train, n_train+n_valid))
         train_set = select_tseries(train_set, range(0, n_train))
-        
+
         return train_set, valid_set
 
     def __prediction_error(self, sample_set):
         predicted_y = self.f_pred(sample_set[0], sample_set[1])
         error_rate = 1. - calc_classification_result(predicted_y, sample_set[2]).acc
         return error_rate
-        
+
     def __validation(self, train_set, valid_set, l_errors):
         train_err = self.__prediction_error(train_set)
         valid_err = self.__prediction_error(valid_set)
@@ -335,8 +335,8 @@ class Lstm():
 
     ##     import ipdb
     ##     ipdb.set_trace()
-        
-        
+
+
     def fit(self, train_set):
         """ train the model by training set """
 
@@ -353,23 +353,23 @@ class Lstm():
 
         m_test = self.__get_test(t_x)
         f_test = th.function([t_x], m_test, name = 'f_test')
-        
-        m_cost, m_pred = self.__get_lstm_model(t_x, t_m, t_y) 
+
+        m_cost, m_pred = self.__get_lstm_model(t_x, t_m, t_y)
         m_grads = T.grad(m_cost, wrt = self.__l_params())
 
         self.f_pred = th.function([t_x, t_m], m_pred, name = 'f_pred')
-        
+
         t_lr = T.scalar(name='t_lr')
         f_cost, f_update = myadadelta(t_lr, self.__l_params(), m_grads, t_x, t_m, t_y, m_cost)
 
         p_info('Loop begins')
-        
+
         n_updates = 0  # the number of update done
         bad_count = 0
 
         l_errors = []
         b_estop = False
-        
+
         self.__validation(train_set, valid_set, l_errors)
         for i_epoch in xrange(self.n_epochs):
             kf = get_minibatches_idx(train_set[0].shape[1], self.batch_size, True)
@@ -380,7 +380,7 @@ class Lstm():
                 n_updates += 1
                 [x, m, y] = select_tseries(train_set, train_index)
                 cost = f_cost(x, m, y)
-                
+
                 l_costs.append(cost)
                 f_update(0.01)
 
@@ -393,7 +393,7 @@ class Lstm():
                     if b_estop:
                         p_info('Early stopping')
                         break
-                    
+
             if b_estop: break
 
         self.__retrieve_best_params()
@@ -406,7 +406,7 @@ class Lstm():
             raise ValueError("Fitting must be done before prediction")
         self.__retrieve_best_params()
         return self.f_pred(test_sample[0], test_sample[1])
-    
+
 class LR_ts():
     def __init__(self, max_step= 10):
         self.clf = linear_model.LogisticRegression(random_state =0)
@@ -425,7 +425,7 @@ class LR_ts():
                         fill_mat[i] = x[s, i]
                     else:
                         x[s, i] = fill_mat[i]
-                        
+
         elif algorithm == 'sample_ave':
             count_m = m.sum(axis = 0)
             sum_x = x.sum(axis = 0)
@@ -446,7 +446,7 @@ class LR_ts():
         self.fill_missing(train_set[0], train_set[1])
         train_x = train_set[0]
         train_y = train_set[2]
-        
+
         n_sample = train_x.shape[1]
         s_train_x = np.array([train_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
 
@@ -458,7 +458,7 @@ class LR_ts():
 
         n_sample = test_x.shape[1]
         s_test_x = np.array([test_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
-        
+
         predict_y = self.clf.predict(s_test_x)
         return predict_y
 
@@ -472,7 +472,7 @@ class Cointoss():
     def predict(self, test_sample):
         n_sample = test_sample[0].shape[1]
         predict_y = np.zeros( n_sample )
-        
+
         for i in range(n_sample):
             predict_y[i] = np.random.randint(2)
         return predict_y
@@ -498,7 +498,7 @@ def fit_and_test(train_set, test_set, algorithm = 'lr'):
 def cv(sample_set, n_fold, algorithm = 'lr'):
 
     n_sample = sample_set[0].shape[1]
-    
+
     kf = cross_validation.KFold(sample_set[0].shape[1], n_folds = n_fold, shuffle = True, random_state = 0)
     i_cv = 0
     results = []
@@ -510,4 +510,3 @@ def cv(sample_set, n_fold, algorithm = 'lr'):
         results.append(fit_and_test(train_set, test_set, algorithm))
 
     return sumup_classification_result(results)
-
