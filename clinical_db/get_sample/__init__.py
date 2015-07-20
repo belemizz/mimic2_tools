@@ -1,3 +1,5 @@
+"""package get_sample."""
+
 import sys
 sys.path.append('../../deep_tutorial/sample_codes/')
 sys.path.append('../../DeepLearningTutorials/code/')
@@ -49,8 +51,8 @@ def l_tseries_to_ar(ts_x):
         dim = ts_x[0].shape[1]
     else:
         raise ValueError('Invalid data format')
-    
-    x = np.zeros( (max_length, len(ts_x), dim) )
+
+    x = np.zeros((max_length, len(ts_x), dim))
     mask = np.zeros((max_length, len(ts_x)))
 
     for i_series, series in enumerate(ts_x):
@@ -102,10 +104,10 @@ def imdb_data():
     return [x, mask,  y]
 
 def get_samples_with_target(source_num = 0, data_dim = 0, n_flag=0):
-    
+
     if source_num is 0:
         [x, y] = normal_dist(data_dim, 100, 100, [2,8], seed = 1)
-        
+
     elif source_num is 1:
         from sklearn import datasets
         iris = datasets.load_iris()
@@ -143,6 +145,7 @@ def chop_data(all_data, all_target, data_dim, n_flag):
     return x,y
 
 def split_to_three_sets(x, y, valid_ratio = 1./3, test_ratio = 1./3, r_seed = 1):
+    '''split the dataset into three sets'''
     n_valid = int(valid_ratio * x.shape[0])
     n_test = int(test_ratio * x.shape[0])
     n_train = x.shape[0] - n_valid - n_test
@@ -179,10 +182,10 @@ def shared_flag(set_y):
     return T.cast(shared_y, 'int32')
 
 def normal_dist(n_dim = 2, n_neg_sample = 100, n_pos_sample = 100, bias = [-2, 2], seed = 1):
-    
+
     """ Generate 2 element samples of normal distribution """
     data = []
-    
+
     random.seed(seed)
     np.random.seed(seed)
 
@@ -207,4 +210,3 @@ def uniform_dist(n_dim = 2, n_sample = 100, minimum = 0.0, maximum = 1.0, seed =
 
     np.random.seed(seed)
     return np.random.uniform(minimum, maximum, (n_sample, n_dim))
-
