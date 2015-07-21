@@ -5,6 +5,7 @@ from math import log10, ceil, sqrt
 from more_itertools import chunked
 import cPickle
 
+
 class Graph:
 
     """Control all the graphs and visualizations."""
@@ -16,11 +17,18 @@ class Graph:
 
     def visualize_image(self, data, h_len=28, n_cols=0, filename="", show_flag=True):
         """Visualizer of data."""
-        if n_cols == 0:
-            n_cols = int(ceil(sqrt(data.shape[0])))
-        if data.ndim == 2:
+        if data.ndim == 1:
+            v_len = data.shape[0] / h_len
+            if n_cols == 0:
+                n_cols = 1
+                n_rows = 1
+        elif data.ndim == 2:
             v_len = data.shape[1]/h_len
+            if n_cols == 0:
+                n_cols = int(ceil(sqrt(data.shape[0])))
             n_rows = int(ceil(float(data.shape[0])/n_cols))
+        else:
+            raise ValueError
 
         plt.gray()
         fig, axes = plt.subplots(n_rows, n_cols)
@@ -28,15 +36,19 @@ class Graph:
         X, Y = np.meshgrid(range(h_len), range(v_len))
         for i_v in range(n_rows):
             for i_h in range(n_cols):
-                print (i_h, i_v)
-                if n_rows > 1:
-                    ax = axes[i_v, i_h]
-                else:
-                    ax = axes[i_h]
                 index = i_h + i_v * n_cols
-
                 if index < data.shape[0]:
-                    Z = data[index].reshape(v_len, h_len)
+
+                    if n_rows > 1:
+                        ax = axes[i_v, i_h]
+                        Z = data[index].reshape(v_len, h_len)
+                    elif n_cols > 1:
+                        ax = axes[i_h]
+                        Z = data[index].reshape(v_len, h_len)
+                    else:
+                        ax = axes
+                        Z = data.reshape(v_len, h_len)
+
                     Z = Z[::-1, :]
                     ax.set_xlim(0, h_len-1)
                     ax.set_ylim(0, v_len-1)

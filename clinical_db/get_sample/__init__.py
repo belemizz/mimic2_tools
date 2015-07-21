@@ -15,6 +15,7 @@ from .mimic2m import Mimic2m
 
 __all__ = [Mimic2, Mimic2m]
 
+
 def vector(source_num=0, n_dim=0, n_flag=2):
     """Get n-dim vector samples.
 
