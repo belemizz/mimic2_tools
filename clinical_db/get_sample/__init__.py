@@ -15,7 +15,6 @@ from .mimic2m import Mimic2m
 
 __all__ = [Mimic2, Mimic2m]
 
-
 def vector(source_num=0, n_dim=0, n_flag=2):
     """Get n-dim vector samples.
 
@@ -37,7 +36,11 @@ def vector(source_num=0, n_dim=0, n_flag=2):
         from logistic_sgd import load_data
         datasets = load_data('mnist.pkl.gz')
         [shared_x, shared_y] = datasets[0]
-        x, y = chop_data(shared_x.get_value(), shared_y.eval(), n_dim, n_flag)
+        if n_dim > 0 and n_flag > 0:
+            x, y = chop_data(shared_x.get_value(), shared_y.eval(),
+                             n_dim, n_flag)
+        else:
+            x, y = shared_x.get_value(), shared_y.eval()
 
     else:
         raise ValueError

@@ -1,16 +1,51 @@
-"""
-A class for controling graph
-"""
+"""A class for controling graph."""
 import numpy as np
 import matplotlib.pyplot as plt
-import math
+from math import log10, ceil, sqrt
 from more_itertools import chunked
 import cPickle
 
 class Graph:
+
+    """Control all the graphs and visualizations."""
+
     def __init__(self):
+        """Initializer of Graph class."""
         self.limit_timeseries = 25
         self.dir_to_save = "../data/"
+
+    def visualize_image(self, data, h_len=28, n_cols=0, filename="", show_flag=True):
+        """Visualizer of data."""
+        if n_cols == 0:
+            n_cols = int(ceil(sqrt(data.shape[0])))
+        if data.ndim == 2:
+            v_len = data.shape[1]/h_len
+            n_rows = int(ceil(float(data.shape[0])/n_cols))
+
+        plt.gray()
+        fig, axes = plt.subplots(n_rows, n_cols)
+
+        X, Y = np.meshgrid(range(h_len), range(v_len))
+        for i_v in range(n_rows):
+            for i_h in range(n_cols):
+                print (i_h, i_v)
+                if n_rows > 1:
+                    ax = axes[i_v, i_h]
+                else:
+                    ax = axes[i_h]
+                index = i_h + i_v * n_cols
+
+                if index < data.shape[0]:
+                    Z = data[index].reshape(v_len, h_len)
+                    Z = Z[::-1, :]
+                    ax.set_xlim(0, h_len-1)
+                    ax.set_ylim(0, v_len-1)
+                    ax.pcolor(X, Y, Z)
+                    ax.tick_params(labelbottom='off')
+                    ax.tick_params(labelleft='off')
+
+        self.__show_and_save(fig, filename, show_flag)
+
 
     def draw_lab_adm(self, admission, title, filename="", show_flag = True):
         base_time = admission.admit_dt
@@ -24,7 +59,7 @@ class Graph:
         plot_list = self.__get_plot_list(base_time, data)
         icu_io = self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time)
         self.__draw_series_with_legend(plot_list, [icu_io], title, filename, show_flag, 'o')
-        
+
     def draw_chart_icu(self, icustay, base_time, title, filename="", show_flag = True):
         data = icustay.charts
         plot_list = self.__get_plot_list(base_time, data)
@@ -61,7 +96,7 @@ class Graph:
 
         ax1.set_title(title)
         ax1.set_xlabel("Hours since Admission")
-        
+
         base_time = admission.admit_dt
         icu_ios = [self.__time_diff_in_hour([icustay.intime, icustay.outtime],base_time) for icustay in admission.icustays]
         for span in icu_ios:
@@ -110,13 +145,13 @@ class Graph:
 
         ax.contourf(xx, yy, z, cmap=plt.cm.rainbow, alpha = 0.2)
         ax.scatter(x[:,0], x[:,1], c = y, cmap=plt.cm.rainbow)
-        
+
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
         ax.set_xlim(xx.min(), xx.max())
         ax.set_ylim(yy.min(), yy.max())
         self.__show_and_save(fig, filename, show_flag)
-        
+
     def bar_feature_importance(self, entropy_reduction, labels, filename = "", show_flag = True):
         fig, ax = plt.subplots()
         Y = range( len(entropy_reduction))
@@ -132,23 +167,23 @@ class Graph:
 
     def bar_comparison(self, data, labels, x_label = "", title = "", filename = "", show_flag = True):
         original_data = locals().copy()
-        
+
         fig, ax = plt.subplots()
-        
+
         Y = range(len(data))
         Y.reverse()
 
         ax.barh(Y, data, height = 0.4)
-        plt.yticks([item + 0.2 for item in Y], labels) 
+        plt.yticks([item + 0.2 for item in Y], labels)
 
         if x_label is not "": ax.set_xlabel(x_label)
         if title is not "": ax.set_title(title)
 
         self.__show_and_save(fig, filename, show_flag, original_data)
-        
+
     def bar_pl(self, data_list, labels, legend, xlim = [], x_label = "", title = "", filename = "", show_flag = True):
         original_data = locals().copy()
-        
+
         fig, ax = plt.subplots()
 
         Y = range(len(labels))
@@ -162,18 +197,18 @@ class Graph:
                     height = bar_height,
                     color = cmap(index*cmap_v))
 
-        plt.yticks([item + bar_height/2 * len(legend) for item in Y], labels) 
+        plt.yticks([item + bar_height/2 * len(legend) for item in Y], labels)
         plt.legend(legend)
-        
+
         if xlim is not []: ax.set_xlim(xlim)
         if x_label is not "": ax.set_xlabel(x_label)
         if title is not "": ax.set_title(title)
 
         self.__show_and_save(fig, filename, show_flag, original_data)
-        
+
     def line_series(self, data, timestamp, label, x_label="", y_label="", title="", ylim = None, markersize = 10, filename = "", show_flag = True):
         original_data = locals().copy()
-        
+
         fig, ax = plt.subplots()
         for item in data:
             if markersize is 0:
@@ -182,14 +217,13 @@ class Graph:
                 ax.plot(timestamp, item, 'o--', markersize = markersize)
         ax.legend(label)
         ax.set_xlim(self.__calc_lim(timestamp, 0.05))
-        
+
         if ylim is not None: ax.set_ylim(ylim)
         if x_label is not "": ax.set_xlabel(x_label)
         if y_label is not "": ax.set_ylabel(y_label)
         if title is not "": ax.set_title(title)
-                
+
         self.__show_and_save(fig, filename, show_flag, original_data)
-        
 
     def __calc_lim(self,values, margin_ratio):
         margin = (max(values) - min(values)) * margin_ratio
@@ -197,7 +231,7 @@ class Graph:
 
     def normalize(self, value):
         max_val = max(abs(value))
-        order = 10.0 ** int(math.log10(float(max_val)))
+        order = 10.0 ** int(log10(float(max_val)))
         n_value = value / order
         return n_value, order
 
@@ -211,7 +245,7 @@ class Graph:
                 f = open(p_path, 'w')
                 cPickle.dump(data, f)
                 f.close()
-                
+
         if show_flag:
             fig.show()
 
@@ -250,9 +284,7 @@ class Graph:
                 ax.axvspan(span[0], span[1], alpha = 0.2, color = 'red')
 
             ax.set_title(title)
-            ax.set_xlabel("Hours since Admission") 
+            ax.set_xlabel("Hours since Admission")
 
             self.__show_legend(ax)
             self.__show_and_save(fig, filename, show_flag)
-
-
