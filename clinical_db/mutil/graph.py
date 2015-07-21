@@ -15,7 +15,8 @@ class Graph:
         self.limit_timeseries = 25
         self.dir_to_save = "../data/"
 
-    def visualize_image(self, data, h_len=28, n_cols=0, filename="", show_flag=True):
+    def visualize_image(self, data,
+                        h_len=28, n_cols=0, filename="", show_flag=True):
         """Visualizer of data."""
         if data.ndim == 1:
             v_len = data.shape[0] / h_len
@@ -58,13 +59,16 @@ class Graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
-
-    def draw_lab_adm(self, admission, title, filename="", show_flag = True):
+    def draw_lab_adm(self, admission, title, filename="", show_flag=True):
+        """Draw lab tests data of admissions."""
         base_time = admission.admit_dt
         data = admission.labs
         plot_list = self.__get_plot_list(base_time, data)
-        icu_ios = [self.__time_diff_in_hour([icustay.intime, icustay.outtime], base_time) for icustay in admission.icustays]
-        self.__draw_series_with_legend(plot_list, icu_ios, title, filename, show_flag)
+        icu_ios = [self.__time_diff_in_hour(
+            [icustay.intime, icustay.outtime], base_time)
+            for icustay in admission.icustays]
+        self.__draw_series_with_legend(plot_list, icu_ios,
+                                       title, filename, show_flag)
 
     def draw_med_icu(self, icustay, base_time,  title, filename="", show_flag = True):
         data = icustay.medications
