@@ -14,5 +14,6 @@
 */.ropeproject/*
 *TAGS
 *tags
+.tag
 .#*
 data/*
