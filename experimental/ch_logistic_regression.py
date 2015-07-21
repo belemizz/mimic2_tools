@@ -10,16 +10,18 @@ graphs = Graph()
 sw = Stopwatch()
 
 import get_sample
+from mutil import Graph
 
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation
-from keras.optimizers import SGD
+from keras.optimizers import Adam
 from keras.utils import np_utils
 
 import chainer
 import chainer.functions as F
 from chainer import optimizers
 
+import matplotlib.pyplot as plt
 
 def keras_lr(train_x, train_y, test_x, test_y, batchsize, n_epoch):
     """Logistic regression by keras."""
@@ -32,19 +34,23 @@ def keras_lr(train_x, train_y, test_x, test_y, batchsize, n_epoch):
     model.add(Dense(n_dim, n_flag))
     model.add(Activation('softmax'))
 
-    rms = SGD()
+    rms = Adam()
     model.compile(loss='categorical_crossentropy', optimizer=rms)
 
     model.fit(train_x, train_y, batch_size=batchsize, nb_epoch=n_epoch,
-              show_accuracy=True, verbose=2,
+              show_accuracy=False, verbose=2,
               validation_data=(test_x, test_y))
     score = model.evaluate(test_x, test_y, show_accuracy=True, verbose=0)
+    graph = Graph()
+
+    act = model.params[0].eval().transpose()
     import ipdb
     ipdb.set_trace(frame=None)
+    graph.visualize_image(act)
+    plt.waitforbuttonpress()
 
     print('Test score:', score[0])
     print('Test accuracy:', score[1])
-
 
 def chainer_lr(train_x, train_y, test_x, test_y, batchsize, n_epoch):
     """Logistic Regression by chainer."""
@@ -117,7 +123,7 @@ if __name__ == '__main__':
     n_dim = x.shape[1]
     n_flag = len(set(y))
 
-    n_epoch = 20
+    n_epoch = 100
     batchsize = 50
 
     N = int(x.shape[0] * 0.8)
