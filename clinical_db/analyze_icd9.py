@@ -42,5 +42,5 @@ for code in all_codes:
         else:
             codes_and_counts[code] = 1
 
-for code, count in sorted(codes_and_counts.iteritems(), key=lambda x: x[1], reverse = False):
+for code, count in sorted(codes_and_counts.iteritems(), key=lambda x: x[1], reverse=False):
     print code, count

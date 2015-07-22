@@ -2,9 +2,8 @@
 Evaluate the importance of the feature
 """
 import numpy as np
-import collections 
 import datetime
-import matplotlib.pyplot as plt
+from collections import Counter
 
 from get_sample import Mimic2
 from mutil import Graph
@@ -15,34 +14,35 @@ import alg.auto_encoder
 import alg.feature_selection
 import alg.timeseries
 
-import mutil
-from mutil import p_info
+from mutil import Cache, p_info
 
 from sklearn import cross_validation
 
 mimic2db = Mimic2()
 graphs = Graph()
 
+
 class evaluate_fetaure:
-    def __init__( self,
-                  max_id = 200000,
-                  target_codes = ['428.0'],
-                  n_lab = 20,
-                  days_before_discharge = 0,
-                  span = 2,
-                  tseries_freq = 1.0,
-                  tseries_steps = 10,
-                  rp_learn_flag = True,
-                  pca_components = 5,
-                  ica_components = 5,
-                  dae_hidden_ratio = 2,
-                  dae_select_ratio = 0.4,
-                  dae_corruption = 0.3,
-                  dae_n_epoch = 20,
-                  n_cv_folds = 4,
-                  classification = False,
-                  class_alg = 'dt'):
-        
+
+    def __init__(self,
+                 max_id=200000,
+                 target_codes=['428.0'],
+                 n_lab=20,
+                 days_before_discharge=0,
+                 span=2,
+                 tseries_freq=1.0,
+                 tseries_steps=10,
+                 rp_learn_flag=True,
+                 pca_components=5,
+                 ica_components=5,
+                 dae_hidden_ratio=2,
+                 dae_select_ratio=0.4,
+                 dae_corruption=0.3,
+                 dae_n_epoch=20,
+                 n_cv_folds=4,
+                 classification=False,
+                 class_alg='dt'):
+
         # params for data retrieval
         self.max_id = max_id
         self.target_codes = target_codes
@@ -53,7 +53,7 @@ class evaluate_fetaure:
         # params for timeseries
         self.tseries_freq = tseries_freq
         self.tseries_steps = tseries_steps
-        
+
         # params for evaluation
         self.rp_learn_flag = rp_learn_flag
         self.pca_components = pca_components
@@ -67,17 +67,17 @@ class evaluate_fetaure:
         self.class_alg = class_alg
 
     def __get_param_data_retrieval(self):
-        return {'max_id' : self.max_id,
-                'target_codes' : self.target_codes,
-                'n_lab' : self.n_lab,
-                'days_before_discharge' : self.days_before_discharge,
-                'span' : self.span,
-                'tseries_freq' : self.tseries_freq,
-                'tseries_steps' : self.tseries_steps
+        return {'max_id': self.max_id,
+                'target_codes': self.target_codes,
+                'n_lab': self.n_lab,
+                'days_before_discharge': self.days_before_discharge,
+                'span': self.span,
+                'tseries_freq': self.tseries_freq,
+                'tseries_steps': self.tseries_steps
                 }
 
     def __param_code(self):
-        return "%s"%self.__dict__.values()
+        return "%s" % self.__dict__.values()
 
     def compare_dbd(self, dbd_list):
 
@@ -87,7 +87,6 @@ class evaluate_fetaure:
         for dbd in dbd_list:
             self.days_before_discharge = dbd
             result.append(self.point_eval())
-            
         self.days_before_discharge = dbd_temp
 
         data = []
@@ -96,7 +95,7 @@ class evaluate_fetaure:
             for r in result:
                 scores.append([item[0] for item in r if item[2] == item_id][0])
             data.append(scores)
-        
+
         bun_score = []
         for r in result:
             bun_score.append([item[0] for item in r if item[2] == 50177][0])
@@ -105,8 +104,8 @@ class evaluate_fetaure:
         label = mimic2db.vital_descs + ['BUN']
 
         graphs.line_series(data, dbd_list, label,
-                           x_label = "Days before discharge", y_label = "Entropy Reduction",
-                           filename = self.__param_code() + '_time.png' )
+                           x_label="Days before discharge", y_label="Entropy Reduction",
+                           filename=self.__param_code() + '_time.png')
         return result
 
     def compare_dae_hidden(self, n_list):
@@ -267,19 +266,14 @@ class evaluate_fetaure:
         return ret_val
 
     def tseries_eval(self):
-        # parameter comfirmation
-        
         # data preparation
         [most_common_tests, lab_tseries, lab_descs, lab_units, vit_tseries, flags] = self.__tseries_preparation()
 
         # classification
         n_sample = len(flags)
-        n_train = int(n_sample * 0.75)
         shuffled_index = range(n_sample)
         np.random.shuffle(shuffled_index)
-        train_idx = shuffled_index[0:n_train]
-        test_idx = shuffled_index[n_train:n_sample]
-        
+
         lab_set = [lab_tseries[0], lab_tseries[1], flags]
         vit_set = [vit_tseries[0], vit_tseries[1], flags]
 
@@ -293,10 +287,9 @@ class evaluate_fetaure:
 
         return [lab_result, vit_result]
 
-
-    def __tseries_preparation(self, cache_key = '__tseries_preparation'):
+    def __tseries_preparation(self, cache_key='__tseries_preparation'):
         param = self.__get_param_data_retrieval()
-        cache = mutil.Cache(cache_key)
+        cache = Cache(cache_key)
 
         try:
             return cache.load(param)
@@ -304,13 +297,13 @@ class evaluate_fetaure:
             subject_ids, lab_ids_dict, patients, units, descs = self.__get_patient_data_form_codes()
             most_common_tests, lab_descs, lab_units = self.__find_most_common_lab_tests(lab_ids_dict, descs, units)
 
-            l_results=[]
+            l_results = []
             freq = self.tseries_freq
             n_steps = self.tseries_steps
             for idx in range(n_steps):
                 dbd = self.days_before_discharge + idx * freq
-                l_results.append( self.__get_lab_chart_values( patients, most_common_tests,
-                                                               mimic2db.vital_charts, dbd))
+                l_results.append(self.__get_lab_chart_values(patients, most_common_tests,
+                                                             mimic2db.vital_charts, dbd))
 
             ids = l_results[0][3]
             flags = l_results[0][2]
@@ -324,7 +317,7 @@ class evaluate_fetaure:
                 s_lab = l_results[i_steps][0]
                 s_vit = l_results[i_steps][1]
                 s_id = l_results[i_steps][3]
-                
+
                 for i_id, id in enumerate(ids):
                     try:
                         lab_x[i_steps][i_id] = s_lab[s_id.index(id)]
@@ -341,12 +334,12 @@ class evaluate_fetaure:
             lab_tseries = [lab_x, lab_m]
             vit_tseries = [vit_x, vit_m]
 
-            ret_val =  [most_common_tests, lab_tseries, lab_descs, lab_units, vit_tseries, flags]
+            ret_val = [most_common_tests, lab_tseries, lab_descs, lab_units, vit_tseries, flags]
             return cache.save(ret_val, param)
-        
+
     def __point_preparation(self, cache_key = '__point_preparation'):
         param = self.__get_param_data_retrieval()
-        cache = mutil.Cache(cache_key)
+        cache = Cache(cache_key)
 
         try:
             return cache.load( param)
@@ -500,8 +493,8 @@ class evaluate_fetaure:
                             descs[item.itemid] = item.description
         return patients, lab_ids_dict, units, descs
 
-    def __find_most_common_lab_tests(self, lab_ids_dict, descs,units):
-        counter =  collections.Counter(lab_ids_dict)
+    def __find_most_common_lab_tests(self, lab_ids_dict, descs, units):
+        counter = Counter(lab_ids_dict)
         most_common_tests = [item[0] for item in counter.most_common(self.n_lab)]
         lab_descs = []
         lab_units = []
@@ -510,8 +503,7 @@ class evaluate_fetaure:
             lab_units.append(units[item_id])
         return most_common_tests, lab_descs, lab_units
 
-    
-    def __get_lab_chart_values(self, patients, lab_ids, chart_ids, days_before_discharge = None):
+    def __get_lab_chart_values(self, patients, lab_ids, chart_ids, days_before_discharge=None):
         ''' Get the value of labtest and values at the time definded by days_before_discharge '''
 
         if days_before_discharge is None:
@@ -643,7 +635,7 @@ def is_number_list(l):
     return True
 
 def float_list(l):
-    f_list= []
+    f_list = []
     for s in l:
         f_list.append(float(s))
     return np.array(f_list)
