@@ -1,3 +1,4 @@
+"""Algorithms for encoding the vectors."""
 import numpy as np
 import theano
 import theano.tensor as T
@@ -18,7 +19,10 @@ import mutil
 import get_sample
 import alg.feature_selection
 
+from bunch import Bunch
 
+L_algorithm = ['pca', 'spca', 'ica', 'sica', 'dae', 'sdae']
+Default_param = Bunch(name='pca')
 
 
 def pca(train_x, test_x, n_components, cache_key = 'pca'):

@@ -17,7 +17,7 @@ from mutil import p_info
 
 from bunch import Bunch
 
-algorithm_list = ['lstm', 'lr', 'coin']
+L_algorithm = ['lstm', 'lr', 'coin']
 Default_param = Bunch(name='lr', lr_max_step=40)
 
 
@@ -484,7 +484,7 @@ def get_algorithm(param=Default_param):
     elif param.name is 'coin':
         clf = Cointoss()
     else:
-        raise ValueError("algorithm has to be either %s" % algorithm_list)
+        raise ValueError("algorithm has to be either %s" % L_algorithm)
     return clf
 
 

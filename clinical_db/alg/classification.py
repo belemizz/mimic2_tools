@@ -12,8 +12,7 @@ from bunch import Bunch
 
 graph = Graph()
 
-class_alg_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
-
+L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
 Default_param = Bunch(name='lr', lr_dim=10, svm_max_iter=20000)
 
 
@@ -60,7 +59,7 @@ def get_algorithm(param=Default_param):
     elif algorithm == 'ab':
         clf = ensemble.AdaBoostClassifier(random_state=0)
     else:
-        raise ValueError("algorithm has to be either %s" % class_alg_list)
+        raise ValueError("algorithm has to be either %s" % L_algorithm)
     return clf
 
 
