@@ -1,5 +1,4 @@
 """Classification or timeseries data."""
-
 import numpy as np
 from sklearn import cross_validation, linear_model
 
@@ -12,30 +11,38 @@ from get_sample import select_tseries
 from . import calc_classification_result, sumup_classification_result
 
 import sys
+sys.path.append('../../deep_tutorial/sample_codes/')
 
 from mutil import p_info
 
-sys.path.append('../../deep_tutorial/sample_codes/')
+from bunch import Bunch
+
+algorithm_list = ['lstm', 'lr', 'coin']
+Default_param = Bunch(name='lr', lr_max_step=40)
 
 
-def example(algorithm='lr'):
+def example(param=Default_param):
     """Function for showing how to use this module."""
     sample_set = get_sample.tseries(0, 2)
-    result = cv(sample_set, 4, algorithm)
+    result = cv(sample_set, 4, param)
     print result
 
-# utility
+
 def ar_float(data):
     return np.asarray(data, dtype=th.config.floatX)
+
 
 def th_imatrix(name):
     return T.matrix(name, dtype='int64')
 
+
 def th_ivector(name):
     return T.vector(name, dtype='int64')
 
+
 def th_fmatrix(name):
     return T.matrix(name, dtype='float64')
+
 
 def th_ftensor3(name):
     return T.tensor3(name, dtype='float64')
@@ -180,6 +187,7 @@ def myadadelta(lr, tparams, grads, x, mask, y, cost):
 
     return f_grad_shared, f_update
 
+
 def ortho_w(ndim):
     """ generate random orthogonal weight"""
     W = np.random.randn(ndim, ndim)
@@ -298,7 +306,7 @@ class Lstm():
 #        n_valid = int(len(train_set[0]) * r_valid)
         n_train = train_set[0].shape[1] - n_valid
 
-        valid_set = select_tseries(train_set, range(n_train, n_train+n_valid))
+        valid_set = select_tseries(train_set, range(n_train, n_train + n_valid))
         train_set = select_tseries(train_set, range(0, n_train))
 
         return train_set, valid_set
@@ -311,7 +319,7 @@ class Lstm():
     def __validation(self, train_set, valid_set, l_errors):
         train_err = self.__prediction_error(train_set)
         valid_err = self.__prediction_error(valid_set)
-        print 'Train:' , train_err, 'Valid:', valid_err
+        print 'Train:', train_err, 'Valid:', valid_err
 
         if (len(l_errors) == 0 or valid_err < np.array(l_errors)[:, 1].min()):
 
@@ -321,21 +329,12 @@ class Lstm():
 
     def __judge_early_stopping(self, l_errors):
         valid_errors = [error[1] for error in l_errors]
-        min_index= valid_errors.index(min(valid_errors))
-        p_info("Patience: %d/%d"%(len(valid_errors)-min_index, self.patience))
+        min_index = valid_errors.index(min(valid_errors))
+        p_info("Patience: %d/%d" % (len(valid_errors) - min_index, self.patience))
         if len(valid_errors) > min_index + self.patience:
             return True
         else:
             return False
-
-    ## def __normalize(self, x, m):
-    ##     record_sum = x.sum(axis = (0,1))
-    ##     record_count = m.sum()
-    ##     record_ave = record_sum / record_count
-
-    ##     import ipdb
-    ##     ipdb.set_trace()
-
 
     def fit(self, train_set):
         """ train the model by training set """
@@ -351,13 +350,10 @@ class Lstm():
         t_m = th_fmatrix('t_m')
         t_y = th_ivector('t_y')
 
-        m_test = self.__get_test(t_x)
-        f_test = th.function([t_x], m_test, name = 'f_test')
-
         m_cost, m_pred = self.__get_lstm_model(t_x, t_m, t_y)
-        m_grads = T.grad(m_cost, wrt = self.__l_params())
+        m_grads = T.grad(m_cost, wrt=self.__l_params())
 
-        self.f_pred = th.function([t_x, t_m], m_pred, name = 'f_pred')
+        self.f_pred = th.function([t_x, t_m], m_pred, name='f_pred')
 
         t_lr = T.scalar(name='t_lr')
         f_cost, f_update = myadadelta(t_lr, self.__l_params(), m_grads, t_x, t_m, t_y, m_cost)
@@ -365,7 +361,6 @@ class Lstm():
         p_info('Loop begins')
 
         n_updates = 0  # the number of update done
-        bad_count = 0
 
         l_errors = []
         b_estop = False
@@ -373,7 +368,6 @@ class Lstm():
         self.__validation(train_set, valid_set, l_errors)
         for i_epoch in xrange(self.n_epochs):
             kf = get_minibatches_idx(train_set[0].shape[1], self.batch_size, True)
-            n_samples = 0
             l_costs = []
 
             for _, train_index in kf:
@@ -394,7 +388,8 @@ class Lstm():
                         p_info('Early stopping')
                         break
 
-            if b_estop: break
+            if b_estop:
+                break
 
         self.__retrieve_best_params()
         self.__validation(train_set, valid_set, l_errors)
@@ -402,41 +397,42 @@ class Lstm():
         print l_errors
 
     def predict(self, test_sample):
-        if self.f_pred == None:
+        if self.f_pred is None:
             raise ValueError("Fitting must be done before prediction")
         self.__retrieve_best_params()
         return self.f_pred(test_sample[0], test_sample[1])
 
+
 class LR_ts():
-    def __init__(self, max_step= 40):
-        self.clf = linear_model.LogisticRegression(random_state =0)
+    def __init__(self, max_step=40):
+        self.clf = linear_model.LogisticRegression(random_state=0)
         self.max_step = max_step
 
-    def fill_missing(self, x, m, algorithm = 'fv'):
+    def fill_missing(self, x, m, algorithm='fv'):
 
         if algorithm == 'none':
             pass
         elif algorithm == 'fv':
-            fill_mat = np.zeros( x.shape[1:3] )
+            fill_mat = np.zeros(x.shape[1:3])
             """ fill by final available value """
-            for s in range( x.shape[0] ):
-                for i in range( x.shape[1] ):
+            for s in range(x.shape[0]):
+                for i in range(x.shape[1]):
                     if m[s, i] == 1:
                         fill_mat[i] = x[s, i]
                     else:
                         x[s, i] = fill_mat[i]
 
         elif algorithm == 'sample_ave':
-            count_m = m.sum(axis = 0)
-            sum_x = x.sum(axis = 0)
+            count_m = m.sum(axis=0)
+            sum_x = x.sum(axis=0)
             ave_x = np.zeros(sum_x.shape)
 
             for dim in range(x.shape[2]):
-                ave_x[:,dim] = np.divide(sum_x[:, dim] , count_m)
+                ave_x[:, dim] = np.divide(sum_x[:, dim], count_m)
 
             """ fill by final available value """
-            for s in range( x.shape[0] ):
-                for i in range( x.shape[1] ):
+            for s in range(x.shape[0]):
+                for i in range(x.shape[1]):
                     if m[s, i] == 0:
                         x[s, i] = ave_x[i]
         else:
@@ -448,7 +444,8 @@ class LR_ts():
         train_y = train_set[2]
 
         n_sample = train_x.shape[1]
-        s_train_x = np.array([train_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
+        s_train_x = np.array(
+            [train_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
 
         self.clf.fit(s_train_x, train_y)
 
@@ -462,8 +459,9 @@ class LR_ts():
         predict_y = self.clf.predict(s_test_x)
         return predict_y
 
+
 class Cointoss():
-    def __init__(self, seed = 0):
+    def __init__(self, seed=0):
         np.random.seed(seed)
 
     def fit(self, train_set):
@@ -471,42 +469,43 @@ class Cointoss():
 
     def predict(self, test_sample):
         n_sample = test_sample[0].shape[1]
-        predict_y = np.zeros( n_sample )
+        predict_y = np.zeros(n_sample)
 
         for i in range(n_sample):
             predict_y[i] = np.random.randint(2)
         return predict_y
 
-algorithm_list = ['lstm', 'lr', 'coin']
-def get_algorithm(algorithm):
-    if algorithm is 'lstm':
+
+def get_algorithm(param=Default_param):
+    if param.name is 'lstm':
         clf = Lstm()
-    elif algorithm is 'lr':
-        clf = LR_ts(max_step = 40)
-    elif algorithm is 'coin':
+    elif param.name is 'lr':
+        clf = LR_ts(max_step=param.lr_max_step)
+    elif param.name is 'coin':
         clf = Cointoss()
     else:
-        raise ValueError("algorithm has to be either %s"%algorithm_list)
+        raise ValueError("algorithm has to be either %s" % algorithm_list)
     return clf
 
-def fit_and_test(train_set, test_set, algorithm = 'lr'):
-    clf = get_algorithm(algorithm)
+
+def fit_and_test(train_set, test_set, param=Default_param):
+    clf = get_algorithm(param)
     clf.fit(train_set)
     predict_y = clf.predict(test_set[0:2])
     return calc_classification_result(predict_y, test_set[2])
 
-def cv(sample_set, n_fold, algorithm = 'lr'):
 
-    n_sample = sample_set[0].shape[1]
+def cv(sample_set, n_fold, param=Default_param):
 
-    kf = cross_validation.KFold(sample_set[0].shape[1], n_folds = n_fold, shuffle = True, random_state = 0)
+    kf = cross_validation.KFold(sample_set[0].shape[1], n_folds=n_fold,
+                                shuffle=True, random_state=0)
     i_cv = 0
     results = []
     for train_idx, test_idx in kf:
         i_cv = i_cv + 1
-        p_info("___cv%d___"%i_cv)
-        train_set = select_tseries( sample_set, train_idx)
-        test_set = select_tseries( sample_set, test_idx)
-        results.append(fit_and_test(train_set, test_set, algorithm))
+        p_info("___cv%d___" % i_cv)
+        train_set = select_tseries(sample_set, train_idx)
+        test_set = select_tseries(sample_set, test_idx)
+        results.append(fit_and_test(train_set, test_set, param))
 
     return sumup_classification_result(results)

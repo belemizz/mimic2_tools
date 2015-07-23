@@ -10,10 +10,10 @@ import theano.tensor as T
 import random
 import imdb
 
-from .mimic2 import Mimic2
+from .mimic2 import Mimic2, PatientData
 from .mimic2m import Mimic2m
 
-__all__ = [Mimic2, Mimic2m]
+__all__ = [Mimic2, PatientData, Mimic2m]
 
 
 def vector(source_num=0, n_dim=0, n_flag=2):
@@ -26,7 +26,7 @@ def vector(source_num=0, n_dim=0, n_flag=2):
     if source_num is 0:
         l_amount = [100] * n_flag
         bias = range(n_flag)
-        [x, y] = normal_dist(n_dim, l_amount,  bias, seed=1)
+        [x, y] = normal_dist(n_dim, l_amount, bias, seed=1)
 
     elif source_num is 1:
         from sklearn import datasets
@@ -121,7 +121,7 @@ def normal_timeseries(length=50, n_dim=2, random_length=True,
     negative_data = get_series(bias[0], 0, n_neg_sample)
     positive_data = get_series(bias[1], 1, n_pos_sample)
 
-    data = negative_data+positive_data
+    data = negative_data + positive_data
     random.shuffle(data)
 
     x = [item[0] for item in data]
@@ -140,7 +140,7 @@ def imdb_data():
     x, mask = l_tseries_to_ar(x)
 
     y = np.array(train[1] + valid[1] + test[1])
-    return [x, mask,  y]
+    return [x, mask, y]
 
 
 def chop_data(all_data, all_target, data_dim, n_flag):
@@ -163,7 +163,7 @@ def chop_data(all_data, all_target, data_dim, n_flag):
     return x, y
 
 
-def split_to_three_sets(x, y, valid_ratio=1./3, test_ratio=1./3, r_seed=1):
+def split_to_three_sets(x, y, valid_ratio=1. / 3, test_ratio=1. / 3, r_seed=1):
     """Split the dataset into three sets."""
     n_valid = int(valid_ratio * x.shape[0])
     n_test = int(test_ratio * x.shape[0])
@@ -174,8 +174,8 @@ def split_to_three_sets(x, y, valid_ratio=1./3, test_ratio=1./3, r_seed=1):
     random.shuffle(index_all)
 
     train_index = index_all[0:n_train]
-    valid_index = index_all[n_train:n_train+n_valid]
-    test_index = index_all[n_train+n_valid: n_train+n_valid+n_test]
+    valid_index = index_all[n_train: n_train + n_valid]
+    test_index = index_all[n_train + n_valid: n_train + n_valid + n_test]
 
     train_x = x[train_index, :]
     train_y = y[train_index]

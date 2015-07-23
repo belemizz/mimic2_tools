@@ -6,19 +6,22 @@ from sklearn import cross_validation
 
 import get_sample
 from mutil import Graph, p_info
-from . import (recall_precision, ClassificationResult,
-               sumup_classification_result, calc_classification_result)
+from . import (sumup_classification_result, calc_classification_result)
+
+from bunch import Bunch
 
 graph = Graph()
 
 class_alg_list = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
 
+Default_param = Bunch(name='lr', lr_dim=10, svm_max_iter=20000)
 
-def example(source_num=1, n_dim=2, n_flag=2, algorithm='ab'):
+
+def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
     """Sample code for this package."""
     [x, y] = get_sample.vector(source_num, n_dim, n_flag)
     try:
-        plot_2d(x, y, algorithm=algorithm)
+        plot_2d(x, y, param=param)
     except ValueError, detail:
         print detail
 
@@ -32,21 +35,22 @@ def example(source_num=1, n_dim=2, n_flag=2, algorithm='ab'):
         test_x = x[test, :]
         test_y = y[test]
 
-        result = fit_and_test(train_x, train_y, test_x, test_y, algorithm)
+        result = fit_and_test(train_x, train_y, test_x, test_y, param)
         result_list.append(result)
 
     p_info("Cross Validation Result")
     print sumup_classification_result(result_list)
 
 
-def get_algorithm(algorithm):
+def get_algorithm(param=Default_param):
     """Get an algorithm for classification."""
+    algorithm = param.name
     if algorithm == 'svm':
-        clf = svm.SVC(random_state=0, kernel='linear', max_iter=200000)
+        clf = svm.SVC(random_state=0, kernel='linear', max_iter=param.svm_max_iter)
     elif algorithm == 'rsvm':
-        clf = svm.SVC(random_state=0, kernel='rbf', max_iter=200000)
+        clf = svm.SVC(random_state=0, kernel='rbf', max_iter=param.svm_max_iter)
     elif algorithm == 'psvm':
-        clf = svm.SVC(random_state=0, kernel='poly', max_iter=200000)
+        clf = svm.SVC(random_state=0, kernel='poly', max_iter=param.svm_max_iter)
     elif algorithm == 'dt':
         clf = tree.DecisionTreeClassifier(random_state=0)
     elif algorithm == 'lr':
@@ -60,11 +64,10 @@ def get_algorithm(algorithm):
     return clf
 
 
-def plot_2d(x, y,
-            x_label="", y_label="", filename="",
-            show_flag=True, algorithm='svm'):
+def plot_2d(x, y, x_label="", y_label="", filename="",
+            show_flag=True, param=Default_param):
     """Show the classification result."""
-    clf = get_algorithm(algorithm)
+    clf = get_algorithm(param)
 
     if x.shape[1] is not 2:
         raise ValueError("Can't show: x dimension is not 2")
@@ -82,8 +85,8 @@ def plot_2d(x, y,
         margin_ratio * y_range
 
     grid_num = 200.0
-    h_x = x_range/grid_num
-    h_y = y_range/grid_num
+    h_x = x_range / grid_num
+    h_y = y_range / grid_num
 
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h_x),
                          np.arange(y_min, y_max, h_y))
@@ -96,24 +99,20 @@ def plot_2d(x, y,
     return clf
 
 
-def fit_and_test(train_x, train_y, test_x, test_y, algorithm='dt'):
+def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param):
     """Fit and test the algorithm."""
-    clf = get_algorithm(algorithm)
+    clf = get_algorithm(param)
     clf.fit(train_x, train_y)
     predict_y = clf.predict(test_x)
     return calc_classification_result(predict_y, test_y)
 
 
-def cross_validate(x, y, n_cv_fold=10, algorithm='dt'):
+def cv(sample_set, n_cv_fold=10, param=Default_param):
     """Execute cross validation with samples."""
-    clf = get_algorithm(algorithm)
 
-#    scores = cross_validation.cross_val_score(clf, x, y, cv=n_cv_fold)
+    x = sample_set[0]
+    y = sample_set[1]
+
+    clf = get_algorithm(param)
     predicted = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
-    n_p = sum(y == 1)
-    n_n = sum(y == 0)
-    n_tp = sum(predicted[y == 1])
-    n_fp = sum(predicted[y == 0])
-    recall, precision, f, acc = recall_precision(n_p, n_n, n_tp, n_fp)
-    return ClassificationResult(n_p, n_n, n_tp, n_fp,
-                                recall, precision, f, acc)
+    return calc_classification_result(predicted, y)

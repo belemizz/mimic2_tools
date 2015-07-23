@@ -36,7 +36,6 @@ class Cache:
 
     def load(self, current_param={}):
         if self.key is not '':
-
             if len(current_param) is 0:
                 if os.path.isfile(self.data_path):
                     g = open(self.data_path, 'r')

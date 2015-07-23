@@ -144,7 +144,7 @@ class evaluate_fetaure:
         eval_n_input = range(1,self.n_lab + 1)
         for n_items in eval_n_input:
             pri_lab = lab_data[:, lab_priority[0:n_items]]
-            result = alg.classification.cross_validate(pri_lab, flags, self.n_cv_folds, self.class_alg)
+            result = alg.classification.cv([pri_lab, flags], self.n_cv_folds, self.class_alg)
             lab_class_result.append(result)
 
         graph_data = np.transpose(np.array([ [item.rec, item.prec, item.f] for item in lab_class_result ]))
@@ -351,17 +351,17 @@ class evaluate_fetaure:
 
     def __eval_with_classification(self, lab_data, vital_data, flags, most_common_tests, lab_descs, lab_units):
         # lab test only
-        alg.classification.cross_validate(lab_data, flags, self.n_cv_folds, self.class_alg)
+        alg.classification.cv([lab_data, flags], self.n_cv_folds, self.class_alg)
         # vital only
-        alg.classification.cross_validate(vital_data, flags, self.n_cv_folds, self.class_alg)
+        alg.classification.cv([vital_data, flags], self.n_cv_folds, self.class_alg)
         # Using both
-        all_data= np.hstack([lab_data, vital_data])
-        alg.classification.cross_validate(all_data, flags, self.n_cv_folds, self.class_alg)
+        all_data = np.hstack([lab_data, vital_data])
+        alg.classification.cv([all_data, flags], self.n_cv_folds, self.class_alg)
 
         if self.rp_learn_flag:
 
             # cross validation
-            kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle = True, random_state = 0)
+            kf = cross_validation.KFold(lab_data.shape[0], n_folds = self.n_cv_folds, shuffle=True, random_state=0)
             result_list = []
             for train, test in kf:
                 # datasets
@@ -383,14 +383,14 @@ class evaluate_fetaure:
 
             all_result = alg.classification.sumup_classification_result(result_list)
             print all_result
-                
+
     def __eval_as_single_set(self, lab_data, vital_data, flags,
                            most_common_tests, lab_descs, lab_units):
 
         self.__classify_important_feature(lab_importance, lab_data, flags,
-                                          filename = self.__param_code() + "_lab_imp.png")
+                                          filename=self.__param_code() + "_lab_imp.png")
         self.__classify_important_feature(vital_importance, vital_data, flags,
-                                          filename = self.__param_code() + "_vital_imp.png")
+                                          filename=self.__param_code() + "_vital_imp.png")
 
         if self.rp_learn_flag:
             ## Encoded Feature Evalation

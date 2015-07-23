@@ -1,12 +1,9 @@
-"""
-Test code for scripts
-"""
+"""Test code for scripts."""
+
 import unittest
 
-class TestSequenceFunctions(unittest.TestCase):
 
-#    def setUp(self):
-#    def tearDown(self):
+class TestScripts(unittest.TestCase):
 
     def test_list_id_from_code(self):
         import list_id_form_code
@@ -19,13 +16,12 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_classification(self):
         import classify_patients
-        classify_patients.main(max_id = 2000)
+        classify_patients.main(max_id=2000)
 
-    def test_evaluate_feature(self):
-        import evaluate_feature
-        ef = evaluate_feature.evaluate_fetaure(max_id = 2000, days_before_discharge = 0)
-        ef.point_eval()
-
+    def test_predict_death(self):
+        from predict_death import PredictDeath
+        pd = PredictDeath(max_id=2000)
+        pd.n_day_prediction()
 
 if __name__ == '__main__':
     unittest.main()
