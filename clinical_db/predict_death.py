@@ -7,7 +7,11 @@ from get_sample import Mimic2, PatientData
 import alg.timeseries
 import alg.classification
 
+from bunch import Bunch
+from mutil import Graph
+
 mimic2 = Mimic2()
+graph = Graph()
 
 
 class PredictDeath:
@@ -18,8 +22,8 @@ class PredictDeath:
                  target_codes=['428.0'],
                  n_lab=20,
                  disch_origin=True,
-                 l_poi=[0.],
-                 tseries_step=10,
+                 l_poi=[0., 0.25, 0.5, 1., 2., 3.],
+                 tseries_step=0,
                  tseries_freq=0.25,
                  class_param=alg.classification.Default_param,
                  tseries_param=alg.timeseries.Default_param,
@@ -58,43 +62,66 @@ class PredictDeath:
         if self.tseries_step > 0:
             l_data.append(patients.get_lab_chart_tseries(l_lab, mimic2.vital_charts,
                                                          self.tseries_freq, self.tseries_step,
-                                                         True))
+                                                         self.disch_origin))
         return l_data
 
     def __eval_data(self, l_data):
-        l_result = []
+        l_tresult = []
+        l_presult = []
         for data in l_data:
             if isinstance(data[0], np.ndarray):
                 p_info("Point Evaluation")
-                l_result.append(self.__eval_point(data))
+                l_presult.append(self.__eval_point(data))
 
             elif isinstance(data[0], list):
                 p_info("Tseries Evaluation")
-                l_result.append(self.__eval_tseries(data))
-        return l_result
+                l_tresult.append(self.__eval_tseries(data))
+        results = Bunch(point=l_presult, tseries=l_tresult)
+        return results
 
     def __eval_point(self, data):
         lab_set = [data[0], data[2]]
         vit_set = [data[1], data[2]]
 
-        lab_result = alg.classification.cv(lab_set, self.n_cv_fold, self.class_param)
-        vit_result = alg.classification.cv(vit_set, self.n_cv_fold, self.class_param)
+        result = Bunch(
+            lab=alg.classification.cv(lab_set, self.n_cv_fold, self.class_param),
+            vit=alg.classification.cv(vit_set, self.n_cv_fold, self.class_param))
 
-        return (lab_result, vit_result)
+        return result
 
     def __eval_tseries(self, tseries):
         lab_set = [tseries[0][0], tseries[0][1], tseries[2]]
         vit_set = [tseries[1][0], tseries[1][1], tseries[2]]
 
-        lab_result = alg.timeseries.cv(lab_set, self.n_cv_fold, self.tseries_param)
-        vit_result = alg.timeseries.cv(vit_set, self.n_cv_fold, self.tseries_param)
+        result = Bunch(
+            lab=alg.timeseries.cv(lab_set, self.n_cv_fold, self.tseries_param),
+            vit=alg.timeseries.cv(vit_set, self.n_cv_fold, self.tseries_param))
 
-        return [lab_result, vit_result]
+        return result
 
     def __visualization(self, result):
-        print result
-        p_info("Visualize")
+        p_info("Point")
+#        print result.point
+        self.__draw_graph_point(result.point)
 
+        p_info("Series")
+        print result.tseries
+        self.__draw_graph_tseries(result.tseries)
+
+    def __draw_graph_point(self, result):
+        l_lab = [item.lab for item in result]
+        l_vit = [item.vit for item in result]
+        comparison_graph(l_lab, self.l_poi, 'lab')
+        comparison_graph(l_vit, self.l_poi, 'vital')
+        import matplotlib.pyplot as plt
+        plt.waitforbuttonpress()
+
+
+def comparison_graph(l_classification_result, label, title):
+    l_rec = [item.rec for item in l_classification_result]
+    l_prec = [item.prec for item in l_classification_result]
+    l_f = [item.f for item in l_classification_result]
+    graph.line_series([l_rec, l_prec, l_f], label, ['recall', 'precision', 'f_measure'])
 
 if __name__ == '__main__':
     pd = PredictDeath()

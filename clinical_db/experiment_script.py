@@ -42,7 +42,6 @@ def classify_vital_and_lab_timeseries():
             graphs.bar_pl([rec, prec, f], l_nsteps, ['recall', 'precision', 'F-measure'],
                           xlim = [0,1], title = title, filename = filename)    
 
-    
 # Experiment Date: 07/01/2015
 # Update Deate
 def classify_vital_and_lab():
@@ -103,7 +102,7 @@ def compare_lab_tests_and_vitals():
                                              dae_corruption = 0.3)
                                              
     efo.compare_dbd([0., 0.25, 0.5, 1., 2., 3.])
-    
+
     efo.rp_learn_flag = True
     efo.n_cv_folds = 4
     efo.point_eval()
@@ -113,8 +112,6 @@ def compare_lab_tests_and_vitals():
     efo.point_eval()
 
 if __name__ == '__main__':
-#    compare_lab_tests_and_vitals()
+    #    compare_lab_tests_and_vitals()
     classify_vital_and_lab_timeseries()
     plt.waitforbuttonpress()
-    
-    
