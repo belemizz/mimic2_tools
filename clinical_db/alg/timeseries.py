@@ -408,7 +408,7 @@ class Lstm():
         return self.f_pred(test_sample[0], test_sample[1])
 
 class LR_ts():
-    def __init__(self, max_step= 10):
+    def __init__(self, max_step= 40):
         self.clf = linear_model.LogisticRegression(random_state =0)
         self.max_step = max_step
 
@@ -482,7 +482,7 @@ def get_algorithm(algorithm):
     if algorithm is 'lstm':
         clf = Lstm()
     elif algorithm is 'lr':
-        clf = LR_ts(max_step = 10)
+        clf = LR_ts(max_step = 40)
     elif algorithm is 'coin':
         clf = Cointoss()
     else:

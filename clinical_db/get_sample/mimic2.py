@@ -139,46 +139,71 @@ class Mimic2:
                 trends.append(trend)
         return trends
 
-    def subject_with_icd9_codes(self, target_codes, ignore_order = True):
+    def subject_with_icd9_codes(self, target_codes, ignore_order=True, final_adm=False, max_id=0):
         ''' Search subject ID the target ICD9 codes
         :return:  list of ids
         '''
         id_lists = []
+        adm_lists = []
         for index, code in enumerate(target_codes):
             if ignore_order:
-                seq_cond = "<=%d"%len(target_codes)
+                seq_cond = "<=%d" % len(target_codes)
             else:
-                seq_cond = "=%d"%(index+1)
-            subjects = self.__subject_with_icd9(code,seq_cond)
+                seq_cond = "=%d" % (index + 1)
+            subjects = self.__subject_with_icd9(code, seq_cond)
             id_lists.append([item[0] for item in subjects])
+            adm_lists.append([item[1] for item in subjects])
 
         id_set = set(id_lists[0])
-        for index in range(1,len(id_lists)):
+        adm_set = set(adm_lists[0])
+        for index in range(1, len(id_lists)):
             id_set = id_set.intersection(set(id_lists[index]))
+            adm_set = adm_set.intersection(set(adm_lists[index]))
 
-        return sorted(list(id_set))
+        sel_id_set = id_set.copy()
+        if final_adm:
+            for id in id_set:
+                adm = self.admission(id)
+                final_adm_id = adm[len(adm) - 1][0]
+                if final_adm_id not in adm_set:
+                    sel_id_set.remove(id)
+
+        if max_id > 0:
+            lim_id = [id for id in sel_id_set if id < max_id]
+        else:
+            lim_id = list(sel_id_set)
+
+        return sorted(lim_id)
+
+    def __subject_with_icd9(self, code, seq_cond):
+        select_seq = "SELECT subject_id,hadm_id " +\
+                     "FROM mimic2v26.icd9 " +\
+                     "WHERE code='%s' AND sequence%s" % (code, seq_cond) +\
+                     "GROUP BY subject_id,hadm_id " +\
+                     "ORDER BY subject_id "
+        return self.__select_and_save(select_seq)
 
     def subject_with_numeric(self):
         ''' Search subject ID who have one or more numeric record
         :return:  list of ids
         '''
 
-    ##  Basic queries to get items for a patient ##
-    def patient(self, patient_id, savepath = ""):
+    # Basic queries to get items for a patient
+    def patient(self, patient_id, savepath=""):
         if len(savepath) == 0:
-            savepath = "../data/%d_patient.csv"%patient_id
+            savepath = "../data/%d_patient.csv" % patient_id
 
-        select_seq = "SELECT * "+\
-                     "FROM mimic2v26.D_PATIENTS "+\
-                     "WHERE subject_id =%d"%(patient_id);
+        select_seq = "SELECT * " +\
+                     "FROM mimic2v26.D_PATIENTS " +\
+                     "WHERE subject_id =%d" % (patient_id)
         return self.__select_and_save(select_seq, savepath)
 
-    def admission(self, patient_id, savepath = ""):
+    def admission(self, patient_id, savepath=""):
         if len(savepath) == 0:
-            savepath = "../data/%d_admission.csv"%patient_id
+            savepath = "../data/%d_admission.csv" % patient_id
 
-        select_seq = "SELECT * FROM mimic2v26.ADMISSIONS "+\
-                     "WHERE subject_id =%d "%(patient_id)+\
+        select_seq = "SELECT * FROM mimic2v26.ADMISSIONS " +\
+                     "WHERE subject_id =%d " % (patient_id) +\
                      "ORDER BY disch_dt"
         return self.__select_and_save(select_seq, savepath)
 
@@ -356,23 +381,16 @@ class Mimic2:
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq, savepath)
 
-    def subject_with_icu_expire_flg(self, savepath = ""):
-        select_seq = "SELECT subject_id "+\
-                     "FROM mimic2v26.icustay_detail "+\
-                     "WHERE icustay_expire_flg='Y' "+\
+    def subject_with_icu_expire_flg(self, savepath=""):
+        select_seq = "SELECT subject_id " +\
+                     "FROM mimic2v26.icustay_detail " +\
+                     "WHERE icustay_expire_flg='Y' " +\
                      "GROUP BY subject_id " +\
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq, savepath)
 
-    def __subject_with_icd9(self, code, seq_cond):
-        select_seq = "SELECT subject_id "+\
-                     "FROM mimic2v26.icd9 "+\
-                     "WHERE code='%s' AND sequence%s"%(code,seq_cond) +\
-                     "GROUP BY subject_id " +\
-                     "ORDER BY subject_id "
-        return self.__select_and_save(select_seq)
 
-    def __select_and_save(self, select_seq, filepath="", print_query = False):
+    def __select_and_save(self, select_seq, filepath="", print_query=False):
 
         if print_query:
             print "exec:"
@@ -381,12 +399,13 @@ class Mimic2:
         self.cur.execute(select_seq)
         result = self.cur.fetchall()
 
-        if len(filepath)>0:
+        if len(filepath) > 0:
             import csv
             writer = csv.writer(open(filepath, 'wb'))
             writer.writerows(result)
 
         return result
+
 
 class subject:
     """
@@ -399,11 +418,12 @@ class subject:
         self.dod = dod
         self.hospital_expire_flg = hospital_expire_flg
 
-    def set_admissions(self,admission_list):
+    def set_admissions(self, admission_list):
         self.admissions = admission_list
 
     def get_final_admission(self):
         return self.admissions[len(self.admissions) - 1]
+
 
 class admission:
     """
@@ -413,7 +433,7 @@ class admission:
         self.hadm_id = hadm_id
         self.admit_dt = admit_dt
         self.disch_dt = disch_dt
-    
+
     def set_icd9(self, icd9):
         self.icd9 = icd9
 
@@ -528,14 +548,20 @@ class admission:
                                 ts_interest.append(ts)
                                 val_interest.append(val)
                         result.append([item.itemid, item.description, item.unit, ts_interest, val_interest])
-                    
+
         return result
 
     def get_estimated_disch_time(self):
-        return max( [self.final_labs_time,
-                     self.final_ios_time,
-                     self.final_medication_time,
-                     self.final_chart_time])
+        return max([self.final_labs_time,
+                    self.final_ios_time,
+                    self.final_medication_time,
+                    self.final_chart_time])
+
+    def get_estimated_admit_time(self):
+        return min([self.final_labs_time,
+                    self.final_ios_time,
+                    self.final_medication_time,
+                    self.final_chart_time])
 
 class icustay:
     """

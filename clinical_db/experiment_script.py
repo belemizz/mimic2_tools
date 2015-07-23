@@ -21,7 +21,7 @@ def classify_vital_and_lab_timeseries():
         result = []
         for n_steps in l_nsteps:
             efo = evaluate_feature.evaluate_fetaure(
-                max_id = 200000,
+                max_id=200000,
                 n_lab = 20,
                 days_before_discharge = dbd,
                 rp_learn_flag = False,

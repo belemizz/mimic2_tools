@@ -6,15 +6,13 @@ import datetime
 from collections import Counter
 
 from get_sample import Mimic2
-from mutil import Graph
+from mutil import p_info, is_number, is_number_list, float_list, Graph, Cache
 
 import alg.classification
 import alg.binary_logistic_regression
 import alg.auto_encoder
 import alg.feature_selection
 import alg.timeseries
-
-from mutil import Cache, p_info
 
 from sklearn import cross_validation
 
@@ -178,10 +176,9 @@ class evaluate_fetaure:
             dae_top_importance = []
             lab_top_importance = []
 
-            
             for n_input in eval_n_input:
 
-                print "---------stage%d----------"%n_input
+                print "---------stage%d----------" % n_input
                 n_dae_hidden = int(self.dae_hidden_ratio * n_input)
                 pri_lab = lab_data[:, lab_priority[0:n_input]]
 
@@ -277,11 +274,11 @@ class evaluate_fetaure:
         lab_set = [lab_tseries[0], lab_tseries[1], flags]
         vit_set = [vit_tseries[0], vit_tseries[1], flags]
 
-        lab_result = alg.timeseries.cv(lab_set, self.n_cv_folds, 'lstm')
+        lab_result = alg.timeseries.cv(lab_set, self.n_cv_folds, 'lr')
         p_info('lab')
         print lab_result
 
-        vit_result = alg.timeseries.cv(vit_set, self.n_cv_folds, 'lstm')
+        vit_result = alg.timeseries.cv(vit_set, self.n_cv_folds, 'lr')
         p_info('vital')
         print vit_result
 
@@ -337,12 +334,12 @@ class evaluate_fetaure:
             ret_val = [most_common_tests, lab_tseries, lab_descs, lab_units, vit_tseries, flags]
             return cache.save(ret_val, param)
 
-    def __point_preparation(self, cache_key = '__point_preparation'):
+    def __point_preparation(self, cache_key='__point_preparation'):
         param = self.__get_param_data_retrieval()
         cache = Cache(cache_key)
 
         try:
-            return cache.load( param)
+            return cache.load(param)
         except IOError:
             subject_ids, lab_ids_dict, patients, units, descs = self.__get_patient_data_form_codes()
             most_common_tests, lab_descs, lab_units = self.__find_most_common_lab_tests(lab_ids_dict, descs, units)
@@ -465,13 +462,13 @@ class evaluate_fetaure:
         print 'not implemented'
 
     def __get_patient_data_form_codes(self):
-        id_list =  mimic2db.subject_with_icd9_codes(self.target_codes)
+        id_list = mimic2db.subject_with_icd9_codes(self.target_codes)
         subject_ids = [item for item in id_list if item < self.max_id]
         patients, lab_ids_dict, units, descs = self.__get_patient_and_lab_info(subject_ids)
         return subject_ids, lab_ids_dict, patients, units, descs
 
     # Get subject info and lab_id info
-    def __get_patient_and_lab_info(self,subject_ids):
+    def __get_patient_and_lab_info(self, subject_ids):
         patients = []
         units = {}
         descs = {}
@@ -481,7 +478,7 @@ class evaluate_fetaure:
             patient = mimic2db.get_subject(subject_id)
             if patient:
                 final_adm = patient.get_final_admission()
-                if len(final_adm.icd9)>0 and final_adm.icd9[0][3] == self.target_codes[0]:
+                if len(final_adm.icd9) > 0 and final_adm.icd9[0][3] == self.target_codes[0]:
                     patients.append(patient)
 
                     for item in final_adm.labs:
@@ -508,16 +505,17 @@ class evaluate_fetaure:
 
         if days_before_discharge is None:
             days_before_discharge = self.days_before_discharge
-            
+
         ids = []
         lab_values = []
         chart_values = []
         flags = []
         for patient in patients:
             final_adm = patient.get_final_admission()
-            time_of_interest = final_adm.get_estimated_disch_time() - datetime.timedelta(days_before_discharge)
-            lab_result =  final_adm.get_newest_lab_at_time(time_of_interest)
-            chart_result =  final_adm.get_newest_chart_at_time(time_of_interest)
+            time_of_interest = (final_adm.get_estimated_disch_time()
+                                - datetime.timedelta(days_before_discharge))
+            lab_result = final_adm.get_newest_lab_at_time(time_of_interest)
+            chart_result = final_adm.get_newest_chart_at_time(time_of_interest)
 
             lab_value = [float('NaN')] * len(lab_ids)
             for item in lab_result:
@@ -539,9 +537,9 @@ class evaluate_fetaure:
 
         lab_array = np.array(lab_values)
         chart_array = np.array(chart_values)
-        flag_array = np.array(flags )
+        flag_array = np.array(flags)
 
-        y = np.zeros(len(flag_array), dtype = 'int')
+        y = np.zeros(len(flag_array), dtype='int')
         y[flag_array == 'Y'] = 1
 
         return lab_array, chart_array, y, ids
@@ -620,25 +618,6 @@ class evaluate_fetaure:
         return lab_array, chart_array, y
 
 
-############ UTILITY ###################
-def is_number(s):
-    try:
-        float(s)
-        return True
-    except (ValueError, TypeError):
-        return False
-
-def is_number_list(l):
-    for s in l:
-        if not is_number(s):
-            return False
-    return True
-
-def float_list(l):
-    f_list = []
-    for s in l:
-        f_list.append(float(s))
-    return np.array(f_list)
 
 if __name__ == '__main__':
     
