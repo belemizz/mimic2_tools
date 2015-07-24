@@ -17,7 +17,7 @@ class Graph:
 
     def visualize_image(self, data,
                         h_len=28, n_cols=0, filename="", show_flag=True):
-        """Visualizer of data."""
+        """Visualizer of image data."""
         if data.ndim == 1:
             v_len = data.shape[0] / h_len
             if n_cols == 0:
@@ -185,75 +185,75 @@ class Graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
-    def bar_comparison(self, data, labels, x_label="", title="", filename="", show_flag=True):
+    # general graphs
+    def comparison_bar(self, data, labels, legend="", metric_label="", lim=[], horizontal=False,
+                       title="", filename="", show_flag=True):
         original_data = locals().copy()
-
         fig, ax = plt.subplots()
-
-        Y = range(len(data))
-        Y.reverse()
-
-        ax.barh(Y, data, height=0.4)
-        plt.yticks([item + 0.2 for item in Y], labels)
-
-        if x_label is not "":
-            ax.set_xlabel(x_label)
-        if title is not "":
-            ax.set_title(title)
-
-        self.__show_and_save(fig, filename, show_flag, original_data)
-
-    def bar_pl(self, data_list, labels, legend, xlim=[], x_label="",
-               title="", filename="", show_flag=True):
-        original_data = locals().copy()
-
-        fig, ax = plt.subplots()
-
         Y = range(len(labels))
         Y.reverse()
-        bar_height = 1. / (len(data_list) + 1)
-        cmap = plt.cm.rainbow
-        cmap_v = cmap.N / (len(legend) - 1)
-        for index, data in enumerate(data_list):
-            ax.barh([y + bar_height * (len(legend) - index - 1) for y in Y],
-                    data,
-                    height=bar_height,
-                    color=cmap(index * cmap_v))
 
-        plt.yticks([item + bar_height / 2 * len(legend) for item in Y], labels)
-        plt.legend(legend)
+        if horizontal:
+            [set_lim1, set_lim2] = [ax.set_ylim, ax.set_xlim]
+            set_label1 = ax.set_xlabel
+            set_ticks = plt.yticks
+        else:
+            [set_lim1, set_lim2] = [ax.set_xlim, ax.set_ylim]
+            set_label1 = ax.set_ylabel
+            set_ticks = plt.xticks
 
-        if xlim is not []:
-            ax.set_xlim(xlim)
-        if x_label is not "":
-            ax.set_xlabel(x_label)
-        if title is not "":
+        if isinstance(data[0], (int, float)):
+            bar_height = 0.5
+            if horizontal:
+                ax.barh(Y, data, height=bar_height)
+            else:
+                ax.bar(Y, data, width=bar_height)
+            set_ticks([item + 0.25 for item in Y], labels)
+
+        else:
+            bar_height = 1. / (len(data) + 1)
+            cmap = plt.cm.rainbow
+            cmap_v = cmap.N / (len(data[0]) - 1)
+            for idx, d in enumerate(data):
+                if horizontal:
+                    ax.barh([y + bar_height * (len(data) - idx - 1) for y in Y], d,
+                            height=bar_height, color=cmap(idx * cmap_v))
+                else:
+                    ax.bar([y + bar_height * (len(data) - idx - 1) for y in Y], d,
+                           width=bar_height, color=cmap(idx * cmap_v))
+                set_ticks([item + bar_height / 2 * len(data) for item in Y], labels)
+
+        set_lim1([-bar_height, len(labels)])
+        if lim:
+            set_lim2(lim)
+        if metric_label:
+            set_label1(metric_label)
+        if legend:
+            plt.legend(legend)
+        if title:
             ax.set_title(title)
-
         self.__show_and_save(fig, filename, show_flag, original_data)
 
-    def line_series(self, data, timestamp, label, x_label="", y_label="", title="", ylim=None,
-                    markersize=10, filename="", show_flag=True):
+    def line_series(self, data, y_points, legend, x_label="", y_label="", ylim=[], markersize=10,
+                    title="", filename="", show_flag=True):
         original_data = locals().copy()
-
         fig, ax = plt.subplots()
         for item in data:
             if markersize is 0:
-                ax.plot(timestamp, item, '-')
+                ax.plot(y_points, item, '-')
             else:
-                ax.plot(timestamp, item, 'o--', markersize=markersize)
-        ax.legend(label)
-        ax.set_xlim(self.__calc_lim(timestamp, 0.05))
+                ax.plot(y_points, item, 'o--', markersize=markersize)
+        ax.legend(legend)
+        ax.set_xlim(self.__calc_lim(y_points, 0.05))
 
-        if ylim is not None:
+        if ylim:
             ax.set_ylim(ylim)
-        if x_label is not "":
+        if x_label:
             ax.set_xlabel(x_label)
-        if y_label is not "":
+        if y_label:
             ax.set_ylabel(y_label)
-        if title is not "":
+        if title:
             ax.set_title(title)
-
         self.__show_and_save(fig, filename, show_flag, original_data)
 
     def __calc_lim(self, values, margin_ratio):
