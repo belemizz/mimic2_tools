@@ -22,13 +22,16 @@ class PredictDeath:
                  target_codes=['428.0'],
                  n_lab=20,
                  disch_origin=True,
-                 l_poi=[0., 0.25, 0.5, 1., 2., 3.],
-                 tseries_step=0,
-                 tseries_freq=0.25,
+                 l_poi=[],
+                 tseries_duration=[1., 2., 3., 4.],
+                 tseries_freq=0.5,
                  class_param=alg.classification.Default_param,
                  tseries_param=alg.timeseries.Default_param,
                  n_cv_fold=10):
 
+        # param validation
+        if isinstance(tseries_duration, list) and isinstance(tseries_freq, list):
+            raise ValueError("Both tseries_duration and tseries_freq can't be lists")
         # params for data retrieval
         self.max_id = max_id
         self.target_codes = target_codes
@@ -36,7 +39,7 @@ class PredictDeath:
 
         self.disch_origin = disch_origin
         self.l_poi = l_poi
-        self.tseries_step = tseries_step
+        self.tseries_duration = tseries_duration
         self.tseries_freq = tseries_freq
 
         # params for algorithm
@@ -59,9 +62,19 @@ class PredictDeath:
                 l_data.append(patients.get_lab_chart_point(l_lab, mimic2.vital_charts,
                                                            poi, self.disch_origin))
 
-        if self.tseries_step > 0:
+        if isinstance(self.tseries_duration, list):
+            for duration in self.tseries_duration:
+                l_data.append(patients.get_lab_chart_tseries(l_lab, mimic2.vital_charts,
+                                                             self.tseries_freq, duration,
+                                                             self.disch_origin))
+        elif isinstance(self.tseries_freq, list):
+            for freq in self.tseries_freq:
+                l_data.append(patients.get_lab_chart_tseries(l_lab, mimic2.vital_charts,
+                                                             freq, self.tseries_duration,
+                                                             self.disch_origin))
+        else:
             l_data.append(patients.get_lab_chart_tseries(l_lab, mimic2.vital_charts,
-                                                         self.tseries_freq, self.tseries_step,
+                                                         self.tseries_freq, self.tseries_duration,
                                                          self.disch_origin))
         return l_data
 
@@ -76,39 +89,49 @@ class PredictDeath:
             elif isinstance(data[0], list):
                 p_info("Tseries Evaluation")
                 l_tresult.append(self.__eval_tseries(data))
-        results = Bunch(point=l_presult, tseries=l_tresult)
-        return results
+        return Bunch(point=l_presult, tseries=l_tresult)
 
     def __eval_point(self, data):
         lab_set = [data[0], data[2]]
         vit_set = [data[1], data[2]]
-
-        result = Bunch(
+        return Bunch(
             lab=alg.classification.cv(lab_set, self.n_cv_fold, self.class_param),
             vit=alg.classification.cv(vit_set, self.n_cv_fold, self.class_param))
-
-        return result
 
     def __eval_tseries(self, tseries):
         lab_set = [tseries[0][0], tseries[0][1], tseries[2]]
         vit_set = [tseries[1][0], tseries[1][1], tseries[2]]
-
-        result = Bunch(
+        return Bunch(
             lab=alg.timeseries.cv(lab_set, self.n_cv_fold, self.tseries_param),
             vit=alg.timeseries.cv(vit_set, self.n_cv_fold, self.tseries_param))
 
-        return result
-
     def __visualization(self, result):
-        self.__draw_graph_point(result.point)
+        if result.point:
+            self.__draw_graph_point(result.point)
         self.__draw_graph_tseries(result.tseries)
 
     def __draw_graph_point(self, result):
         l_lab = [item.lab for item in result]
         l_vit = [item.vit for item in result]
-        x_label = 'Days from discharge'
+        if self.disch_origin:
+            x_label = 'Days from discharge'
+        else:
+            x_label = 'Days from admission'
         graph.series_classification(l_lab, self.l_poi, x_label, 'lab')
         graph.series_classification(l_vit, self.l_poi, x_label, 'vit')
+        graph.waitforbuttunpress()
+
+    def __draw_graph_tseries(self, result):
+        l_lab = [item.lab for item in result]
+        l_vit = [item.vit for item in result]
+        if isinstance(self.tseries_duration, list):
+            x_label = 'Duration'
+            graph.series_classification(l_lab, self.tseries_duration, x_label, 'lab')
+            graph.series_classification(l_vit, self.tseries_duration, x_label, 'vit')
+        if isinstance(self.tseries_freq, list):
+            x_label = 'Freq'
+            graph.series_classification(l_lab, self.tseries_freq, x_label, 'lab')
+            graph.series_classification(l_vit, self.tseries_freq, x_label, 'vit')
         graph.waitforbuttunpress()
 
 if __name__ == '__main__':

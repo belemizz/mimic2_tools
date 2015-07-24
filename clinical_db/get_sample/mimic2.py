@@ -54,8 +54,9 @@ class PatientData:
             lab_units.append(units[item_id])
         return most_common_tests, lab_descs, lab_units
 
-    def get_lab_chart_tseries(self, l_lab_id, l_chart_id, freq, n_steps, from_discharge=True):
+    def get_lab_chart_tseries(self, l_lab_id, l_chart_id, freq, duration, from_discharge=True):
         l_results = []
+        n_steps = int(duration / freq)
         for idx in range(n_steps):
             days = idx * freq
             l_results.append(self.get_lab_chart_point(l_lab_id, l_chart_id, days, from_discharge))

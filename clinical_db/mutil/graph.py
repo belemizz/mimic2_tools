@@ -191,7 +191,8 @@ class Graph:
         l_prec = [item.prec for item in l_classification_result]
         l_f = [item.f for item in l_classification_result]
         legend = ['recall', 'precision', 'f_measure']
-        self.line_series([l_rec, l_prec, l_f], timestamp, legend, ylim=[0, 1], title=title)
+        self.line_series([l_rec, l_prec, l_f], timestamp, legend, ylim=[0, 1],
+                         x_label=x_label, title=title)
 
     # general graphs
     def comparison_bar(self, data, labels, legend="", metric_label="", lim=[], horizontal=False,
