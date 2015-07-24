@@ -185,6 +185,14 @@ class Graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
+    def series_classification(self, l_classification_result, timestamp, x_label,
+                              title="", filename="", show_flag=True):
+        l_rec = [item.rec for item in l_classification_result]
+        l_prec = [item.prec for item in l_classification_result]
+        l_f = [item.f for item in l_classification_result]
+        legend = ['recall', 'precision', 'f_measure']
+        self.line_series([l_rec, l_prec, l_f], timestamp, legend, ylim=[0, 1], title=title)
+
     # general graphs
     def comparison_bar(self, data, labels, legend="", metric_label="", lim=[], horizontal=False,
                        title="", filename="", show_flag=True):
@@ -213,7 +221,7 @@ class Graph:
         else:
             bar_height = 1. / (len(data) + 1)
             cmap = plt.cm.rainbow
-            cmap_v = cmap.N / (len(data[0]) - 1)
+            cmap_v = cmap.N / (len(data) - 1)
             for idx, d in enumerate(data):
                 if horizontal:
                     ax.barh([y + bar_height * (len(data) - idx - 1) for y in Y], d,
@@ -255,6 +263,9 @@ class Graph:
         if title:
             ax.set_title(title)
         self.__show_and_save(fig, filename, show_flag, original_data)
+
+    def waitforbuttunpress(self):
+        plt.waitforbuttonpress()
 
     def __calc_lim(self, values, margin_ratio):
         margin = (max(values) - min(values)) * margin_ratio

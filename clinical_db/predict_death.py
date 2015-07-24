@@ -100,28 +100,16 @@ class PredictDeath:
         return result
 
     def __visualization(self, result):
-        p_info("Point")
-#        print result.point
         self.__draw_graph_point(result.point)
-
-        p_info("Series")
-        print result.tseries
         self.__draw_graph_tseries(result.tseries)
 
     def __draw_graph_point(self, result):
         l_lab = [item.lab for item in result]
         l_vit = [item.vit for item in result]
-        comparison_graph(l_lab, self.l_poi, 'lab')
-        comparison_graph(l_vit, self.l_poi, 'vital')
-        import matplotlib.pyplot as plt
-        plt.waitforbuttonpress()
-
-
-def comparison_graph(l_classification_result, label, title):
-    l_rec = [item.rec for item in l_classification_result]
-    l_prec = [item.prec for item in l_classification_result]
-    l_f = [item.f for item in l_classification_result]
-    graph.line_series([l_rec, l_prec, l_f], label, ['recall', 'precision', 'f_measure'])
+        x_label = 'Days from discharge'
+        graph.series_classification(l_lab, self.l_poi, x_label, 'lab')
+        graph.series_classification(l_vit, self.l_poi, x_label, 'vit')
+        graph.waitforbuttunpress()
 
 if __name__ == '__main__':
     pd = PredictDeath()
