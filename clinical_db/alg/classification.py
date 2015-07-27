@@ -43,23 +43,35 @@ def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
 
 def get_algorithm(param=Default_param):
     """Get an algorithm for classification."""
-    algorithm = param.name
-    if algorithm == 'svm':
-        clf = svm.SVC(random_state=0, kernel='linear', max_iter=param.svm_max_iter)
-    elif algorithm == 'rsvm':
-        clf = svm.SVC(random_state=0, kernel='rbf', max_iter=param.svm_max_iter)
-    elif algorithm == 'psvm':
-        clf = svm.SVC(random_state=0, kernel='poly', max_iter=param.svm_max_iter)
-    elif algorithm == 'dt':
-        clf = tree.DecisionTreeClassifier(random_state=0)
-    elif algorithm == 'lr':
-        clf = linear_model.LogisticRegression(random_state=0)
-    elif algorithm == 'rf':
-        clf = ensemble.RandomForestClassifier(random_state=0)
-    elif algorithm == 'ab':
-        clf = ensemble.AdaBoostClassifier(random_state=0)
+    def _get_algorithm(name):
+        if name == 'svm':
+            clf = svm.SVC(random_state=0, kernel='linear', max_iter=param.svm_max_iter)
+        elif name == 'rsvm':
+            clf = svm.SVC(random_state=0, kernel='rbf', max_iter=param.svm_max_iter)
+        elif name == 'psvm':
+            clf = svm.SVC(random_state=0, kernel='poly', max_iter=param.svm_max_iter)
+        elif name == 'dt':
+            clf = tree.DecisionTreeClassifier(random_state=0)
+        elif name == 'lr':
+            clf = linear_model.LogisticRegression(random_state=0)
+        elif name == 'rf':
+            clf = ensemble.RandomForestClassifier(random_state=0)
+        elif name == 'ab':
+            clf = ensemble.AdaBoostClassifier(random_state=0)
+        else:
+            raise ValueError("algorithm has to be either %s" % L_algorithm)
+        return clf
+
+    if isinstance(param.name, list):
+        clf = []
+        for name in param.name:
+            try:
+                clf.append(_get_algorithm(name))
+            except ValueError:
+                pass
     else:
-        raise ValueError("algorithm has to be either %s" % L_algorithm)
+        clf = _get_algorithm(param.name)
+
     return clf
 
 
@@ -101,17 +113,32 @@ def plot_2d(x, y, x_label="", y_label="", filename="",
 def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param):
     """Fit and test the algorithm."""
     clf = get_algorithm(param)
-    clf.fit(train_x, train_y)
-    predict_y = clf.predict(test_x)
-    return calc_classification_result(predict_y, test_y)
+
+    if isinstance(clf, list):
+        result = []
+        for c in clf:
+            c.fit(train_x, train_y)
+            predict_y = c.predict(test_x)
+            result.append(calc_classification_result(predict_y, test_y))
+    else:
+        clf.fit(train_x, train_y)
+        predict_y = clf.predict(test_x)
+        result = calc_classification_result(predict_y, test_y)
+    return result
 
 
 def cv(sample_set, n_cv_fold=10, param=Default_param):
     """Execute cross validation with samples."""
-
     x = sample_set[0]
     y = sample_set[1]
-
     clf = get_algorithm(param)
-    predicted = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
-    return calc_classification_result(predicted, y)
+
+    if isinstance(clf, list):
+        result = []
+        for c in clf:
+            predict_y = cross_validation.cross_val_predict(c, x, y, cv=n_cv_fold)
+            result.append(calc_classification_result(predict_y, y))
+    else:
+        predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
+        result = calc_classification_result(predict_y, y)
+    return result

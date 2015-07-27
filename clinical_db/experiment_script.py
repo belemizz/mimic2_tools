@@ -39,10 +39,9 @@ def classify_vital_and_lab_timeseries():
             f = [item[i].f for item in result]
             title = "%s_tseriess_dbd_%d"%(short_label[i], dbd)
             filename = "%s_tseries_dbd_%d"%(short_label[i], dbd)
-            graphs.bar_pl([rec, prec, f], l_nsteps, ['recall', 'precision', 'F-measure'],
-                          xlim = [0,1], title = title, filename = filename)    
+            graphs.comparison_bar([rec, prec, f], l_nsteps, ['recall', 'precision', 'F-measure'],
+                          lim = [0,1], title = title, filename = filename)    
 
-    
 # Experiment Date: 07/01/2015
 # Update Deate
 def classify_vital_and_lab():
@@ -73,7 +72,7 @@ def classify_vital_and_lab():
             alg = [item['param']['class_alg'] for item in result]
             title = "Lab/ n_metrics = %d/ dbd=%d"%(i,dbd)
             filename = "Lab_n_metrics_%d_dbd_%d"%(i,dbd)
-            graphs.bar_pl([recall, precision, f_measure], alg, ['recall', 'precision', 'F-measure'], xlim = [0,1], title = title, filename = filename)
+            graphs.comparison_bar([recall, precision, f_measure], alg, ['recall', 'precision', 'F-measure'], lim = [0,1], title = title, filename = filename)
 
         i = 4
         recall = [item['vital_class'][i-1].rec for item in result]
@@ -82,7 +81,7 @@ def classify_vital_and_lab():
         alg = [item['param']['class_alg'] for item in result]
         title = "Vital/ n_metrics = %d/ dbd=%d"%(i,dbd)
         filename = "Vital_n_metrics_%d_dbd_%d"%(i,dbd)
-        graphs.bar_pl([recall, precision, f_measure], alg, ['recall', 'precision', 'F-measure'], xlim = [0,1], title = title, filename = filename)
+        graphs.comparison_bar([recall, precision, f_measure], alg, ['recall', 'precision', 'F-measure'], lim = [0,1], title = title, filename = filename)
 
 
 # Experiment Date:06/24/2015
@@ -103,7 +102,7 @@ def compare_lab_tests_and_vitals():
                                              dae_corruption = 0.3)
                                              
     efo.compare_dbd([0., 0.25, 0.5, 1., 2., 3.])
-    
+
     efo.rp_learn_flag = True
     efo.n_cv_folds = 4
     efo.point_eval()
@@ -113,8 +112,6 @@ def compare_lab_tests_and_vitals():
     efo.point_eval()
 
 if __name__ == '__main__':
-#    compare_lab_tests_and_vitals()
+    #    compare_lab_tests_and_vitals()
     classify_vital_and_lab_timeseries()
     plt.waitforbuttonpress()
-    
-    
