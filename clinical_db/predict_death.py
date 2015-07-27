@@ -9,16 +9,19 @@ import alg.classification
 from bunch import Bunch
 from mutil import Graph
 
+from patient_classification import ControlExperiment
+
 mimic2 = Mimic2()
 graph = Graph()
 
 
-class PredictDeath:
+class PredictDeath(ControlExperiment):
     """Evaluate metrics for predicting death."""
 
     def __init__(self,
                  max_id=200000,
                  target_codes=['428.0'],
+                 matched_only=False,
                  n_lab=20,
                  disch_origin=True,
                  l_poi=0.,  # None to disable point eval
@@ -29,9 +32,7 @@ class PredictDeath:
                  n_cv_fold=10):
 
         # params for data retrieval
-        self.max_id = max_id
-        self.target_codes = target_codes
-        self.n_lab = n_lab
+        ControlExperiment.__init__(self, max_id, target_codes, matched_only, n_lab)
 
         self.disch_origin = disch_origin
         self.l_poi = l_poi
@@ -75,8 +76,7 @@ class PredictDeath:
         self.__visualization(result)
 
     def __data_preparation(self):
-        id_list = mimic2.subject_with_icd9_codes(self.target_codes, True, True, self.max_id)
-        patients = PatientData(id_list)
+        patients = PatientData(self.id_list)
         l_lab, l_descs, l_units = patients.get_common_labs(self.n_lab)
 
         l_point = []
@@ -149,7 +149,7 @@ class PredictDeath:
         l_vit = self.__remove_list_duplication(l_vit)
         if self.point_comp_info[2] == 'bar':
             graph.bar_classification(l_lab, self.point_comp_info[0], 'lab')
-            graph.bar_classification(l_vit, self.point_comp_info[0], 'vital')
+            graph.bar_classification(l_vit, self.point_comp_info[0], 'vit')
         else:
             x_label = self.point_comp_info[1]
             graph.series_classification(l_lab, self.point_comp_info[0], x_label, 'lab')

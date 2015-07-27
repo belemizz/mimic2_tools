@@ -15,10 +15,14 @@ class Mimic2m:
             numerics.remove("")
         return numerics
 
-    def get_id_numerics(self):
+    def get_id_numerics(self, max_id=None):
         ''' get the ids who have numeric records '''
         numerics = self.get_numerics()
-        id_list = list( set( map(self.__pick_id_in_numerics, numerics)))
+        id_list = list(set(map(self.__pick_id_in_numerics, numerics)))
+
+        if max_id:
+            id_list = [item for item in id_list if item < max_id]
+
         id_list.sort()
         return id_list
 

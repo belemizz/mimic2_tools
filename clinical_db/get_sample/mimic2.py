@@ -25,7 +25,7 @@ class PatientData:
             for id in self.id_list:
                 mimic2 = Mimic2()
                 patient = mimic2.get_subject(id)
-                if patient:
+                if patient and len(patient.admissions) > 0:
                     l_patient.append(patient)
                 else:
                     p_info("ID %d is not available" % id)
@@ -272,6 +272,11 @@ class Mimic2:
                 trends.append(trend)
         return trends
 
+    def get_all_subject(self, max_id):
+        subjects = self.all_patient()
+        id_list = [item[0] for item in subjects if item[0] < max_id]
+        return sorted(id_list)
+
     def subject_with_icd9_codes(self, target_codes, ignore_order=True, final_adm=False, max_id=0):
         ''' Search subject ID the target ICD9 codes
         :return:  list of ids
@@ -316,12 +321,12 @@ class Mimic2:
                      "ORDER BY subject_id "
         return self.__select_and_save(select_seq)
 
-    def subject_with_numeric(self):
-        ''' Search subject ID who have one or more numeric record
-        :return:  list of ids
-        '''
-
     # Basic queries to get items for a patient
+    def all_patient(self):
+        select_seq = "SELECT subject_id " +\
+                     "FROM mimic2v26.D_PATIENTS "
+        return self.__select_and_save(select_seq)
+
     def patient(self, patient_id):
         select_seq = "SELECT * " +\
                      "FROM mimic2v26.D_PATIENTS " +\
