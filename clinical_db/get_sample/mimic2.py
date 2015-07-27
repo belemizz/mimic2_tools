@@ -55,6 +55,7 @@ class PatientData:
         return most_common_tests, lab_descs, lab_units
 
     def get_lab_chart_tseries(self, l_lab_id, l_chart_id, freq, duration, from_discharge=True):
+
         l_results = []
         n_steps = int(duration / freq)
         for idx in range(n_steps):
@@ -321,66 +322,45 @@ class Mimic2:
         '''
 
     # Basic queries to get items for a patient
-    def patient(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_patient.csv" % patient_id
-
+    def patient(self, patient_id):
         select_seq = "SELECT * " +\
                      "FROM mimic2v26.D_PATIENTS " +\
                      "WHERE subject_id =%d" % (patient_id)
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def admission(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_admission.csv" % patient_id
-
+    def admission(self, patient_id):
         select_seq = "SELECT * FROM mimic2v26.ADMISSIONS " +\
                      "WHERE subject_id =%d " % (patient_id) +\
                      "ORDER BY disch_dt"
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def icustay_detail(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_icustay_detail.csv" % patient_id
-
+    def icustay_detail(self, patient_id):
         select_seq = "SELECT * FROM mimic2v26.ICUSTAY_DETAIL " +\
                      "WHERE subject_id =%d " % (patient_id)
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def icustay_events(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_icustay_events.csv" % patient_id
-
+    def icustay_events(self, patient_id):
         select_seq = "SELECT * FROM mimic2v26.ICUSTAYEVENTS " +\
                      "WHERE subject_id =%d " % (patient_id)
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def icustay_days(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_icustay_days.csv" % patient_id
-
+    def icustay_days(self, patient_id):
         select_seq = "SELECT * FROM mimic2v26.ICUSTAY_DAYS " +\
                      "WHERE subject_id =%d " % (patient_id)
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def icd9(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_icd9.csv" % patient_id
-
+    def icd9(self, patient_id):
         select_seq = "SELECT I.* FROM mimic2v26.ICD9 I " +\
                      "WHERE subject_id =%d " % (patient_id) +\
                      "ORDER BY hadm_id, sequence"
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def med_events(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_med_events.csv" % patient_id
-
+    def med_events(self, patient_id):
         select_seq = "SELECT M.*, T.LABEL " +\
                      "FROM mimic2v26.MEDEVENTS M, mimic2v26.D_MEDITEMS T " +\
                      "WHERE subject_id =%d " % (patient_id) +\
                      "AND M.ITEMID = T.ITEMID ORDER BY ITEMID, REALTIME"
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
     def lab_items(self, item_id):
         select_seq = "SELECT * " +\
@@ -388,50 +368,34 @@ class Mimic2:
                      "WHERE itemid =%d " % (item_id)
         return self.__select_and_save(select_seq)
 
-    def note_events(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_note_events.csv" % patient_id
-
+    def note_events(self, patient_id):
         select_seq = "SELECT N.* FROM mimic2v26.NOTEEVENTS N " +\
                      "WHERE subject_id =%d " % (patient_id) +\
                      "ORDER BY CHARTTIME"
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def poe_order(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_poe_order.csv" % patient_id
-
+    def poe_order(self, patient_id):
         select_seq = "SELECT P.* FROM mimic2v26.POE_ORDER P " +\
                      "WHERE subject_id =%d " % (patient_id) +\
                      "ORDER BY START_DT"
+        return self.__select_and_save(select_seq)
 
-        return self.__select_and_save(select_seq, savepath)
-
-    def lab_events(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_lab_events.csv" % patient_id
-
+    def lab_events(self, patient_id):
         select_seq = "SELECT L.*, T.TEST_NAME, T.FLUID, T.CATEGORY, T.LOINC_CODE, T.LOINC_DESCRIPTION " +\
                      "FROM mimic2v26.LABEVENTS L, mimic2v26.D_LABITEMS T " +\
                      "WHERE subject_id =%d " % (patient_id) +\
                      "AND L.ITEMID = T.ITEMID " +\
                      "ORDER BY ITEMID, CHARTTIME"
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def io_events(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_io_events.csv" % patient_id
-
+    def io_events(self, patient_id):
         select_seq = "SELECT I.*, T.LABEL, T.CATEGORY " +\
                      "FROM mimic2v26.IOEVENTS I, mimic2v26.D_IOITEMS T " +\
                      "WHERE subject_id =%d AND I.ITEMID = T.ITEMID " % patient_id +\
                      "ORDER BY REALTIME"
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
-    def microbiology_events(self, patient_id, savepath=""):
-        if len(savepath) == 0:
-            savepath = "../data/%d_microbiology_events.csv" % patient_id
-
+    def microbiology_events(self, patient_id):
         select_seq = "SELECT M.*, " +\
                      "C.TYPE AS STYPE, C.LABEL AS SLABEL, C.DESCRIPTION AS SDESC, " +\
                      "D.TYPE AS OTYPE, D.LABEL AS OLABEL, D.DESCRIPTION AS ODESC, " +\
@@ -440,8 +404,7 @@ class Mimic2:
                      "WHERE subject_id =%d " % (patient_id) +\
                      "AND M.SPEC_ITEMID = C.ITEMID AND M.ORG_ITEMID = D.ITEMID AND M.AB_ITEMID = E.ITEMID " +\
                      "ORDER BY CHARTTIME"
-
-        return self.__select_and_save(select_seq, savepath)
+        return self.__select_and_save(select_seq)
 
     # RETURN ELEMENTS WHICH BELONG TO ADMISSION
     def icustay_detail_in_admission(self, hadm_id):

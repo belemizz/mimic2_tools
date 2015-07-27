@@ -60,5 +60,6 @@ class TestMimic2(unittest.TestCase):
         eq_(len(result), 484)
         eq_(result[10], 679)
 
+
 if __name__ == '__main__':
     unittest.main()
