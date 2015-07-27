@@ -64,7 +64,7 @@ def get_algorithm(param=Default_param):
 
     if isinstance(param.name, list):
         clf = []
-        for name in L_algorithm:
+        for name in param.name:
             try:
                 clf.append(_get_algorithm(name))
             except ValueError:

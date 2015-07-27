@@ -185,6 +185,15 @@ class Graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
+    def bar_classification(self, l_classification_result, labels,
+                           title="", filename="", show_flag=True):
+        l_rec = [item.rec for item in l_classification_result]
+        l_prec = [item.prec for item in l_classification_result]
+        l_f = [item.f for item in l_classification_result]
+        legend = ['recall', 'precision', 'f_measure']
+        self.comparison_bar([l_rec, l_prec, l_f], labels, legend, lim=[0, 1],
+                            title=title, filename=filename, show_flag=show_flag)
+
     def series_classification(self, l_classification_result, timestamp, x_label,
                               title="", filename="", show_flag=True):
         l_rec = [item.rec for item in l_classification_result]
@@ -192,7 +201,7 @@ class Graph:
         l_f = [item.f for item in l_classification_result]
         legend = ['recall', 'precision', 'f_measure']
         self.line_series([l_rec, l_prec, l_f], timestamp, legend, ylim=[0, 1],
-                         x_label=x_label, title=title)
+                         x_label=x_label, title=title, filename=filename, show_flag=show_flag)
 
     # general graphs
     def comparison_bar(self, data, labels, legend="", metric_label="", lim=[], horizontal=False,
@@ -200,7 +209,6 @@ class Graph:
         original_data = locals().copy()
         fig, ax = plt.subplots()
         Y = range(len(labels))
-        Y.reverse()
 
         if horizontal:
             [set_lim1, set_lim2] = [ax.set_ylim, ax.set_xlim]
@@ -218,7 +226,6 @@ class Graph:
             else:
                 ax.bar(Y, data, width=bar_height)
             set_ticks([item + 0.25 for item in Y], labels)
-
         else:
             bar_height = 1. / (len(data) + 1)
             cmap = plt.cm.rainbow
@@ -228,7 +235,7 @@ class Graph:
                     ax.barh([y + bar_height * (len(data) - idx - 1) for y in Y], d,
                             height=bar_height, color=cmap(idx * cmap_v))
                 else:
-                    ax.bar([y + bar_height * (len(data) - idx - 1) for y in Y], d,
+                    ax.bar([y + bar_height * idx for y in Y], d,
                            width=bar_height, color=cmap(idx * cmap_v))
                 set_ticks([item + bar_height / 2 * len(data) for item in Y], labels)
 

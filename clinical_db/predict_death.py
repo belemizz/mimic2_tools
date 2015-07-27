@@ -108,8 +108,6 @@ class PredictDeath:
         return Bunch(point=l_point, tseries=l_tseries)
 
     def __eval_data(self, l_data):
-        import ipdb
-        ipdb.set_trace()
         l_presult = []
         for data in l_data.point:
             p_info("Point Evaluation")
@@ -147,10 +145,24 @@ class PredictDeath:
     def __draw_graph_point(self, result):
         l_lab = [item.lab for item in result]
         l_vit = [item.vit for item in result]
-        x_label = self.point_comp_info[1]
-        graph.series_classification(l_lab, self.point_comp_info[0], x_label, 'lab')
-        graph.series_classification(l_vit, self.point_comp_info[0], x_label, 'vit')
+        l_lab = self.__remove_list_duplication(l_lab)
+        l_vit = self.__remove_list_duplication(l_vit)
+        if self.point_comp_info[2] == 'bar':
+            graph.bar_classification(l_lab, self.point_comp_info[0], 'lab')
+            graph.bar_classification(l_vit, self.point_comp_info[0], 'vital')
+        else:
+            x_label = self.point_comp_info[1]
+            graph.series_classification(l_lab, self.point_comp_info[0], x_label, 'lab')
+            graph.series_classification(l_vit, self.point_comp_info[0], x_label, 'vital')
+
         graph.waitforbuttunpress()
+
+    def __remove_list_duplication(self, l_in):
+        if len(l_in) == 1 and isinstance(l_in[0], list):
+            l_out = l_in[0]
+        else:
+            l_out = l_in
+        return l_out
 
     def __draw_graph_tseries(self, result):
         l_lab = [item.lab for item in result]
@@ -161,14 +173,16 @@ class PredictDeath:
         graph.waitforbuttunpress()
 
 if __name__ == '__main__':
+    class_param = alg.classification.Default_param
+    class_param.name = alg.classification.L_algorithm
     pd = PredictDeath(max_id=200000,
                       target_codes=['428.0'],
                       n_lab=20,
                       disch_origin=True,
-                      l_poi=[0., 1., 2.],  # None to disable point eval
-                      tseries_duration=1.,  # None to disable tseries eval
+                      l_poi=1.,
+                      tseries_duration=1.,
                       tseries_freq=0.25,
-                      class_param=alg.classification.Default_param,
+                      class_param=class_param,
                       tseries_param=alg.timeseries.Default_param,
                       n_cv_fold=10)
     pd.n_day_prediction()
