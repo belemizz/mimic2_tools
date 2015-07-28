@@ -5,8 +5,8 @@ import get_sample.mimic2
 from mutil import Graph, Csv
 
 import matplotlib.pyplot as plt
-subject_id = 2987
-#subject_id = 1855
+#subject_id = 2987
+subject_id = 1855
 
 mimic2db = get_sample.mimic2.Mimic2()
 graph = Graph()
@@ -42,7 +42,7 @@ for admission in subject.admissions:
         #Medication
         filename = "Med_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Medication)"%(subject_id, admission.admit_dt)
-#        graph.draw_med_icu(icustay, admission.admit_dt, title, filename)
+        graph.draw_med_icu(icustay, admission.admit_dt, title, filename)
 
         #Charts
         filename = "Chart_%d.png"%icustay.icustay_id
@@ -52,13 +52,13 @@ for admission in subject.admissions:
             if item.description in ['Heart Rate', 'Respiratory Rate', 'SpO2', 'NBP', 'NBP Mean']:
                 print (item.itemid, item.description, item.unit, len(item.values))
 
-#        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
+        graph.draw_chart_icu(icustay, admission.admit_dt, title, filename)
         mutil.graph.draw_selected_chart_icu(icustay, mimic2db.vital_charts, admission.admit_dt, title, filename)
 
         #Fluid IO
         filename = "Fluid_%d.png"%icustay.icustay_id
         title = "ID:%d [%s] (Fluid IO)"%(subject_id, admission.admit_dt)
-#        graph.draw_io_icu(icustay, admission.admit_dt, title, filename)
+        graph.draw_io_icu(icustay, admission.admit_dt, title, filename)
 
 
 plt.waitforbuttonpress()

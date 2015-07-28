@@ -32,66 +32,101 @@ class PatientData:
             return cache.save(l_patient, param)
 
     def get_common_labs(self, n_select):
-        lab_ids_dict = {}
-        units = {}
+        ids = {}
         descs = {}
+        units = {}
         for patient in self.l_patient:
             final_adm = patient.get_final_admission()
             for item in final_adm.labs:
-                if item.itemid in lab_ids_dict:
-                    lab_ids_dict[item.itemid] = lab_ids_dict[item.itemid] + 1
+                if item.itemid in ids:
+                    ids[item.itemid] = ids[item.itemid] + 1
                 else:
-                    lab_ids_dict[item.itemid] = 1
-                    units[item.itemid] = item.unit
+                    ids[item.itemid] = 1
                     descs[item.itemid] = item.description
+                    units[item.itemid] = item.unit
+        common_tests, [l_descs, l_units], _ = self.__get_common_item(ids, n_select, [descs, units])
+        return common_tests, l_descs, l_units
 
-        counter = Counter(lab_ids_dict)
-        most_common_tests = [item[0] for item in counter.most_common(n_select)]
-        lab_descs = []
-        lab_units = []
-        for item_id in most_common_tests:
-            lab_descs.append(descs[item_id])
-            lab_units.append(units[item_id])
-        return most_common_tests, lab_descs, lab_units
+    def get_common_icd9(self, n_select):
+        codes = {}
+        descs = {}
+        for patient in self.l_patient:
+            final_adm = patient.get_final_admission()
+            for item in final_adm.icd9:
+                if item[3] in codes:
+                    codes[item[3]] += 1
+                else:
+                    codes[item[3]] = 1
+                    descs[item[3]] = item[4]
+        common_icd9, l_desc, _ = self.__get_common_item(codes, n_select, [descs])
+        return common_icd9, l_desc[0]
 
-    def get_lab_chart_tseries(self, l_lab_id, l_chart_id, freq, duration, from_discharge=True):
+    def get_common_medication(self, n_select):
+        ids = {}
+        descs = {}
+        units = {}
+        for patient in self.l_patient:
+            final_adm = patient.get_final_admission()
+            fa_id, fa_descs, fa_units = final_adm.get_medication_info()
+            descs.update(fa_descs)
+            units.update(fa_units)
+            for itemid in fa_id:
+                if itemid in ids:
+                    ids[itemid] += 1
+                else:
+                    ids[itemid] = 1
+        common_meds, [l_desc, l_unit], _ = self.__get_common_item(ids, n_select, [descs, units])
+        return common_meds, l_desc, l_unit
 
-        l_results = []
-        n_steps = int(duration / freq)
-        for idx in range(n_steps):
-            days = idx * freq
-            l_results.append(self.get_lab_chart_point(l_lab_id, l_chart_id, days, from_discharge))
+    def get_comat_icd9(self, l_icd9):
+        return self.__comat_helper(l_icd9, l_icd9, self.__icd9_get_func, self.__icd9_get_func)
 
-        ids = l_results[0][3]
-        flags = l_results[0][2]
+    def get_comat_med(self, l_med):
+        return self.__comat_helper(l_med, l_med, self.__med_get_func, self.__med_get_func)
 
-        lab_x = np.zeros([n_steps, len(ids), len(l_lab_id)])
-        lab_m = np.zeros([n_steps, len(ids)])
-        vit_x = np.zeros([n_steps, len(ids), len(l_chart_id)])
-        vit_m = np.zeros([n_steps, len(ids)])
+    def get_comat_icd9_med(self, l_icd9, l_med_id):
+        return self.__comat_helper(l_icd9, l_med_id, self.__icd9_get_func, self.__med_get_func)
 
-        for i_steps in range(n_steps):
-            s_lab = l_results[i_steps][0]
-            s_vit = l_results[i_steps][1]
-            s_id = l_results[i_steps][3]
+    def get_comat_icd9_lab(self, l_icd9, l_med_id):
+        return self.__comat_helper(l_icd9, l_med_id, self.__icd9_get_func, self.__lab_get_func)
 
-            for i_id, id in enumerate(ids):
-                try:
-                    lab_x[i_steps][i_id] = s_lab[s_id.index(id)]
-                    lab_m[i_steps][i_id] = 1.
-                except ValueError:
-                    pass
+    def __icd9_get_func(self, admission):
+        icd9, _ = admission.get_icd9_info()
+        return icd9
 
-                try:
-                    vit_x[i_steps][i_id] = s_vit[s_id.index(id)]
-                    vit_m[i_steps][i_id] = 1.
-                except ValueError:
-                    pass
+    def __med_get_func(self, admission):
+        med_id, _, _, = admission.get_medication_info()
+        return med_id
 
-        lab_tseries = [lab_x, lab_m]
-        vit_tseries = [vit_x, vit_m]
+    def __lab_get_func(self, admission):
+        lab_id, _, _, = admission.get_lab_info()
+        return lab_id
 
-        return lab_tseries, vit_tseries, flags, ids
+    def __comat_helper(self, l_1, l_2, get_func1, get_func2):
+        comat = np.zeros((len(l_1), len(l_2))).astype('int')
+        for patient in self.l_patient:
+            final_adm = patient.get_final_admission()
+            l_item1 = get_func1(final_adm)
+            l_item2 = get_func2(final_adm)
+            for item1 in l_item1:
+                for item2 in l_item2:
+                    try:
+                        comat[l_1.index(item1)][l_2.index(item2)] += 1
+                    except ValueError:
+                        pass
+        return comat
+
+    def __get_common_item(self, item_dict, n_select, l_acc_dics=[]):
+        counter = Counter(item_dict)
+        most_common_item = [item[0] for item in counter.most_common(n_select)]
+        frequency = [item[1] for item in counter.most_common(n_select)]
+        l_common_descs = []
+        for acc_dict in l_acc_dics:
+            l_acc = []
+            for item_id in most_common_item:
+                l_acc.append(acc_dict[item_id])
+            l_common_descs.append(l_acc)
+        return most_common_item, l_common_descs, frequency
 
     def get_lab_chart_point(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
         """Get data of lab test and chart on a datapoint."""
@@ -139,6 +174,45 @@ class PatientData:
         y[flag_array == 'Y'] = 1
 
         return lab_array, chart_array, y, ids
+
+    def get_lab_chart_tseries(self, l_lab_id, l_chart_id, freq, duration, from_discharge=True):
+
+        l_results = []
+        n_steps = int(duration / freq)
+        for idx in range(n_steps):
+            days = idx * freq
+            l_results.append(self.get_lab_chart_point(l_lab_id, l_chart_id, days, from_discharge))
+
+        ids = l_results[0][3]
+        flags = l_results[0][2]
+
+        lab_x = np.zeros([n_steps, len(ids), len(l_lab_id)])
+        lab_m = np.zeros([n_steps, len(ids)])
+        vit_x = np.zeros([n_steps, len(ids), len(l_chart_id)])
+        vit_m = np.zeros([n_steps, len(ids)])
+
+        for i_steps in range(n_steps):
+            s_lab = l_results[i_steps][0]
+            s_vit = l_results[i_steps][1]
+            s_id = l_results[i_steps][3]
+
+            for i_id, id in enumerate(ids):
+                try:
+                    lab_x[i_steps][i_id] = s_lab[s_id.index(id)]
+                    lab_m[i_steps][i_id] = 1.
+                except ValueError:
+                    pass
+
+                try:
+                    vit_x[i_steps][i_id] = s_vit[s_id.index(id)]
+                    vit_m[i_steps][i_id] = 1.
+                except ValueError:
+                    pass
+
+        lab_tseries = [lab_x, lab_m]
+        vit_tseries = [vit_x, vit_m]
+
+        return lab_tseries, vit_tseries, flags, ids
 
 
 class Mimic2:
@@ -553,6 +627,46 @@ class admission:
         self.labs = lab_event_trends
         self.final_labs_time = final_timestamp(self.labs)
 
+    # simple getter
+    def get_lab_info(self):
+        ids = []
+        descs = {}
+        units = {}
+        for lab in self.labs:
+            ids.append(lab.itemid)
+            descs[lab.itemid] = lab.description
+            units[lab.itemid] = lab.unit
+        return ids, descs, units
+
+    def get_chart_info(self):
+        ids = []
+        descs = {}
+        units = {}
+        for icustay in self.icustays:
+            for chart in icustay.charts:
+                if chart.itemid is not ids:
+                    ids.append(chart.itemid)
+                    descs[chart.itemid] = chart.description
+                    units[chart.itemid] = chart.unit
+        return ids, descs, units
+
+    def get_medication_info(self):
+        ids = []
+        descs = {}
+        units = {}
+        for icustay in self.icustays:
+            for medication in icustay.medications:
+                if medication.itemid is not ids:
+                    ids.append(medication.itemid)
+                    descs[medication.itemid] = medication.description
+                    units[medication.itemid] = medication.unit
+        return ids, descs, units
+
+    def get_icd9_info(self):
+        codes = [item[3] for item in self.icd9]
+        descs = [item[4] for item in self.icd9]
+        return codes, descs
+
     def get_lab_itemid(self, itemid):
         result = [item for item in self.labs if item.itemid == itemid]
         if len(result) > 1:
@@ -661,9 +775,7 @@ class admission:
 
 
 class icustay:
-    """
-    icustay class
-    """
+    """Icustay class."""
     def __init__(self, icustay_id, intime, outtime):
         self.icustay_id = icustay_id
         self.intime = intime
