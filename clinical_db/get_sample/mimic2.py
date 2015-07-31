@@ -15,8 +15,12 @@ class PatientData:
         self.id_list = id_list
         self.l_patient = self.__get_patient_data()
 
+    def __reproduce_param(self):
+        """Parameters that are needed for reproduce this class."""
+        return {'id_list': self.id_list}
+
     def __get_patient_data(self, cache_key='__get_patient_data'):
-        param = self.__dict__
+        param = self.__reproduce_param()
         cache = Cache(cache_key)
         try:
             return cache.load(param)
@@ -30,6 +34,9 @@ class PatientData:
                 else:
                     p_info("ID %d is not available" % id)
             return cache.save(l_patient, param)
+
+    def get_n_patient(self):
+        return len(self.l_patient)
 
     def get_common_labs(self, n_select):
         ids = {}
@@ -59,6 +66,7 @@ class PatientData:
                     codes[item[3]] = 1
                     descs[item[3]] = item[4]
         common_icd9, l_desc, _ = self.__get_common_item(codes, n_select, [descs])
+
         return common_icd9, l_desc[0]
 
     def get_common_medication(self, n_select):
@@ -78,8 +86,17 @@ class PatientData:
         common_meds, [l_desc, l_unit], _ = self.__get_common_item(ids, n_select, [descs, units])
         return common_meds, l_desc, l_unit
 
-    def get_comat_icd9(self, l_icd9):
-        return self.__comat_helper(l_icd9, l_icd9, self.__icd9_get_func, self.__icd9_get_func)
+    def get_comat_icd9(self, l_icd9, cache_key='get_comat_icd9'):
+        param = locals().copy()
+        del param['self']
+        param.update(self.__reproduce_param())
+
+        cache = Cache(cache_key)
+        try:
+            return cache.load(param)
+        except IOError:
+            comat = self.__comat_helper(l_icd9, l_icd9, self.__icd9_get_func, self.__icd9_get_func)
+            return cache.save(comat, param)
 
     def get_comat_med(self, l_med):
         return self.__comat_helper(l_med, l_med, self.__med_get_func, self.__med_get_func)
@@ -104,17 +121,38 @@ class PatientData:
 
     def __comat_helper(self, l_1, l_2, get_func1, get_func2):
         comat = np.zeros((len(l_1), len(l_2))).astype('int')
+        hist_1 = np.zeros(len(l_1)).astype('int')
+        hist_2 = np.zeros(len(l_2)).astype('int')
+
         for patient in self.l_patient:
             final_adm = patient.get_final_admission()
             l_item1 = get_func1(final_adm)
             l_item2 = get_func2(final_adm)
+
+            for item1 in l_item1:
+                idx_1 = self.__find_index(item1, l_1)
+                if idx_1 >= 0:
+                    hist_1[idx_1] += 1
+
+            for item2 in l_item2:
+                idx_2 = self.__find_index(item2, l_2)
+                if idx_2 >= 0:
+                    hist_2[idx_2] += 1
+
             for item1 in l_item1:
                 for item2 in l_item2:
-                    try:
+                    idx_1 = self.__find_index(item1, l_1)
+                    idx_2 = self.__find_index(item2, l_2)
+                    if idx_1 >= 0 and idx_2 >= 0:
                         comat[l_1.index(item1)][l_2.index(item2)] += 1
-                    except ValueError:
-                        pass
-        return comat
+
+        return comat, hist_1, hist_2
+
+    def __find_index(self, item, l_item):
+        try:
+            return l_item.index(item)
+        except ValueError:
+            return None
 
     def __get_common_item(self, item_dict, n_select, l_acc_dics=[]):
         counter = Counter(item_dict)
