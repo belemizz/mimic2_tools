@@ -12,6 +12,11 @@ from datetime import timedelta
 
 class PatientData:
     def __init__(self, id_list):
+        """Initializer of this class.
+
+        :param id_list: list of subject id included in the instance
+        """
+
         self.id_list = id_list
         self.l_patient = self.__get_patient_data()
 
@@ -267,7 +272,7 @@ class Mimic2:
         self.conn.close()
 
     def get_subject(self, subject_id):
-
+        """Get subject data from the database."""
         cache_key = "s%d" % subject_id
         cache = mutil.Cache(cache_key)
         try:
@@ -282,6 +287,7 @@ class Mimic2:
             return cache.save(subject_ins)
 
     def get_admission(self, subject_id):
+        """Get admission data from the database."""
         admissions = self.admission(subject_id)
 
         admission_list = []
@@ -304,6 +310,7 @@ class Mimic2:
         return admission_list
 
     def get_icustay(self, hadm_id):
+        """Get icustay data from the database."""
         icustays = self.icustay_detail_in_admission(hadm_id)
         icustay_list = []
         for item in icustays:
@@ -389,9 +396,42 @@ class Mimic2:
         id_list = [item[0] for item in subjects if item[0] < max_id]
         return sorted(id_list)
 
+    def subject_with_chf(self, max_id=0, max_seq=1):
+        ''' Search subject IDs who have at least one admission with heart failure icd9 code.
+
+        :param max_id: maximum subject id (0 for using all ids)
+        :param max_seq: conditions of sequence
+        :return:  list of the subject id
+        '''
+        chf_related_codes = ['402,01', '402.11', '402.91',
+                            '404.01', '404.03', '404.11', '404.13', '404.91', '404.93',
+                            '428.%']
+        seq_cond = "<=%d" % max_seq
+        subjects = self.__subject_with_icd9_or(chf_related_codes, seq_cond)
+        l_id = sorted(list(set([item[0] for item in subjects])))
+        return l_id
+
+    def __subject_with_icd9_or(self, l_code, seq_cond):
+        where_cond = ''
+        for code in l_code:
+            if where_cond is not '':
+                where_cond += ' OR '
+            where_cond += "code LIKE '%s'" % code
+        select_seq = "SELECT subject_id,hadm_id " +\
+                     "FROM mimic2v26.icd9 " +\
+                     "WHERE (%s) AND sequence%s " % (where_cond, seq_cond) +\
+                     "GROUP BY subject_id,hadm_id " +\
+                     "ORDER BY subject_id "
+        return self.__select_and_save(select_seq)
+
     def subject_with_icd9_codes(self, target_codes, ignore_order=True, final_adm=False, max_id=0):
-        ''' Search subject ID the target ICD9 codes
-        :return:  list of ids
+        ''' Search subject IDs who have at leaset one admission with the target ICD9 codes.
+
+        :param target_codes: ICD9 codes labeled in the admissions of the subject
+        :param ignore_order: True if the order of the code is not cared
+        :param final_adm: True to check only the final admission of the subject
+        :param max_id: maximum subject id (0 for using all ids)
+        :return:  list of the subject id
         '''
         id_lists = []
         adm_lists = []

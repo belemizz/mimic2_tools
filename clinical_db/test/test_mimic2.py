@@ -60,6 +60,11 @@ class TestMimic2(unittest.TestCase):
         eq_(len(result), 484)
         eq_(result[10], 679)
 
+    def test_subject_with_heart_failure(self):
+        result = self.mimic2.subject_with_chf()
+        eq_(len(result), 722)
+        result = self.mimic2.subject_with_chf(max_seq=2)
+        eq_(len(result), 2315)
 
 if __name__ == '__main__':
     unittest.main()
