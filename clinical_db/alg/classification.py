@@ -2,7 +2,7 @@
 import numpy as np
 
 from sklearn import svm, tree, linear_model, ensemble
-from sklearn import cross_validation
+from sklearn import cross_validation, metrics
 
 import get_sample
 from mutil import Graph, p_info
@@ -13,7 +13,7 @@ from bunch import Bunch
 graph = Graph()
 
 L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
-Default_param = Bunch(name='lr', lr_dim=10, svm_max_iter=20000)
+Default_param = Bunch(name='svm', lr_dim=10, svm_max_iter=20000)
 
 
 def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
@@ -27,6 +27,7 @@ def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
     kf = cross_validation.KFold(
         x.shape[0], n_folds=4, shuffle=True, random_state=0)
     result_list = []
+    auc_list = []
     for train, test in kf:
         train_x = x[train, :]
         train_y = y[train]
@@ -34,11 +35,13 @@ def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
         test_x = x[test, :]
         test_y = y[test]
 
-        result = fit_and_test(train_x, train_y, test_x, test_y, param)
+        result, auc = fit_and_test(train_x, train_y, test_x, test_y, param, True)
         result_list.append(result)
+        auc_list.append(auc)
 
     p_info("Cross Validation Result")
     print sumup_classification_result(result_list)
+    print ('mean AUC', np.mean(auc_list))
 
 
 def get_algorithm(param=Default_param):
@@ -85,7 +88,6 @@ def plot_2d(x, y, x_label="", y_label="", filename="",
 
     clf.fit(x, y)
 
-    # mesh
     x_range = x[:, 0].max() - x[:, 0].min()
     y_range = x[:, 1].max() - x[:, 1].min()
 
@@ -110,7 +112,7 @@ def plot_2d(x, y, x_label="", y_label="", filename="",
     return clf
 
 
-def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param):
+def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param, auc=False):
     """Fit and test the algorithm."""
     clf = get_algorithm(param)
 
@@ -124,6 +126,15 @@ def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param):
         clf.fit(train_x, train_y)
         predict_y = clf.predict(test_x)
         result = calc_classification_result(predict_y, test_y)
+
+        if auc:
+            if param.name in ['dt', 'rf']:
+                score_y = clf.predict_proba(test_x)[:, 1] - clf.predict_proba(test_x)[:, 0]
+            else:
+                score_y = clf.decision_function(test_x)
+            auc = metrics.roc_auc_score(test_y, score_y)
+            result = [result, auc]
+
     return result
 
 
@@ -142,3 +153,4 @@ def cv(sample_set, n_cv_fold=10, param=Default_param):
         predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
         result = calc_classification_result(predict_y, y)
     return result
+
