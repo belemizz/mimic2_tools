@@ -92,5 +92,3 @@ def main( max_id = 2000, target_codes = ['428.0'], show_flag = True):
 
 if __name__ == '__main__':
     main()
-
-    

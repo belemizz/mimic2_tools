@@ -32,8 +32,9 @@ class PredictDeath(ControlExperiment):
                  n_cv_fold=10):
 
         # params for data retrieval
-        ControlExperiment.__init__(self, max_id, target_codes, matched_only, n_lab)
+        ControlExperiment.__init__(self, max_id, target_codes, matched_only)
 
+        self.n_lab = n_lab
         self.disch_origin = disch_origin
         self.l_poi = l_poi
         self.tseries_duration = tseries_duration
