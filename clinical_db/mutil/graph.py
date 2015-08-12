@@ -194,6 +194,15 @@ class Graph:
         self.comparison_bar([l_rec, l_prec, l_f], labels, legend, lim=[0, 1],
                             title=title, filename=filename, show_flag=show_flag)
 
+    def bar_histogram(self, hist, bin_edges, hist_label, bin_label, only_left_edge=False,
+                      title="", filename="", show_flag=True):
+        label = list(bin_edges)
+        if only_left_edge:
+            label.pop()
+
+        self.comparison_bar(hist, label, metric_label=hist_label, comparison_label=bin_label,
+                            title=title, filename=filename, show_flag=show_flag)
+
     def series_classification(self, l_classification_result, timestamp, x_label,
                               title="", filename="", show_flag=True):
         l_rec = [item.rec for item in l_classification_result]
@@ -204,29 +213,38 @@ class Graph:
                          x_label=x_label, title=title, filename=filename, show_flag=show_flag)
 
     # general graphs
-    def comparison_bar(self, data, labels, legend="", metric_label="", lim=[], horizontal=False,
-                       title="", filename="", show_flag=True):
+    def comparison_bar(self, data, labels, legend="", metric_label="", comparison_label="", lim=[],
+                       horizontal=False, title="", filename="", show_flag=True):
+        '''Draw a bar graph for comparing items.'''
         original_data = locals().copy()
         fig, ax = plt.subplots()
-        Y = range(len(labels))
 
         if horizontal:
             [set_lim1, set_lim2] = [ax.set_ylim, ax.set_xlim]
             set_label1 = ax.set_xlabel
+            set_label2 = ax.set_ylabel
             set_ticks = plt.yticks
         else:
             [set_lim1, set_lim2] = [ax.set_xlim, ax.set_ylim]
             set_label1 = ax.set_ylabel
+            set_label2 = ax.set_xlabel
             set_ticks = plt.xticks
 
         if isinstance(data[0], (int, float)):
+            Y = range(len(data))
             bar_height = 0.5
             if horizontal:
                 ax.barh(Y, data, height=bar_height)
             else:
                 ax.bar(Y, data, width=bar_height)
-            set_ticks([item + 0.25 for item in Y], labels)
+
+            if len(labels) == len(data):
+                set_ticks([item + 0.25 for item in Y], labels)
+            elif len(labels) == len(data) + 1:
+                pos = [p - 0.25 for p in range(len(labels) + 1)]
+                set_ticks(pos, labels)
         else:
+            Y = range(len(labels))
             bar_height = 1. / (len(data) + 1)
             cmap = plt.cm.rainbow
             cmap_v = cmap.N / (len(data) - 1)
@@ -244,6 +262,8 @@ class Graph:
             set_lim2(lim)
         if metric_label:
             set_label1(metric_label)
+        if comparison_label:
+            set_label2(comparison_label)
         if legend:
             plt.legend(legend)
         if title:

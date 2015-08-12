@@ -53,6 +53,11 @@ class TestMimic2(unittest.TestCase):
             datetime.datetime(3408, 6, 5))[3][4],
             [38.0, 124.0])
 
+    def test_subject_all(self):
+        result = self.mimic2.subject_all(2000)
+        eq_(len(result), 1993)
+        eq_(result[100], 101)
+
     def test_subject_with_icd9_codes(self):
         result = self.mimic2.subject_with_icd9_codes(['428.0'], True, True)
         eq_(len(result), 391)

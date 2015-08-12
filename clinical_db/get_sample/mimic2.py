@@ -391,13 +391,18 @@ class Mimic2:
                 trends.append(trend)
         return trends
 
-    def get_all_subject(self, max_id):
+    def subject_all(self, max_id):
+        '''Return the list of all subjects.
+
+        :param max_id: maximum subject id (0 for using all ids)
+        :return:  list of the subject id
+        '''
         subjects = self.all_patient()
-        id_list = [item[0] for item in subjects if item[0] < max_id]
-        return sorted(id_list)
+        set_id = set([item[0] for item in subjects])
+        return self.__limit_and_sort_set_id(set_id, max_id)
 
     def subject_with_chf(self, max_id=0, max_seq=1):
-        ''' Search subject IDs who have at least one admission with heart failure icd9 code.
+        '''Return the list of subject IDs who have at least one admission with heart failure icd9 code.
 
         :param max_id: maximum subject id (0 for using all ids)
         :param max_seq: conditions of sequence
@@ -408,8 +413,8 @@ class Mimic2:
                             '428.%']
         seq_cond = "<=%d" % max_seq
         subjects = self.__subject_with_icd9_or(chf_related_codes, seq_cond)
-        l_id = sorted(list(set([item[0] for item in subjects])))
-        return l_id
+        set_id = set([item[0] for item in subjects])
+        return self.__limit_and_sort_set_id(set_id, max_id)
 
     def __subject_with_icd9_or(self, l_code, seq_cond):
         where_cond = ''
@@ -425,7 +430,7 @@ class Mimic2:
         return self.__select_and_save(select_seq)
 
     def subject_with_icd9_codes(self, target_codes, ignore_order=True, final_adm=False, max_id=0):
-        ''' Search subject IDs who have at leaset one admission with the target ICD9 codes.
+        '''Return the list of subject IDs who have at leaset one admission with ICD9 codes given.
 
         :param target_codes: ICD9 codes labeled in the admissions of the subject
         :param ignore_order: True if the order of the code is not cared
@@ -457,12 +462,13 @@ class Mimic2:
                 final_adm_id = adm[len(adm) - 1][0]
                 if final_adm_id not in adm_set:
                     sel_id_set.remove(id)
+        return self.__limit_and_sort_set_id(sel_id_set, max_id)
 
+    def __limit_and_sort_set_id(self, set_id, max_id):
         if max_id > 0:
-            lim_id = [id for id in sel_id_set if id < max_id]
+            lim_id = [id for id in set_id if id < max_id]
         else:
-            lim_id = list(sel_id_set)
-
+            lim_id = list(set_id)
         return sorted(lim_id)
 
     def __subject_with_icd9(self, code, seq_cond):

@@ -32,7 +32,7 @@ class ControlExperiment:
         if self.matched_only:
             id_list = mimic2m.get_id_numerics(self.max_id)
         else:
-            id_list = mimic2.get_all_subject(self.max_id)
+            id_list = mimic2.subject_all(self.max_id)
 
         if self.target_codes:
             id_code = mimic2.subject_with_icd9_codes(self.target_codes, True, True, self.max_id)
