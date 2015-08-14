@@ -177,7 +177,8 @@ if __name__ == '__main__':
     class_param = alg.classification.Default_param
     class_param.name = alg.classification.L_algorithm
     pd = PredictDeath(max_id=200000,
-                      target_codes=['428.0'],
+#                      target_codes=['428.0'],
+                      target_codes='chf',
                       n_lab=20,
                       disch_origin=True,
                       l_poi=1.,

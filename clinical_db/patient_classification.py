@@ -28,15 +28,17 @@ class ControlExperiment:
         self.id_list = self.__get_id_list()
 
     def __get_id_list(self):
+        if self.target_codes == 'all':
+            id_list = mimic2.subject_all(self.max_id)
+        elif self.target_codes == 'chf':
+            id_list = mimic2.subject_with_chf(self.max_id)
+        elif self.target_codes:
+            id_list = mimic2.subject_with_icd9_codes(self.target_codes, True, True, self.max_id)
 
         if self.matched_only:
-            id_list = mimic2m.get_id_numerics(self.max_id)
-        else:
-            id_list = mimic2.subject_all(self.max_id)
+            id_matched = mimic2m.get_id_numerics(self.max_id)
+            id_list = list(set(id_list).intersection(set(id_matched)))
 
-        if self.target_codes:
-            id_code = mimic2.subject_with_icd9_codes(self.target_codes, True, True, self.max_id)
-            id_list = list(set(id_code).intersection(set(id_list)))
         return sorted(id_list)
 
 
