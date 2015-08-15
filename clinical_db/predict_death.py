@@ -26,19 +26,33 @@ class PredictDeath(ControlExperiment):
                  disch_origin=True,
                  l_poi=0.,  # None to disable point eval
                  tseries_duration=1.,  # None to disable tseries eval
-                 tseries_freq=0.25,
+                 tseries_cycle=0.25,
                  class_param=alg.classification.Default_param,
                  tseries_param=alg.timeseries.Default_param,
                  n_cv_fold=10):
+        '''Initializer.
 
+        :param max_id: maximum of subject id (0 for using all ids)
+        :param target_codes: keyword of a list of icd9 codes to select subjects
+        :param matched_only: select only subjects with continuous record
+        :param n_lab: number of lab tests to be used
+        :param disch_origin: count duration from discharge point
+        :param l_poi: list of point of interest
+        :param tseries_duration: Duration in days of timeseries (None to disable tseries eval)
+        :param tseries_cycle: Cycle of the points of timeseries
+        :param class_param: param for classification algorithm
+        :param tseries_param: param for timeseries classification algorithm
+        :param n_cv_fold: number of folds in cross validation
+        '''
         # params for data retrieval
         ControlExperiment.__init__(self, max_id, target_codes, matched_only)
 
+        # params for data
         self.n_lab = n_lab
         self.disch_origin = disch_origin
         self.l_poi = l_poi
         self.tseries_duration = tseries_duration
-        self.tseries_freq = tseries_freq
+        self.tseries_cycle = tseries_cycle
 
         # params for algorithm
         self.class_param = class_param
@@ -49,6 +63,11 @@ class PredictDeath(ControlExperiment):
         self.__point_comparison_info()
         self.__tseries_comparison_info()
 
+    def n_day_prediction(self):
+        data = self.__prepare_data()
+        result = self.__eval_data(data)
+        self.__visualize(result)
+
     def __point_comparison_info(self):
         candidate = ([self.l_poi, 'point of interest', 'line'],
                      [self.class_param.name, 'algorithm', 'bar'])
@@ -56,7 +75,7 @@ class PredictDeath(ControlExperiment):
 
     def __tseries_comparison_info(self):
         candidate = ([self.tseries_duration, 'Duration', 'line'],
-                     [self.tseries_freq, 'Freqency', 'line'])
+                     [self.tseries_cycle, 'Freqency', 'line'])
         self.tseries_comp_info = self.__check_and_get_info(candidate)
 
     def __check_and_get_info(self, candidate):
@@ -71,42 +90,39 @@ class PredictDeath(ControlExperiment):
                                 % [item[1] for item in candidate])
         return info
 
-    def n_day_prediction(self):
-        data = self.__data_preparation()
-        result = self.__eval_data(data)
-        self.__visualization(result)
-
-    def __data_preparation(self):
+    def __prepare_data(self):
         patients = PatientData(self.id_list)
         l_lab, l_descs, l_units = patients.get_common_labs(self.n_lab)
 
-        l_point = []
+        l_pdata = []
         if self.l_poi is not None:
             if isinstance(self.l_poi, list):
                 for poi in self.l_poi:
-                    l_point.append(patients.get_lab_chart_point(l_lab, mimic2.vital_charts,
-                                                                poi, self.disch_origin))
+                    l_pdata.append(patients.get_lab_chart_point_final_adm(l_lab,
+                                                                          mimic2.vital_charts,
+                                                                          poi, self.disch_origin))
             else:
-                l_point.append(patients.get_lab_chart_point(l_lab, mimic2.vital_charts,
-                                                            self.l_poi, self.disch_origin))
+                l_pdata.append(patients.get_lab_chart_point_final_adm(l_lab, mimic2.vital_charts,
+                                                                      self.l_poi,
+                                                                      self.disch_origin))
         l_tseries = []
         if self.tseries_duration is not None:
             if isinstance(self.tseries_duration, list):
                 for duration in self.tseries_duration:
-                    l_tseries.append(patients.get_lab_chart_tseries(l_lab, mimic2.vital_charts,
-                                                                 self.tseries_freq, duration,
+                    l_tseries.append(patients.get_lab_chart_tseries_final_adm(l_lab, mimic2.vital_charts,
+                                                                 self.tseries_cycle, duration,
                                                                  self.disch_origin))
-            elif isinstance(self.tseries_freq, list):
-                for freq in self.tseries_freq:
-                    l_tseries.append(patients.get_lab_chart_tseries(l_lab, mimic2.vital_charts,
+            elif isinstance(self.tseries_cycle, list):
+                for freq in self.tseries_cycle:
+                    l_tseries.append(patients.get_lab_chart_tseries_final_adm(l_lab, mimic2.vital_charts,
                                                                  freq, self.tseries_duration,
                                                                  self.disch_origin))
             else:
-                l_tseries.append(patients.get_lab_chart_tseries(l_lab, mimic2.vital_charts,
-                                                                self.tseries_freq,
+                l_tseries.append(patients.get_lab_chart_tseries_final_adm(l_lab, mimic2.vital_charts,
+                                                                self.tseries_cycle,
                                                                 self.tseries_duration,
                                                                 self.disch_origin))
-        return Bunch(point=l_point, tseries=l_tseries)
+        return Bunch(point=l_pdata, tseries=l_tseries)
 
     def __eval_data(self, l_data):
         l_presult = []
@@ -135,7 +151,7 @@ class PredictDeath(ControlExperiment):
             lab=alg.timeseries.cv(lab_set, self.n_cv_fold, self.tseries_param),
             vit=alg.timeseries.cv(vit_set, self.n_cv_fold, self.tseries_param))
 
-    def __visualization(self, result):
+    def __visualize(self, result):
         print result.point
         print result.tseries
         if self.point_comp_info:
@@ -183,7 +199,7 @@ if __name__ == '__main__':
                       disch_origin=True,
                       l_poi=1.,
                       tseries_duration=1.,
-                      tseries_freq=0.25,
+                      tseries_cycle=0.25,
                       class_param=class_param,
                       tseries_param=alg.timeseries.Default_param,
                       n_cv_fold=10)

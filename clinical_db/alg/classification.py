@@ -153,4 +153,3 @@ def cv(sample_set, n_cv_fold=10, param=Default_param):
         predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
         result = calc_classification_result(predict_y, y)
     return result
-

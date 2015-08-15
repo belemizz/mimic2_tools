@@ -171,8 +171,67 @@ class PatientData:
             l_common_descs.append(l_acc)
         return most_common_item, l_common_descs, frequency
 
-    def get_lab_chart_point(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
-        """Get data of lab test and chart on a datapoint."""
+    def __get_lab_chart_from_admission(self, admission, l_lab_id, l_chart_id,
+                                       days=0., from_discharge=True):
+        if from_discharge:
+            time_of_interest = (admission.get_estimated_disch_time() - timedelta(days))
+        else:
+            time_of_interest = (admission.get_estimated_admit_time() + timedelta(days))
+        lab_result = admission.get_newest_lab_at_time(time_of_interest)
+        chart_result = admission.get_newest_chart_at_time(time_of_interest)
+
+        lab_value = [float('NaN')] * len(l_lab_id)
+        for item in lab_result:
+            if item[0] in l_lab_id and is_number(item[4]):
+                index = l_lab_id.index(item[0])
+                lab_value[index] = float(item[4])
+
+        chart_value = [float('NaN')] * len(l_chart_id)
+        for item in chart_result:
+            if item[0] in l_chart_id and is_number(item[4]):
+                index = l_chart_id.index(item[0])
+                chart_value[index] = float(item[4])
+
+        return lab_value, chart_value
+
+    def get_lab_chart_point_all_adm(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
+        l_subject_id = []
+        l_hadm_id = []
+        expire_flags = []
+
+        a_lab = np.array([]).reshape(0, len(l_lab_id))
+        a_chart = np.array([]).reshape(0, len(l_chart_id))
+        duration = np.array([])
+
+        for patient in self.l_patient:
+            for idx, admission in enumerate(patient.admissions):
+                lab_value, chart_value = self.__get_lab_chart_from_admission(
+                    admission, l_lab_id, l_chart_id, days, from_discharge)
+
+                # validation and add to list
+                if (True not in np.isnan(lab_value)
+                        and True not in np.isnan(chart_value)
+                        and patient.hospital_expire_flg in ['Y', 'N']):
+                    a_lab = np.vstack((a_lab, lab_value))
+                    a_chart = np.vstack((a_chart, chart_value))
+                    expire_flags.append(patient.hospital_expire_flg)
+
+                    if idx < len(patient.admissions) - 1:
+                        rd = (patient.admissions[idx + 1].admit_dt - admission.disch_dt).days
+                    else:
+                        rd = np.inf
+                    readmission_duration = np.append(duration, rd)
+
+                    l_subject_id.append(patient.subject_id)
+                    l_hadm_id.append(admission.hadm_id)
+
+        y = np.zeros(len(expire_flags), dtype='int')
+        y[np.array(expire_flags) == 'Y'] = 1
+
+        return a_lab, a_chart, y, l_subject_id, readmission_duration, l_hadm_id
+
+    def get_lab_chart_point_final_adm(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
+        """Get lab test data and chart data on a datapoint in final admission of the subject."""
         ids = []
         lab_values = []
         chart_values = []
@@ -201,6 +260,7 @@ class PatientData:
                     index = l_chart_id.index(item[0])
                     chart_value[index] = float(item[4])
 
+            # validation and add to list
             if (True not in np.isnan(lab_value)
                     and True not in np.isnan(chart_value)
                     and patient.hospital_expire_flg in ['Y', 'N']):
@@ -211,20 +271,22 @@ class PatientData:
 
         lab_array = np.array(lab_values)
         chart_array = np.array(chart_values)
-        flag_array = np.array(flags)
 
+        flag_array = np.array(flags)
         y = np.zeros(len(flag_array), dtype='int')
         y[flag_array == 'Y'] = 1
 
         return lab_array, chart_array, y, ids
 
-    def get_lab_chart_tseries(self, l_lab_id, l_chart_id, freq, duration, from_discharge=True):
+    def get_lab_chart_tseries_final_adm(self, l_lab_id, l_chart_id, freq, duration,
+                                        from_discharge=True):
 
         l_results = []
         n_steps = int(duration / freq)
         for idx in range(n_steps):
             days = idx * freq
-            l_results.append(self.get_lab_chart_point(l_lab_id, l_chart_id, days, from_discharge))
+            l_results.append(self.get_lab_chart_point_final_adm(l_lab_id, l_chart_id,
+                                                                days, from_discharge))
 
         ids = l_results[0][3]
         flags = l_results[0][2]
