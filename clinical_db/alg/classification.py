@@ -13,7 +13,7 @@ from bunch import Bunch
 graph = Graph()
 
 L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
-Default_param = Bunch(name='svm', lr_dim=10, svm_max_iter=20000)
+Default_param = Bunch(name='rf', lr_dim=10, svm_max_iter=20000)
 
 
 def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
@@ -138,19 +138,29 @@ def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param, auc=Fals
     return result
 
 
-def cv(sample_set, n_cv_fold=10, param=Default_param):
+def cv(sample_set, n_cv_fold=10, param=Default_param, auc=False):
     """Execute cross validation with samples."""
     x = sample_set[0]
     y = sample_set[1]
     clf = get_algorithm(param)
 
-    if isinstance(clf, list):
-        result = []
-        for c in clf:
-            predict_y = cross_validation.cross_val_predict(c, x, y, cv=n_cv_fold)
-            result.append(calc_classification_result(predict_y, y))
+    if auc:
+        if isinstance(clf, list):
+            result = []
+            for c in clf:
+                predict_y = cross_validation.cross_val_predict(c, x, y, cv=n_cv_fold)
+                result.append(calc_classification_result(predict_y, y))
+        else:
+            predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
+            result = calc_classification_result(predict_y, y)
     else:
-        predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
-        result = calc_classification_result(predict_y, y)
-    return result
+        if isinstance(clf, list):
+            result = []
+            for c in clf:
+                predict_y = cross_validation.cross_val_predict(c, x, y, cv=n_cv_fold)
+                result.append(calc_classification_result(predict_y, y))
+        else:
+            predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
+            result = calc_classification_result(predict_y, y)
 
+    return result
