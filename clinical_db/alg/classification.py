@@ -42,6 +42,7 @@ def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
     p_info("Cross Validation Result")
     print sumup_classification_result(result_list)
     print ('mean AUC', np.mean(auc_list))
+    return result_list, auc_list
 
 
 def get_algorithm(param=Default_param):
@@ -144,23 +145,31 @@ def cv(sample_set, n_cv_fold=10, param=Default_param, auc=False):
     y = sample_set[1]
     clf = get_algorithm(param)
 
-    if auc:
-        if isinstance(clf, list):
-            result = []
-            for c in clf:
-                predict_y = cross_validation.cross_val_predict(c, x, y, cv=n_cv_fold)
-                result.append(calc_classification_result(predict_y, y))
+    def __cross_validation(clf, x, y, n_cv_fold, auc):
+        if auc:
+            kf = cross_validation.KFold(x.shape[0], n_cv_fold, shuffle=True, random_state=0)
+            result_list = []
+            auc_list = []
+            for train, test in kf:
+                result, auc = fit_and_test(x[train, :], y[train],
+                                           x[test, :], y[test],
+                                           param, True)
+                result_list.append(result)
+                auc_list.append(auc)
+
+            total_acc = sumup_classification_result(result_list)
+            mean_auc = np.mean(auc_list)
+            cv_result = [total_acc, mean_auc]
         else:
             predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
-            result = calc_classification_result(predict_y, y)
+            cv_result = calc_classification_result(predict_y, y)
+        return cv_result
+
+    if isinstance(clf, list):
+        result = []
+        for c in clf:
+            result.append(__cross_validation(clf, x, y, n_cv_fold, auc))
     else:
-        if isinstance(clf, list):
-            result = []
-            for c in clf:
-                predict_y = cross_validation.cross_val_predict(c, x, y, cv=n_cv_fold)
-                result.append(calc_classification_result(predict_y, y))
-        else:
-            predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
-            result = calc_classification_result(predict_y, y)
+        result = __cross_validation(clf, x, y, n_cv_fold, auc)
 
     return result

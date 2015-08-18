@@ -3,10 +3,11 @@ Test code for algorithm codes
 """
 import unittest
 import get_sample
+import numpy as np
 
 from sys import exit
 from mutil import Cache
-from nose.tools import ok_
+from nose.tools import ok_, eq_
 
 save_result = False
 
@@ -53,7 +54,12 @@ class TestSequenceFunctions(unittest.TestCase):
         import alg.classification
         x, y = get_sample.vector(0, 2)
         alg.classification.plot_2d(x, y, show_flag=False)
-        alg.classification.cv([x, y], 4)
+        result_cv = alg.classification.cv([x, y], 4)
+        self.__check_data('cv', result_cv)
+        result_cv = alg.classification.cv([x, y], 4, auc=True)
+        self.__check_data('cv_auc', result_cv)
+        result_ex = alg.classification.example(0, 2)
+        self.__check_data('example', result_ex)
 
     def __check_data(self, cache_key, data):
         cc = Cache(cache_key, cache_dir='../data/test/')
@@ -61,7 +67,10 @@ class TestSequenceFunctions(unittest.TestCase):
             cc.save(data)
         else:
             correct_data = cc.load()
-            ok_((data == correct_data).all(), cache_key)
+            if isinstance(data, np.ndarray):
+                ok_((data == correct_data).all(), cache_key)
+            else:
+                eq_(data, correct_data, cache_key)
 
 if __name__ == '__main__':
     unittest.main()

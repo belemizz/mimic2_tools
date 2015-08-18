@@ -81,9 +81,12 @@ class PredictReadmission(ControlExperiment):
         readm_flag = (readm_duration < 31)[alive_on_disch]
         r_or_d_flag = np.logical_or(readm_flag, death_flag)
 
-        result1 = alg.classification.cv([vit_data, death_flag], 10, self.class_param)
-        result2 = alg.classification.cv([vit_data, readm_flag], 10, self.class_param)
-        result3 = alg.classification.cv([vit_data, r_or_d_flag], 10, self.class_param)
+        result1 = alg.classification.cv([lab_data, death_flag], 10, self.class_param, auc=True)
+        result2 = alg.classification.cv([lab_data, readm_flag], 10, self.class_param, auc=True)
+        result3 = alg.classification.cv([lab_data, r_or_d_flag], 10, self.class_param, auc=True)
+
+        import ipdb
+        ipdb.set_trace()
 
     def __visualize(self, result):
         p_info("Visualization")
@@ -93,7 +96,7 @@ if __name__ == '__main__':
     class_param = alg.classification.Default_param
 
     pr = PredictReadmission(max_id=0,
-                            target_codes='chf',
+                            target_codes=['428.0'],
                             matched_only=False,
                             n_lab=10,
                             disch_origin=True,
