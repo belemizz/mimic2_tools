@@ -1,21 +1,21 @@
-''' 
+'''
 Experiments are recorded in this script
 Experiment date, update date, and purpose should be recorded
 '''
 import matplotlib.pyplot as plt
-import mutil.graph
-import alg.classification
+
+from mutil import Graph
+graph = Graph()
 
 
-# Experiment Date: 07/16/2015
-# Update Date: 07/17/2015
 def classify_vital_and_lab_timeseries():
-    import mutil.graph
-    graphs = mutil.graph.Graph()
+    '''Predict death with vital and lab timeseries data
+    :Experiment Date: 07/16/2015
+    :Updated Date: 07/17/2015
+    '''
 
     import evaluate_feature
-    import alg.classification
-    l_dbd = [0,2]
+    l_dbd = [0., 2.]
     l_nsteps = range(1, 6)
     for dbd in l_dbd:
         result = []
@@ -45,9 +45,6 @@ def classify_vital_and_lab_timeseries():
 # Experiment Date: 07/01/2015
 # Update Deate
 def classify_vital_and_lab():
-    import mutil.graph
-    graphs = mutil.graph.Graph()
-
     import evaluate_feature
     import alg.classification
 

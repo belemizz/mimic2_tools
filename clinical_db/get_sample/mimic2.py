@@ -203,7 +203,6 @@ class PatientData:
     def get_lab_chart_point_all_adm(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
         l_subject_id = []
         l_hadm_id = []
-#        expire_flags = []
 
         a_lab = np.array([]).reshape(0, len(l_lab_id))
         a_chart = np.array([]).reshape(0, len(l_chart_id))
@@ -279,8 +278,10 @@ class PatientData:
         flags = []
 
         for patient in self.l_patient:
-            lab_value, chart_value = self.__get_lab_chart_from_admission(
-                admission, l_lab_id, l_chart_id, days, from_discharge)
+            final_adm = patient.get_final_admission()
+            lab_value, chart_value = self.__get_lab_chart_from_admission(final_adm, l_lab_id,
+                                                                         l_chart_id,
+                                                                         days, from_discharge)
 
             # validation and add to list
             if (True not in np.isnan(lab_value)
@@ -506,7 +507,7 @@ class Mimic2:
                 where_cond += ' OR '
             where_cond += "code LIKE '%s'" % code
         select_seq = "SELECT subject_id,hadm_id " +\
-                     "FROM mimic2v26.icd9 " +\
+          "FROM mimic2v26.icd9 " +\
                      "WHERE (%s) AND sequence%s " % (where_cond, seq_cond) +\
                      "GROUP BY subject_id,hadm_id " +\
                      "ORDER BY subject_id "

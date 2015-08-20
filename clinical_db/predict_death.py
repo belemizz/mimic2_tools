@@ -100,11 +100,10 @@ class PredictDeath(ControlExperiment):
                 for poi in self.l_poi:
                     l_pdata.append(patients.get_lab_chart_point_final_adm(l_lab,
                                                                           mimic2.vital_charts,
-                                                                          poi, self.disch_origin))
+                                                                poi, self.disch_origin))
             else:
                 l_pdata.append(patients.get_lab_chart_point_final_adm(l_lab, mimic2.vital_charts,
-                                                                      self.l_poi,
-                                                                      self.disch_origin))
+                                                            self.l_poi, self.disch_origin))
         l_tseries = []
         if self.tseries_duration is not None:
             if isinstance(self.tseries_duration, list):
@@ -140,9 +139,14 @@ class PredictDeath(ControlExperiment):
     def __eval_point(self, data):
         lab_set = [data[0], data[2]]
         vit_set = [data[1], data[2]]
+        lab_rp, lab_auc = alg.classification.cv(lab_set, self.n_cv_fold,
+                                                self.class_param, auc=True)
+        vit_rp, vit_auc = alg.classification.cv(vit_set, self.n_cv_fold,
+                                                self.class_param, auc=True)
+
         return Bunch(
-            lab=alg.classification.cv(lab_set, self.n_cv_fold, self.class_param),
-            vit=alg.classification.cv(vit_set, self.n_cv_fold, self.class_param))
+            lab=lab_rp, lab_auc=lab_auc,
+            vit=vit_rp, vit_auc=vit_auc)
 
     def __eval_tseries(self, tseries):
         lab_set = [tseries[0][0], tseries[0][1], tseries[2]]
@@ -162,9 +166,13 @@ class PredictDeath(ControlExperiment):
     def __draw_graph_point(self, result):
         l_lab = [item.lab for item in result]
         l_vit = [item.vit for item in result]
+        l_lab_auc = [item.lab_auc for item in result]
+        print l_lab_auc
+        
         l_lab = self.__remove_list_duplication(l_lab)
         l_vit = self.__remove_list_duplication(l_vit)
         if self.point_comp_info[2] == 'bar':
+            graph.bar_classification(l_lab_auc, self.point_comp_info[0], 'lab_auc')
             graph.bar_classification(l_lab, self.point_comp_info[0], 'lab')
             graph.bar_classification(l_vit, self.point_comp_info[0], 'vit')
         else:
@@ -192,15 +200,15 @@ class PredictDeath(ControlExperiment):
 if __name__ == '__main__':
     class_param = alg.classification.Default_param
     class_param.name = alg.classification.L_algorithm
-    pd = PredictDeath(max_id=200000,
+    pd = PredictDeath(max_id=0,
 #                      target_codes=['428.0'],
                       target_codes='chf',
                       n_lab=20,
                       disch_origin=True,
-                      l_poi=1.,
+                      l_poi=0.,
                       tseries_duration=1.,
-                      tseries_cycle=0.25,
+                      tseries_cycle=[0.1, 0.25, 0.5],
                       class_param=class_param,
                       tseries_param=alg.timeseries.Default_param,
-                      n_cv_fold=10)
+                      n_cv_fold=4)
     pd.n_day_prediction()
