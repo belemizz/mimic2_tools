@@ -124,3 +124,10 @@ def float_list(l):
     for s in l:
         f_list.append(float(s))
     return np.array(f_list)
+
+
+def float_div(a, b):
+    try:
+        return float(a) / b
+    except ZeroDivisionError:
+        return 0.
