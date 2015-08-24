@@ -4,6 +4,8 @@ import numpy as np
 from sklearn import svm, tree, linear_model, ensemble
 from sklearn import cross_validation, metrics
 
+from alg.metrics import BinaryClassResult, BinaryClassCVResult
+
 import get_sample
 from mutil import Graph, p_info
 from . import (sumup_classification_result, calc_classification_result)
@@ -16,7 +18,7 @@ L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
 Default_param = Bunch(name='rf', lr_dim=10, svm_max_iter=20000)
 
 
-def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
+def example(source_num=2, n_dim=784, n_flag=2, param=Default_param):
     """Sample code for this package."""
     [x, y] = get_sample.vector(source_num, n_dim, n_flag)
     try:
@@ -24,25 +26,27 @@ def example(source_num=1, n_dim=2, n_flag=2, param=Default_param):
     except ValueError, detail:
         print detail
 
-    kf = cross_validation.KFold(
-        x.shape[0], n_folds=4, shuffle=True, random_state=0)
-    result_list = []
-    auc_list = []
-    for train, test in kf:
-        train_x = x[train, :]
-        train_y = y[train]
+    p_info("Train and Test")
+    train_x, test_x, train_y, test_y = cross_validation.train_test_split(x, y)
+    result = fit_and_test2(train_x, train_y, test_x, test_y, param)
+    print result.get_dict()
 
-        test_x = x[test, :]
-        test_y = y[test]
+    p_info("Cross Validation")
+    result_cv = cv2(x, y)
+    print result_cv.get_dict()
+    print result_cv.mean_auc2
 
-        result, auc = fit_and_test(train_x, train_y, test_x, test_y, param, True)
-        result_list.append(result)
-        auc_list.append(auc)
+    p_info("Algorithm Comparison")
+    l_alg = ['lr', 'dt', 'rf', 'ab']
+    l_result = []
+    for alg_name in l_alg:
+        p_info(alg_name)
+        param = Default_param
+        param.name = alg_name
+        l_result.append(cv2(x, y, 10, param))
 
-    p_info("Cross Validation Result")
-    print sumup_classification_result(result_list)
-    print ('mean AUC', np.mean(auc_list))
-    return result_list, auc_list
+    print l_alg
+    print [r.auc for r in l_result]
 
 
 def get_algorithm(param=Default_param):
@@ -139,6 +143,30 @@ def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param, auc=Fals
         result = __fit_and_test(clf, auc)
 
     return result
+
+
+def fit_and_test2(train_x, train_y, test_x, test_y, param=Default_param):
+    """Train and test with samples."""
+    clf = get_algorithm(param)
+    clf.fit(train_x, train_y)
+    predict_y = clf.predict(test_x)
+
+    if clf.__class__.__name__ in ['DecisionTreeClassifier', 'RandomForestClassifier']:
+        score_y = clf.predict_proba(test_x)[:, 1] - clf.predict_proba(test_x)[:, 0]
+    else:
+        score_y = clf.decision_function(test_x)
+
+    return BinaryClassResult(test_y, predict_y, score_y)
+
+
+def cv2(x, y, n_cv_fold=10, param=Default_param):
+
+    l_result = []
+    kf = cross_validation.KFold(x.shape[0], n_cv_fold, shuffle=True, random_state=0)
+    for train, test in kf:
+        l_result.append(fit_and_test2(x[train, :], y[train], x[test, :], y[test], param))
+
+    return BinaryClassCVResult(l_result)
 
 
 def cv(sample_set, n_cv_fold=10, param=Default_param, auc=False):

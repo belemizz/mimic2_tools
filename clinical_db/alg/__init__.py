@@ -66,4 +66,3 @@ def recall_precision(n_posi, n_nega, n_tp, n_fp):
 
     return recall, precision, f_measure, accuracy
 
-
