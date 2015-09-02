@@ -177,28 +177,28 @@ class PatientData:
             l_common_descs.append(l_acc)
         return most_common_item, l_common_descs, frequency
 
-    def __get_lab_chart_from_admission(self, admission, l_lab_id, l_chart_id,
-                                       days=0., from_discharge=True):
-        if from_discharge:
-            time_of_interest = (admission.get_estimated_disch_time() - timedelta(days))
+    def __death_duration(self, patient, adm_idx):
+        if patient.dod:
+            admission = patient.admissions[adm_idx]
+            dd = (patient.dod - admission.disch_dt).days
         else:
-            time_of_interest = (admission.get_estimated_admit_time() + timedelta(days))
-        lab_result = admission.get_newest_lab_at_time(time_of_interest)
-        chart_result = admission.get_newest_chart_at_time(time_of_interest)
+            dd = np.inf
+        return dd
 
-        lab_value = [float('NaN')] * len(l_lab_id)
-        for item in lab_result:
-            if item[0] in l_lab_id and is_number(item[4]):
-                index = l_lab_id.index(item[0])
-                lab_value[index] = float(item[4])
+    def __readmission_duration(self, patient, adm_idx):
+        if adm_idx < len(patient.admissions) - 1:
+            admission = patient.admissions[adm_idx]
+            rd = (patient.admissions[adm_idx + 1].admit_dt - admission.disch_dt).days
+        else:
+            rd = np.inf
+        return rd
 
-        chart_value = [float('NaN')] * len(l_chart_id)
-        for item in chart_result:
-            if item[0] in l_chart_id and is_number(item[4]):
-                index = l_chart_id.index(item[0])
-                chart_value[index] = float(item[4])
-
-        return lab_value, chart_value
+    def __expire_flag(self, patient, adm_idx):
+        if adm_idx == len(patient.admissions) - 1 and patient.hospital_expire_flg == 'Y':
+            ef = 1
+        else:
+            ef = 0
+        return ef
 
     def get_lab_chart_point_all_adm(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
         l_subject_id = []
@@ -215,20 +215,9 @@ class PatientData:
                 lab_value, chart_value = self.__get_lab_chart_from_admission(
                     admission, l_lab_id, l_chart_id, days, from_discharge)
 
-                if idx < len(patient.admissions) - 1:
-                    rd = (patient.admissions[idx + 1].admit_dt - admission.disch_dt).days
-                else:
-                    rd = np.inf
-
-                if patient.dod:
-                    dd = (patient.dod - admission.disch_dt).days
-                else:
-                    dd = np.inf
-
-                if idx == len(patient.admissions) - 1 and patient.hospital_expire_flg == 'Y':
-                    ef = 1
-                else:
-                    ef = 0
+                rd = self.__readmission_duration(patient, idx)
+                dd = self.__death_duration(patient, idx)
+                ef = self.__expire_flag(patient, idx)
 
                 def validation(lab_value, chart_value):
                     if (True not in np.isnan(lab_value)
@@ -241,7 +230,6 @@ class PatientData:
                     a_lab = np.vstack((a_lab, lab_value))
                     a_chart = np.vstack((a_chart, chart_value))
                     expire_flag = np.append(expire_flag, ef)
-#                    expire_flags.append(patient.hospital_expire_flg)
                     readm_duration = np.append(readm_duration, rd)
                     death_duration = np.append(death_duration, dd)
                     l_subject_id.append(patient.subject_id)
@@ -299,6 +287,93 @@ class PatientData:
         y[np.array(flags) == 'Y'] = 1
 
         return lab_array, chart_array, y, ids
+
+    def __get_lab_chart_from_admission(self, admission, l_lab_id, l_chart_id,
+                                       days=0., from_discharge=True):
+        '''get a datapoint of lab and chart in a admission'''
+        if from_discharge:
+            if admission.get_estimated_disch_time() > datetime.datetime.min + timedelta(days):
+                time_of_interest = (admission.get_estimated_disch_time() - timedelta(days))
+            else:
+                time_of_interest = admission.get_estimated_disch_time()
+        else:
+            time_of_interest = (admission.get_estimated_admit_time() + timedelta(days))
+
+        lab_result = admission.get_newest_lab_at_time(time_of_interest)
+        chart_result = admission.get_newest_chart_at_time(time_of_interest)
+
+        lab_value = [float('NaN')] * len(l_lab_id)
+        for item in lab_result:
+            if item[0] in l_lab_id and is_number(item[4]):
+                index = l_lab_id.index(item[0])
+                lab_value[index] = float(item[4])
+
+        chart_value = [float('NaN')] * len(l_chart_id)
+        for item in chart_result:
+            if item[0] in l_chart_id and is_number(item[4]):
+                index = l_chart_id.index(item[0])
+                chart_value[index] = float(item[4])
+
+        return lab_value, chart_value
+
+    def get_lab_chart_tseries_all_adm(self, l_lab_id, l_chart_id, freq, duration,
+                                      from_discharge=True):
+        l_subject_id = []
+        l_hadm_id = []
+
+        l_lab_data = []
+        l_chart_data = []
+
+        readm_duration = np.array([])
+        death_duration = np.array([])
+        expire_flag = np.array([]).astype('int')
+
+        n_steps = int(duration / freq)
+        for patient in self.l_patient:
+            for adm_idx, admission in enumerate(patient.admissions):
+                a_lab_value = np.zeros((n_steps, len(l_lab_id)))
+                a_vit_value = np.zeros((n_steps, len(l_chart_id)))
+                for idx in range(n_steps):
+                    days = idx * freq
+                    lab_value, chart_value = self.__get_lab_chart_from_admission(
+                        admission, l_lab_id, l_chart_id, days, from_discharge)
+                    a_lab_value[idx, :] = lab_value
+                    a_vit_value[idx, :] = chart_value
+
+                rd = self.__readmission_duration(patient, adm_idx)
+                dd = self.__death_duration(patient, adm_idx)
+                ef = self.__expire_flag(patient, adm_idx)
+
+                def validation(lab_value, chart_value):
+                    return True
+
+                if validation(lab_value, chart_value):
+                    l_lab_data.append(a_lab_value)
+                    l_chart_data.append(a_vit_value)
+                    readm_duration = np.append(readm_duration, rd)
+                    death_duration = np.append(death_duration, dd)
+                    expire_flag = np.append(expire_flag, ef)
+                    l_subject_id.append(patient.subject_id)
+                    l_hadm_id.append(admission.hadm_id)
+
+        lab_x = np.zeros([n_steps, len(l_hadm_id), len(l_lab_id)])
+        lab_m = np.zeros([n_steps, len(l_hadm_id)])
+        vit_x = np.zeros([n_steps, len(l_hadm_id), len(l_chart_id)])
+        vit_m = np.zeros([n_steps, len(l_hadm_id)])
+
+        for idx, adm_id in enumerate(l_hadm_id):
+            for isteps in range(n_steps):
+                if not np.isnan(l_lab_data[idx][isteps]).any():
+                    lab_x[isteps][idx] = l_lab_data[idx][isteps]
+                    lab_m[isteps][idx] = 1.
+                if not np.isnan(l_chart_data[idx][isteps]).any():
+                    vit_x[isteps][idx] = l_chart_data[idx][isteps]
+                    vit_m[isteps][idx] = 1.
+
+        lab_tseries = [lab_x, lab_m]
+        vit_tseries = [vit_x, vit_m]
+        return (lab_tseries, vit_tseries, expire_flag, l_subject_id,
+                readm_duration, death_duration, l_hadm_id)
 
     def get_lab_chart_tseries_final_adm(self, l_lab_id, l_chart_id, freq, duration,
                                         from_discharge=True):

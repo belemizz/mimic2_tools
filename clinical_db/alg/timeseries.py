@@ -8,7 +8,7 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
 import get_sample
 from get_sample import select_tseries
-from . import calc_classification_result, sumup_classification_result
+from . import calc_classification_result
 
 import sys
 sys.path.append('../../deep_tutorial/sample_codes/')
@@ -16,16 +16,46 @@ sys.path.append('../../deep_tutorial/sample_codes/')
 from mutil import p_info
 
 from bunch import Bunch
+from alg.metrics import BinaryClassResult, BinaryClassCVResult
 
 L_algorithm = ['lstm', 'lr', 'coin']
 Default_param = Bunch(name='lr', lr_max_step=40)
 
 
+class SeriesData():
+    '''Series Data Handler'''
+    def __init__(self, series, mask, label):
+        self.series = series
+        self.mask = mask
+        self.label = label
+
+    def slice_by_time(self, index):
+        return SeriesData(self.series[index, :, :],
+                          self.mask[index, :],
+                          self.label)
+
+    def slice_by_sample(self, index):
+        return SeriesData(self.series[:, index, :],
+                          self.mask[:, index],
+                          self.label[index])
+
+    def slice_by_feature(self, index):
+        return SeriesData(self.series[:, :, index],
+                          self.mask,
+                          self.label)
+
+
 def example(param=Default_param):
     """Function for showing how to use this module."""
     sample_set = get_sample.tseries(0, 2)
-    result = cv(sample_set, 4, param)
-    print result
+    sample = SeriesData(sample_set[0], sample_set[1], sample_set[2])
+
+    train_set, test_set = train_test_split_ts(sample)
+    result = fit_and_test(train_set, test_set)
+    print result.get_dict()
+
+    cv_result = cv(sample)
+    print cv_result.get_dict()
 
 
 def ar_float(data):
@@ -459,6 +489,15 @@ class LR_ts():
         predict_y = self.clf.predict(s_test_x)
         return predict_y
 
+    def score(self, test_sample):
+        self.fill_missing(test_sample[0], test_sample[1])
+        test_x = test_sample[0]
+
+        n_sample = test_x.shape[1]
+        s_test_x = np.array([test_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
+        score_y = self.clf.decision_function(s_test_x)
+        return score_y
+
 
 class Cointoss():
     def __init__(self, seed=0):
@@ -475,6 +514,9 @@ class Cointoss():
             predict_y[i] = np.random.randint(2)
         return predict_y
 
+    def score(self, test_sample):
+        return self.predict(test_sample)
+
 
 def get_algorithm(param=Default_param):
     if param.name is 'lstm':
@@ -488,24 +530,39 @@ def get_algorithm(param=Default_param):
     return clf
 
 
+def train_test_split_ts(sample):
+    cv_iter = cross_validation.StratifiedKFold(sample.label)
+    train_idx, test_idx = list(cv_iter)[0]
+    train_sample = sample.slice_by_sample(train_idx)
+    test_sample = sample.slice_by_sample(test_idx)
+    return (train_sample, test_sample)
+
+
 def fit_and_test(train_set, test_set, param=Default_param):
+    '''Train and test with samples'''
     clf = get_algorithm(param)
-    clf.fit(train_set)
-    predict_y = clf.predict(test_set[0:2])
-    return calc_classification_result(predict_y, test_set[2])
+    clf.fit([train_set.series, train_set.mask, train_set.label])
+    predict_y = clf.predict([test_set.series, test_set.mask])
+
+    if clf.__class__.__name__ in ['LR_ts', 'Cointoss']:
+        score_y = clf.score([test_set.series, test_set.mask])
+    else:
+        score_y = None
+
+    return BinaryClassResult(test_set.label, predict_y, score_y)
 
 
-def cv(sample_set, n_fold, param=Default_param):
+def cv(sample, n_fold=10, param=Default_param):
 
-    kf = cross_validation.KFold(sample_set[0].shape[1], n_folds=n_fold,
+    kf = cross_validation.KFold(sample.series.shape[1], n_folds=n_fold,
                                 shuffle=True, random_state=0)
     i_cv = 0
-    results = []
+    l_result = []
     for train_idx, test_idx in kf:
         i_cv = i_cv + 1
         p_info("___cv%d___" % i_cv)
-        train_set = select_tseries(sample_set, train_idx)
-        test_set = select_tseries(sample_set, test_idx)
-        results.append(fit_and_test(train_set, test_set, param))
+        train_set = sample.slice_by_sample(train_idx)
+        test_set = sample.slice_by_sample(test_idx)
+        l_result.append(fit_and_test(train_set, test_set, param))
 
-    return sumup_classification_result(results)
+    return BinaryClassCVResult(l_result)

@@ -5,6 +5,7 @@ from get_sample import Mimic2, PatientData
 
 import alg.timeseries
 import alg.classification
+from alg.timeseries import SeriesData
 
 from bunch import Bunch
 from mutil import Graph
@@ -91,6 +92,7 @@ class PredictDeath(ControlExperiment):
         return info
 
     def __prepare_data(self):
+        p_info("Data preparation")
         patients = PatientData(self.id_list)
         l_lab, l_descs, l_units = patients.get_common_labs(self.n_lab)
 
@@ -100,27 +102,27 @@ class PredictDeath(ControlExperiment):
                 for poi in self.l_poi:
                     l_pdata.append(patients.get_lab_chart_point_final_adm(l_lab,
                                                                           mimic2.vital_charts,
-                                                                poi, self.disch_origin))
+                                                                          poi, self.disch_origin))
             else:
                 l_pdata.append(patients.get_lab_chart_point_final_adm(l_lab, mimic2.vital_charts,
-                                                            self.l_poi, self.disch_origin))
+                                                                      self.l_poi,
+                                                                      self.disch_origin))
         l_tseries = []
         if self.tseries_duration is not None:
             if isinstance(self.tseries_duration, list):
                 for duration in self.tseries_duration:
-                    l_tseries.append(patients.get_lab_chart_tseries_final_adm(l_lab, mimic2.vital_charts,
-                                                                 self.tseries_cycle, duration,
-                                                                 self.disch_origin))
+                    l_tseries.append(patients.get_lab_chart_tseries_final_adm(
+                        l_lab, mimic2.vital_charts,
+                        self.tseries_cycle, duration, self.disch_origin))
             elif isinstance(self.tseries_cycle, list):
                 for freq in self.tseries_cycle:
-                    l_tseries.append(patients.get_lab_chart_tseries_final_adm(l_lab, mimic2.vital_charts,
-                                                                 freq, self.tseries_duration,
-                                                                 self.disch_origin))
+                    l_tseries.append(patients.get_lab_chart_tseries_final_adm(
+                        l_lab, mimic2.vital_charts, freq,
+                        self.tseries_duration, self.disch_origin))
             else:
-                l_tseries.append(patients.get_lab_chart_tseries_final_adm(l_lab, mimic2.vital_charts,
-                                                                self.tseries_cycle,
-                                                                self.tseries_duration,
-                                                                self.disch_origin))
+                l_tseries.append(patients.get_lab_chart_tseries_final_adm(
+                    l_lab, mimic2.vital_charts,
+                    self.tseries_cycle, self.tseries_duration, self.disch_origin))
         return Bunch(point=l_pdata, tseries=l_tseries)
 
     def __eval_data(self, l_data):
@@ -137,27 +139,27 @@ class PredictDeath(ControlExperiment):
         return Bunch(point=l_presult, tseries=l_tresult)
 
     def __eval_point(self, data):
-        lab_set = [data[0], data[2]]
-        vit_set = [data[1], data[2]]
-        lab_rp, lab_auc = alg.classification.cv(lab_set, self.n_cv_fold,
-                                                self.class_param, auc=True)
-        vit_rp, vit_auc = alg.classification.cv(vit_set, self.n_cv_fold,
-                                                self.class_param, auc=True)
-
-        return Bunch(
-            lab=lab_rp, lab_auc=lab_auc,
-            vit=vit_rp, vit_auc=vit_auc)
+        lab_data = data[0]
+        vit_data = data[1]
+        label = data[2]
+        lab_res = alg.classification.cv(lab_data, label, self.n_cv_fold, self.class_param)
+        vit_res = alg.classification.cv(vit_data, label, self.n_cv_fold, self.class_param)
+        return Bunch(lab=lab_res, vit=vit_res)
 
     def __eval_tseries(self, tseries):
-        lab_set = [tseries[0][0], tseries[0][1], tseries[2]]
-        vit_set = [tseries[1][0], tseries[1][1], tseries[2]]
+        lab_series = SeriesData(tseries[0][0], tseries[0][1], tseries[2])
+        vit_series = SeriesData(tseries[1][0], tseries[1][1], tseries[2])
         return Bunch(
-            lab=alg.timeseries.cv(lab_set, self.n_cv_fold, self.tseries_param),
-            vit=alg.timeseries.cv(vit_set, self.n_cv_fold, self.tseries_param))
+            lab=alg.timeseries.cv(lab_series, self.n_cv_fold, self.tseries_param),
+            vit=alg.timeseries.cv(vit_series, self.n_cv_fold, self.tseries_param))
 
     def __visualize(self, result):
-        print result.point
-        print result.tseries
+        import ipdb
+        ipdb.set_trace()
+        print ('lab_point', result.point[0].lab.get_dict())
+        print ('vit_point', result.point[0].vit.get_dict())
+        print ('lab_ts', result.tseries[0].lab.get_dict())
+        print ('vit_ts', result.tseries[0].vit.get_dict())
         if self.point_comp_info:
             self.__draw_graph_point(result.point)
         if self.tseries_comp_info:
@@ -168,7 +170,7 @@ class PredictDeath(ControlExperiment):
         l_vit = [item.vit for item in result]
         l_lab_auc = [item.lab_auc for item in result]
         print l_lab_auc
-        
+
         l_lab = self.__remove_list_duplication(l_lab)
         l_vit = self.__remove_list_duplication(l_vit)
         if self.point_comp_info[2] == 'bar':
@@ -199,16 +201,16 @@ class PredictDeath(ControlExperiment):
 
 if __name__ == '__main__':
     class_param = alg.classification.Default_param
-    class_param.name = alg.classification.L_algorithm
+
     pd = PredictDeath(max_id=0,
-#                      target_codes=['428.0'],
                       target_codes='chf',
                       n_lab=20,
-                      disch_origin=True,
+                      disch_origin=False,
                       l_poi=0.,
                       tseries_duration=1.,
-                      tseries_cycle=[0.1, 0.25, 0.5],
+                      tseries_cycle=0.1,
                       class_param=class_param,
                       tseries_param=alg.timeseries.Default_param,
-                      n_cv_fold=4)
+                      n_cv_fold=10)
+
     pd.n_day_prediction()

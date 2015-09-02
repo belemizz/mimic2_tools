@@ -15,7 +15,7 @@ from bunch import Bunch
 graph = Graph()
 
 L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
-Default_param = Bunch(name='rf', lr_dim=10, svm_max_iter=20000)
+Default_param = Bunch(name='lr', lr_dim=10, svm_max_iter=20000)
 
 
 def example(source_num=2, n_dim=784, n_flag=2, param=Default_param):
@@ -28,11 +28,11 @@ def example(source_num=2, n_dim=784, n_flag=2, param=Default_param):
 
     p_info("Train and Test")
     train_x, test_x, train_y, test_y = cross_validation.train_test_split(x, y)
-    result = fit_and_test2(train_x, train_y, test_x, test_y, param)
+    result = fit_and_test(train_x, train_y, test_x, test_y, param)
     print result.get_dict()
 
     p_info("Cross Validation")
-    result_cv = cv2(x, y)
+    result_cv = cv(x, y)
     print result_cv.get_dict()
     print result_cv.mean_auc2
 
@@ -43,7 +43,7 @@ def example(source_num=2, n_dim=784, n_flag=2, param=Default_param):
         p_info(alg_name)
         param = Default_param
         param.name = alg_name
-        l_result.append(cv2(x, y, 10, param))
+        l_result.append(cv(x, y, 10, param))
 
     print l_alg
     print [r.auc for r in l_result]
@@ -117,7 +117,31 @@ def plot_2d(x, y, x_label="", y_label="", filename="",
     return clf
 
 
-def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param, auc=False):
+def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param):
+    """Train and test with samples."""
+    clf = get_algorithm(param)
+    clf.fit(train_x, train_y)
+    predict_y = clf.predict(test_x)
+
+    if clf.__class__.__name__ in ['DecisionTreeClassifier', 'RandomForestClassifier']:
+        score_y = clf.predict_proba(test_x)[:, 1] - clf.predict_proba(test_x)[:, 0]
+    else:
+        score_y = clf.decision_function(test_x)
+
+    return BinaryClassResult(test_y, predict_y, score_y)
+
+
+def cv(x, y, n_cv_fold=10, param=Default_param):
+    '''Apply cross validataion'''
+    l_result = []
+    kf = cross_validation.StratifiedKFold(y, n_cv_fold, shuffle=True, random_state=0)
+    for train, test in kf:
+        l_result.append(fit_and_test(x[train, :], y[train], x[test, :], y[test], param))
+
+    return BinaryClassCVResult(l_result)
+
+
+def fit_and_test_orig(train_x, train_y, test_x, test_y, param=Default_param, auc=False):
     """Fit and test the algorithm."""
     clf = get_algorithm(param)
 
@@ -145,31 +169,7 @@ def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param, auc=Fals
     return result
 
 
-def fit_and_test2(train_x, train_y, test_x, test_y, param=Default_param):
-    """Train and test with samples."""
-    clf = get_algorithm(param)
-    clf.fit(train_x, train_y)
-    predict_y = clf.predict(test_x)
-
-    if clf.__class__.__name__ in ['DecisionTreeClassifier', 'RandomForestClassifier']:
-        score_y = clf.predict_proba(test_x)[:, 1] - clf.predict_proba(test_x)[:, 0]
-    else:
-        score_y = clf.decision_function(test_x)
-
-    return BinaryClassResult(test_y, predict_y, score_y)
-
-
-def cv2(x, y, n_cv_fold=10, param=Default_param):
-
-    l_result = []
-    kf = cross_validation.KFold(x.shape[0], n_cv_fold, shuffle=True, random_state=0)
-    for train, test in kf:
-        l_result.append(fit_and_test2(x[train, :], y[train], x[test, :], y[test], param))
-
-    return BinaryClassCVResult(l_result)
-
-
-def cv(sample_set, n_cv_fold=10, param=Default_param, auc=False):
+def cv_orig(sample_set, n_cv_fold=10, param=Default_param, auc=False):
     """Execute cross validation with samples."""
     x = sample_set[0]
     y = sample_set[1]
@@ -180,7 +180,7 @@ def cv(sample_set, n_cv_fold=10, param=Default_param, auc=False):
         alg_result = [list([]) for _ in range(len(param.name))]
         alg_auc = [list([]) for _ in range(len(param.name))]
         for train, test in kf:
-            result = fit_and_test(x[train, :], y[train], x[test, :], y[test], param, True)
+            result = fit_and_test_orig(x[train, :], y[train], x[test, :], y[test], param, True)
             for idx in range(len(result)):
                 alg_result[idx].append(result[idx][0])
                 alg_auc[idx].append(result[idx][1])
