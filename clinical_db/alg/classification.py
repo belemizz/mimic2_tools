@@ -2,13 +2,12 @@
 import numpy as np
 
 from sklearn import svm, tree, linear_model, ensemble
-from sklearn import cross_validation, metrics
+from sklearn import cross_validation
 
 from alg.metrics import BinaryClassResult, BinaryClassCVResult
 
 import get_sample
 from mutil import Graph, p_info
-from . import (sumup_classification_result, calc_classification_result)
 
 from bunch import Bunch
 
@@ -133,75 +132,12 @@ def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param):
 
 def cv(x, y, n_cv_fold=10, param=Default_param):
     '''Apply cross validataion'''
+    i_cv = 0
     l_result = []
     kf = cross_validation.StratifiedKFold(y, n_cv_fold, shuffle=True, random_state=0)
     for train, test in kf:
+        i_cv = i_cv + 1
+        p_info("classification.cv: {0}/{1}".format(i_cv, n_cv_fold))
         l_result.append(fit_and_test(x[train, :], y[train], x[test, :], y[test], param))
 
     return BinaryClassCVResult(l_result)
-
-
-def fit_and_test_orig(train_x, train_y, test_x, test_y, param=Default_param, auc=False):
-    """Fit and test the algorithm."""
-    clf = get_algorithm(param)
-
-    def __fit_and_test(clf, auc):
-        clf.fit(train_x, train_y)
-        predict_y = clf.predict(test_x)
-        result = calc_classification_result(predict_y, test_y)
-
-        if auc:
-            if clf.__class__.__name__ in ['DecisionTreeClassifier', 'RandomForestClassifier']:
-                score_y = clf.predict_proba(test_x)[:, 1] - clf.predict_proba(test_x)[:, 0]
-            else:
-                score_y = clf.decision_function(test_x)
-            auc = metrics.roc_auc_score(test_y, score_y)
-            result = [result, auc]
-        return result
-
-    if isinstance(clf, list):
-        result = []
-        for c in clf:
-            result.append(__fit_and_test(c, auc))
-    else:
-        result = __fit_and_test(clf, auc)
-
-    return result
-
-
-def cv_orig(sample_set, n_cv_fold=10, param=Default_param, auc=False):
-    """Execute cross validation with samples."""
-    x = sample_set[0]
-    y = sample_set[1]
-
-    if auc:
-        kf = cross_validation.KFold(x.shape[0], n_cv_fold, shuffle=True, random_state=0)
-
-        alg_result = [list([]) for _ in range(len(param.name))]
-        alg_auc = [list([]) for _ in range(len(param.name))]
-        for train, test in kf:
-            result = fit_and_test_orig(x[train, :], y[train], x[test, :], y[test], param, True)
-            for idx in range(len(result)):
-                alg_result[idx].append(result[idx][0])
-                alg_auc[idx].append(result[idx][1])
-
-        alg_final_result = [sumup_classification_result(r) for r in alg_result]
-        alg_final_auc = [np.mean(a) for a in alg_auc]
-        cv_result = [alg_final_result, alg_final_auc]
-        return cv_result
-
-    else:
-        clf = get_algorithm(param)
-
-        def __cross_validation(clf, x, y):
-            predict_y = cross_validation.cross_val_predict(clf, x, y, cv=n_cv_fold)
-            cv_result = calc_classification_result(predict_y, y)
-            return cv_result
-
-        if isinstance(clf, list):
-            result = []
-            for c in clf:
-                result.append(__cross_validation(c, x, y, n_cv_fold, param, auc))
-        else:
-            result = __cross_validation(c, x, y, n_cv_fold, param, auc)
-        return result

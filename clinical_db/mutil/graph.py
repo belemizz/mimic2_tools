@@ -185,14 +185,15 @@ class Graph:
 
         self.__show_and_save(fig, filename, show_flag)
 
-    def bar_classification(self, l_classification_result, labels,
+    def bar_classification(self, l_classification_result, labels, comparison_label="",
                            title="", filename="", show_flag=True):
-        l_rec = [item.rec for item in l_classification_result]
+        l_rec = [item.recall for item in l_classification_result]
         l_prec = [item.prec for item in l_classification_result]
         l_f = [item.f for item in l_classification_result]
         legend = ['recall', 'precision', 'f_measure']
         self.comparison_bar([l_rec, l_prec, l_f], labels, legend, lim=[0, 1],
-                            title=title, filename=filename, show_flag=show_flag)
+                            comparison_label=comparison_label, title=title,
+                            filename=filename, show_flag=show_flag)
 
     def bar_histogram(self, hist, bin_edges, hist_label, bin_label, only_left_edge=False,
                       title="", filename="", show_flag=True):

@@ -553,14 +553,13 @@ def fit_and_test(train_set, test_set, param=Default_param):
 
 
 def cv(sample, n_fold=10, param=Default_param):
-
-    kf = cross_validation.KFold(sample.series.shape[1], n_folds=n_fold,
-                                shuffle=True, random_state=0)
+    kf = cross_validation.StratifiedKFold(sample.label, n_folds=n_fold,
+                                          shuffle=True, random_state=0)
     i_cv = 0
     l_result = []
     for train_idx, test_idx in kf:
         i_cv = i_cv + 1
-        p_info("___cv%d___" % i_cv)
+        p_info("timeseries.cv: {0}/{1}".format(i_cv, n_fold))
         train_set = sample.slice_by_sample(train_idx)
         test_set = sample.slice_by_sample(test_idx)
         l_result.append(fit_and_test(train_set, test_set, param))

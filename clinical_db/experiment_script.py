@@ -2,10 +2,94 @@
 Experiments are recorded in this script
 Experiment date, update date, and purpose should be recorded
 '''
-import matplotlib.pyplot as plt
+import alg.classification
 
-from mutil import Graph
+from matplotlib.pyplot import waitforbuttonpress
+from mutil import Graph, Stopwatch
 graph = Graph()
+sw = Stopwatch()
+
+
+def cycle_comparison(predictor, l_cycle):
+    result = predictor.compare_cycle(l_cycle)
+    l_lab_result = [r.lab for r in result]
+    l_vit_result = [r.vit for r in result]
+
+    label = [int(1. / cycle) for cycle in l_cycle]
+    comparison_label = 'Points per Day'
+    graph.bar_classification(l_lab_result, label,
+                             comparison_label=comparison_label,
+                             title='Cycle Comparison: Lab')
+    graph.bar_classification(l_vit_result, label,
+                             comparison_label=comparison_label,
+                             title='Cycle Comparison: Vital')
+
+
+def duration_comparison(predictor, l_duration):
+    result = predictor.compare_duration(l_duration)
+    l_lab_result = [r.lab for r in result]
+    l_vit_result = [r.vit for r in result]
+
+    label = [int(duration) for duration in l_duration]
+    comparison_label = 'Duration in Days'
+
+    graph.bar_classification(l_lab_result, label,
+                             comparison_label=comparison_label,
+                             title='Duration Comparison: Lab')
+    graph.bar_classification(l_vit_result, label,
+                             comparison_label=comparison_label,
+                             title='Duration Comparison: Vital')
+
+
+def death_prediction():
+    from predict_death import PredictDeath
+
+    class_param = alg.classification.Default_param
+    tseries_param = alg.timeseries.Default_param
+    pd = PredictDeath(max_id=0,
+                      target_codes='chf',
+                      n_lab=20,
+                      disch_origin=False,
+                      l_poi=0.,
+                      tseries_duration=1.,
+                      tseries_cycle=0.1,
+                      class_param=class_param,
+                      tseries_param=tseries_param,
+                      n_cv_fold=10)
+
+    l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
+    cycle_comparison(pd, l_cycle)
+
+    l_duration = [1., 2., 3., 4., 5.]
+    duration_comparison(pd, l_duration)
+    waitforbuttonpress()
+
+
+def readmission_prediction():
+    from predict_readmission import PredictReadmission
+
+    # Parameter
+    class_param = alg.classification.Default_param
+    tseries_param = alg.timeseries.Default_param
+    pr = PredictReadmission(max_id=0,
+                            target_codes='chf',
+                            matched_only=False,
+                            n_lab=20,
+                            disch_origin=True,
+                            l_poi=0.,
+                            tseries_flag=True,
+                            tseries_duration=2.,
+                            tseries_cycle=0.1,
+                            class_param=class_param,
+                            tseries_param=tseries_param,
+                            n_cv_fold=10)
+    # comparison in cycle parameter
+    l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
+    cycle_comparison(pr, l_cycle)
+
+    l_duration = [1., 2., 3., 4., 5.]
+    duration_comparison(pr, l_duration)
+    waitforbuttonpress()
 
 
 def classify_vital_and_lab_timeseries():
@@ -109,6 +193,8 @@ def compare_lab_tests_and_vitals():
     efo.point_eval()
 
 if __name__ == '__main__':
-    #    compare_lab_tests_and_vitals()
-    classify_vital_and_lab_timeseries()
-    plt.waitforbuttonpress()
+    sw.reset()
+#    readmission_prediction()
+    death_prediction()
+    sw.stop()
+    sw.print_cpu_elapsed()
