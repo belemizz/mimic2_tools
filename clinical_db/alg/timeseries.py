@@ -19,7 +19,7 @@ from bunch import Bunch
 from alg.metrics import BinaryClassResult, BinaryClassCVResult
 
 L_algorithm = ['lstm', 'lr', 'coin']
-Default_param = Bunch(name='lr', lr_max_step=40)
+Default_param = Bunch(name='lr', lr_max_step=50)
 
 
 class SeriesData():
@@ -43,6 +43,15 @@ class SeriesData():
         return SeriesData(self.series[:, :, index],
                           self.mask,
                           self.label)
+
+    def n_step(self):
+        return self.series.shape[0]
+
+    def n_sample(self):
+        return self.series.shape[1]
+
+    def n_feature(self):
+        return self.series.shape[2]
 
 
 def example(param=Default_param):
@@ -559,7 +568,6 @@ def cv(sample, n_fold=10, param=Default_param):
     l_result = []
     for train_idx, test_idx in kf:
         i_cv = i_cv + 1
-        p_info("timeseries.cv: {0}/{1}".format(i_cv, n_fold))
         train_set = sample.slice_by_sample(train_idx)
         test_set = sample.slice_by_sample(test_idx)
         l_result.append(fit_and_test(train_set, test_set, param))

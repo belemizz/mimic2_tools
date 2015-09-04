@@ -10,7 +10,7 @@ graph = Graph()
 sw = Stopwatch()
 
 
-def cycle_comparison(predictor, l_cycle):
+def cycle_comparison(predictor, l_cycle, filename):
     result = predictor.compare_cycle(l_cycle)
     l_lab_result = [r.lab for r in result]
     l_vit_result = [r.vit for r in result]
@@ -19,13 +19,17 @@ def cycle_comparison(predictor, l_cycle):
     comparison_label = 'Points per Day'
     graph.bar_classification(l_lab_result, label,
                              comparison_label=comparison_label,
-                             title='Cycle Comparison: Lab')
+                             title='Cycle Comparison: Lab',
+                             filename=filename + '_CycleLab')
     graph.bar_classification(l_vit_result, label,
                              comparison_label=comparison_label,
-                             title='Cycle Comparison: Vital')
+                             title='Cycle Comparison: Vital',
+                             filename=filename + '_CycleVit')
+    print [r.lab.n_posi for r in result]
+    print [r.lab.n_nega for r in result]
 
 
-def duration_comparison(predictor, l_duration):
+def duration_comparison(predictor, l_duration, filename):
     result = predictor.compare_duration(l_duration)
     l_lab_result = [r.lab for r in result]
     l_vit_result = [r.vit for r in result]
@@ -35,10 +39,14 @@ def duration_comparison(predictor, l_duration):
 
     graph.bar_classification(l_lab_result, label,
                              comparison_label=comparison_label,
-                             title='Duration Comparison: Lab')
+                             title='Duration Comparison: Lab',
+                             filename=filename + '_DurLab')
     graph.bar_classification(l_vit_result, label,
                              comparison_label=comparison_label,
-                             title='Duration Comparison: Vital')
+                             title='Duration Comparison: Vital',
+                             filename=filename + '_DurVit')
+    print [r.lab.n_posi for r in result]
+    print [r.lab.n_nega for r in result]
 
 
 def death_prediction():
@@ -51,17 +59,17 @@ def death_prediction():
                       n_lab=20,
                       disch_origin=False,
                       l_poi=0.,
-                      tseries_duration=1.,
+                      tseries_duration=2.,
                       tseries_cycle=0.1,
                       class_param=class_param,
                       tseries_param=tseries_param,
                       n_cv_fold=10)
 
     l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
-    cycle_comparison(pd, l_cycle)
+    cycle_comparison(pd, l_cycle, 'death')
 
     l_duration = [1., 2., 3., 4., 5.]
-    duration_comparison(pd, l_duration)
+    duration_comparison(pd, l_duration, 'death')
     waitforbuttonpress()
 
 
@@ -85,12 +93,12 @@ def readmission_prediction():
                             n_cv_fold=10)
     # comparison in cycle parameter
     l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
-    cycle_comparison(pr, l_cycle)
+    cycle_comparison(pr, l_cycle, 'readm')
 
     l_duration = [1., 2., 3., 4., 5.]
-    duration_comparison(pr, l_duration)
+    duration_comparison(pr, l_duration, 'readm')
     waitforbuttonpress()
-
+    
 
 def classify_vital_and_lab_timeseries():
     '''Predict death with vital and lab timeseries data
@@ -194,7 +202,7 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
     sw.reset()
-#    readmission_prediction()
-    death_prediction()
+    readmission_prediction()
+#    death_prediction()
     sw.stop()
     sw.print_cpu_elapsed()

@@ -266,21 +266,24 @@ class Graph:
         if comparison_label:
             set_label2(comparison_label)
         if legend:
-            plt.legend(legend)
+            plt.legend(legend, loc='upper right')
         if title:
             ax.set_title(title)
         self.__show_and_save(fig, filename, show_flag, original_data)
 
-    def line_series(self, data, y_points, legend, x_label="", y_label="", ylim=[], markersize=10,
-                    title="", filename="", show_flag=True):
+    def line_series(self, data, y_points, legend="", x_label="", y_label="", ylim=[],
+                    markersize=10, title="", filename="", show_flag=True):
         original_data = locals().copy()
         fig, ax = plt.subplots()
         for item in data:
             if markersize is 0:
+                
                 ax.plot(y_points, item, '-')
             else:
                 ax.plot(y_points, item, 'o--', markersize=markersize)
-        ax.legend(legend)
+
+        if legend:
+            ax.legend(legend)
         ax.set_xlim(self.__calc_lim(y_points, 0.05))
 
         if ylim:
@@ -292,6 +295,48 @@ class Graph:
         if title:
             ax.set_title(title)
         self.__show_and_save(fig, filename, show_flag, original_data)
+
+    def labeled_line_series(self, data, label, y_points,
+                           x_label="", y_label="", ylim=[],
+                           title="", filename="", show_flag=True):
+        original_data = locals().copy()
+        fig, ax = plt.subplots()
+        for idx, item in enumerate(data):
+            if label[idx] == 0:
+                ax.plot(y_points, item, 'b-')
+
+        for idx, item in enumerate(data):
+            if label[idx] == 1:
+                ax.plot(y_points, item, 'r-')
+
+        ax.set_xlim(self.__calc_lim(y_points, 0.05))
+
+        if ylim:
+            ax.set_ylim(ylim)
+        if x_label:
+            ax.set_xlabel(x_label)
+        if y_label:
+            ax.set_ylabel(y_label)
+        if title:
+            ax.set_title(title)
+        self.__show_and_save(fig, filename, show_flag, original_data)
+
+    def draw_series_data_class(self, series, n_draw_sample=0):
+        """Visualize the deata of SeriesData class."""
+        fig, ax = plt.subplots()
+        y_points = range(series.n_step())
+        n_sample = series.n_sample()
+
+        if 0 < n_draw_sample < n_sample:
+            idx_selected_sample = range(n_draw_sample - 1,
+                                        n_sample,
+                                        int(n_sample / n_draw_sample))
+            series = series.slice_by_sample(idx_selected_sample)
+
+        for idx_f in range(series.n_feature()):
+            f_series = series.slice_by_feature(idx_f)
+            self.labeled_line_series(f_series.series.transpose(), f_series.label, y_points)
+        self.waitforbuttunpress()
 
     def waitforbuttunpress(self):
         plt.waitforbuttonpress()

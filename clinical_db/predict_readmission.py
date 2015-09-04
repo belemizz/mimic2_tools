@@ -10,8 +10,10 @@ import alg.timeseries
 from alg.timeseries import SeriesData
 
 import numpy as np
+from mutil import Graph
 
 mimic2 = Mimic2()
+graph = Graph()
 
 
 class PredictReadmission(ControlExperiment):
@@ -19,7 +21,7 @@ class PredictReadmission(ControlExperiment):
 
     def __init__(self, max_id, target_codes, matched_only,
                  n_lab, disch_origin, l_poi,
-                 tseries_flag, tseries_duration, tseries_cycle,
+                 tseries_flag, tseries_duration, tseries_cycle, visualize_data,
                  class_param, tseries_param, n_cv_fold):
         '''Initializer.
 
@@ -42,7 +44,7 @@ class PredictReadmission(ControlExperiment):
 
         # params for data
         self.original_data_params = (n_lab, disch_origin, l_poi,
-                                     tseries_flag, tseries_duration, tseries_cycle)
+                                     tseries_flag, tseries_duration, tseries_cycle, visualize_data)
         self.reset_data_params()
 
         # params for algorithm
@@ -56,6 +58,7 @@ class PredictReadmission(ControlExperiment):
         self.tseries_flag = self.original_data_params[3]
         self.tseries_duration = self.original_data_params[4]
         self.tseries_cycle = self.original_data_params[5]
+        self.visualize_data = self.original_data_params[6]
 
     def reset_algo_params(self):
         self.class_param = self.original_algo_params[0]
@@ -70,6 +73,7 @@ class PredictReadmission(ControlExperiment):
                                                                self.tseries_cycle,
                                                                self.tseries_duration,
                                                                self.disch_origin)
+
             result = self.__eval_tseries(data)
         else:
             data = self.patients.get_lab_chart_point_all_adm(l_lab, mimic2.vital_charts,
@@ -136,6 +140,10 @@ class PredictReadmission(ControlExperiment):
         lab_select = lab_data.slice_by_sample(alive_on_disch)
         vit_select = vit_data.slice_by_sample(alive_on_disch)
 
+        if self.visualize_data:
+            graph.draw_series_data_class(vit_select, 100)
+            graph.draw_series_data_class(lab_select, 100)
+
         result_lab = alg.timeseries.cv(lab_select, self.n_cv_fold, self.tseries_param)
         result_vit = alg.timeseries.cv(vit_select, self.n_cv_fold, self.tseries_param)
 
@@ -152,9 +160,10 @@ if __name__ == '__main__':
                             disch_origin=True,
                             l_poi=0.,
                             tseries_flag=True,
-                            tseries_duration=1.,
-                            tseries_cycle=0.1,
+                            tseries_duration=2.,
+                            tseries_cycle=0.25,
+                            visualize_data=True,
                             class_param=class_param,
                             tseries_param=tseries_param,
                             n_cv_fold=10)
-    pr.prediction()
+    pr.execution()
