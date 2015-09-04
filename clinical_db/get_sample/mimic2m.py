@@ -1,5 +1,6 @@
 from urllib2 import urlopen
 
+
 class Mimic2m:
     ''' Mimic 2 waveform databased matched subset '''
     def __init__(self):

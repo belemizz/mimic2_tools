@@ -17,12 +17,12 @@ class TestScripts():
         import classify_patients
         classify_patients.main(max_id=2000)
 
+    @attr(work=True)
     def test_predict_death(self):
         from predict_death import PredictDeath
         pd = PredictDeath(max_id=2000)
         pd.execution()
 
-    @attr(work=True)
     def test_predict_readmission(self):
         from predict_readmission import PredictReadmission
         pr = PredictReadmission(max_id=2000)

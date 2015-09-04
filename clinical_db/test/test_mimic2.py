@@ -1,14 +1,14 @@
 """
 Test code for scripts
 """
-import unittest
-from nose.tools import eq_
+from nose.plugins.attrib import attr
+from nose.tools import eq_, ok_
 
 import datetime
-from get_sample import Mimic2, Mimic2m
+from get_sample import Mimic2, Mimic2m, PatientData
 
 
-class TestMimic2m(unittest.TestCase):
+class TestMimic2m:
     def setUp(self):
         self.mimic2m = Mimic2m()
 
@@ -21,7 +21,7 @@ class TestMimic2m(unittest.TestCase):
         eq_(l_id[len(l_id) - 1], 32805, 'First id')
 
 
-class TestMimic2(unittest.TestCase):
+class TestMimic2:
 
     def setUp(self):
         self.mimic2 = Mimic2()
@@ -71,5 +71,41 @@ class TestMimic2(unittest.TestCase):
         result = self.mimic2.subject_with_chf(max_seq=2)
         eq_(len(result), 2315)
 
-if __name__ == '__main__':
-    unittest.main()
+
+@attr(mimic2_work=True)
+class TestPatientData:
+    """Test for PatientData class."""
+    def setUp(self):
+        mimic2 = Mimic2()
+        id_list = mimic2.subject_with_chf(2000)
+        self.patients = PatientData(id_list)
+
+    def test_counter(self):
+        eq_(self.patients.get_n_patient(), 42)
+        eq_(self.patients.get_n_admission(), 64)
+
+    def test_get_data(self):
+        lab_list = self.patients.get_common_labs(2)
+        eq_(lab_list[0], [50177, 50383])
+
+        icd9_list = self.patients.get_common_icd9(2)
+        eq_(icd9_list[0], ['428.0', '427.31'])
+
+        med_list = self.patients.get_common_medication(2)
+        eq_(med_list[0], [25, 43])
+
+        pt_all_adm = self.patients.get_point_from_adm(lab_list[0], Mimic2.vital_charts,
+                                                      0.0, from_discharge=False)
+        pt_final_adm = self.patients.get_point_from_adm(lab_list[0], Mimic2.vital_charts,
+                                                        0.0, from_discharge=False,
+                                                        final_adm_only=True)
+        ok_((pt_all_adm[0][6] == pt_final_adm[0][3]).all())
+
+        ts_all_adm = self.patients.get_tseries_from_adm(lab_list[0],
+                                                        Mimic2.vital_charts,
+                                                        0.1, 1.0, False)
+        ts_final_adm = self.patients.get_tseries_from_adm(lab_list[0],
+                                                          Mimic2.vital_charts,
+                                                          0.1, 1.0, False,
+                                                          final_adm_only=True)
+        ok_((ts_all_adm[0][0][:, 1, :] == ts_final_adm[0][0][:, 0, :]).all())

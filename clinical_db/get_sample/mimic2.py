@@ -200,41 +200,57 @@ class PatientData:
             ef = 0
         return ef
 
-    def get_lab_chart_point_all_adm(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
+    def get_point_from_adm(self, l_lab_id, l_chart_id, days=0.,
+                           from_discharge=True, final_adm_only=False):
         l_subject_id = []
         l_hadm_id = []
 
-        a_lab = np.array([]).reshape(0, len(l_lab_id))
-        a_chart = np.array([]).reshape(0, len(l_chart_id))
-        readm_duration = np.array([])
-        death_duration = np.array([])
-        expire_flag = np.array([]).astype('int')
+        l_lab_data = []
+        l_chart_data = []
+
+        l_readm_duration = []
+        l_death_duration = []
+        l_expire_flag = []
+
+        def validation(lab_value, chart_value):
+            if (True not in np.isnan(lab_value)
+                    and True not in np.isnan(chart_value)):
+                return True
+            else:
+                return False
+
+        def append_adm_data(patient, idx, admission):
+            lab_value, chart_value = self.__get_lab_chart_from_admission(
+                admission, l_lab_id, l_chart_id, days, from_discharge)
+            rd = self.__readmission_duration(patient, idx)
+            dd = self.__death_duration(patient, idx)
+            ef = self.__expire_flag(patient, idx)
+            if validation(lab_value, chart_value):
+                l_lab_data.append(lab_value)
+                l_chart_data.append(chart_value)
+                l_readm_duration.append(rd)
+                l_death_duration.append(dd)
+                l_expire_flag.append(ef)
+                l_subject_id.append(patient.subject_id)
+                l_hadm_id.append(admission.hadm_id)
 
         for patient in self.l_patient:
-            for idx, admission in enumerate(patient.admissions):
-                lab_value, chart_value = self.__get_lab_chart_from_admission(
-                    admission, l_lab_id, l_chart_id, days, from_discharge)
+            if final_adm_only:
+                adm_idx = len(patient.admissions) - 1
+                admission = patient.admissions[adm_idx]
+                append_adm_data(patient, adm_idx, admission)
+            else:
+                for idx, admission in enumerate(patient.admissions):
+                    append_adm_data(patient, idx, admission)
 
-                rd = self.__readmission_duration(patient, idx)
-                dd = self.__death_duration(patient, idx)
-                ef = self.__expire_flag(patient, idx)
+        a_lab = np.array(l_lab_data)
+        a_chart = np.array(l_chart_data)
 
-                def validation(lab_value, chart_value):
-                    if (True not in np.isnan(lab_value)
-                            and True not in np.isnan(chart_value)):
-                        return True
-                    else:
-                        return False
+        readm_duration = np.array(l_readm_duration)
+        death_duration = np.array(l_death_duration)
+        expire_flag = np.array(l_expire_flag).astype('int')
 
-                if validation(lab_value, chart_value):
-                    a_lab = np.vstack((a_lab, lab_value))
-                    a_chart = np.vstack((a_chart, chart_value))
-                    expire_flag = np.append(expire_flag, ef)
-                    readm_duration = np.append(readm_duration, rd)
-                    death_duration = np.append(death_duration, dd)
-                    l_subject_id.append(patient.subject_id)
-                    l_hadm_id.append(admission.hadm_id)
-
+        # Statistics
         death_on_disch = death_duration < 1
         alive_on_disch = death_duration >= 1
         death_within_30 = np.logical_and(alive_on_disch, death_duration < 31)
@@ -258,35 +274,77 @@ class PatientData:
 
         return a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id
 
-    def get_lab_chart_point_final_adm(self, l_lab_id, l_chart_id, days=0., from_discharge=True):
-        """Get lab test data and chart data on a datapoint in final admission of the subject."""
-        ids = []
-        lab_values = []
-        chart_values = []
-        flags = []
+    def get_tseries_from_adm(self, l_lab_id, l_chart_id, freq, duration,
+                             from_discharge=True, final_adm_only=False):
+        l_subject_id = []
+        l_hadm_id = []
+
+        l_lab_data = []
+        l_chart_data = []
+
+        l_readm_duration = []
+        l_death_duration = []
+        l_expire_flag = []
+        n_steps = int(duration / freq)
+
+        def validation(lab_value, chart_value):
+            return True
+
+        def append_adm_data(patient, adm_idx, admission):
+            a_lab_value = np.zeros((n_steps, len(l_lab_id)))
+            a_vit_value = np.zeros((n_steps, len(l_chart_id)))
+            for idx in range(n_steps):
+                days = idx * freq
+                lab_value, chart_value = self.__get_lab_chart_from_admission(
+                    admission, l_lab_id, l_chart_id, days, from_discharge)
+                a_lab_value[idx, :] = lab_value
+                a_vit_value[idx, :] = chart_value
+
+            rd = self.__readmission_duration(patient, adm_idx)
+            dd = self.__death_duration(patient, adm_idx)
+            ef = self.__expire_flag(patient, adm_idx)
+
+            if validation(lab_value, chart_value):
+                l_lab_data.append(a_lab_value)
+                l_chart_data.append(a_vit_value)
+                l_readm_duration.append(rd)
+                l_death_duration.append(dd)
+                l_expire_flag.append(ef)
+                l_subject_id.append(patient.subject_id)
+                l_hadm_id.append(admission.hadm_id)
 
         for patient in self.l_patient:
-            final_adm = patient.get_final_admission()
-            lab_value, chart_value = self.__get_lab_chart_from_admission(final_adm, l_lab_id,
-                                                                         l_chart_id,
-                                                                         days, from_discharge)
+            if final_adm_only:
+                adm_idx = len(patient.admissions) - 1
+                admission = patient.admissions[adm_idx]
+                append_adm_data(patient, adm_idx, admission)
+            else:
+                for adm_idx, admission in enumerate(patient.admissions):
+                    append_adm_data(patient, adm_idx, admission)
 
-            # validation and add to list
-            if (True not in np.isnan(lab_value)
-                    and True not in np.isnan(chart_value)
-                    and patient.hospital_expire_flg in ['Y', 'N']):
-                lab_values.append(lab_value)
-                chart_values.append(chart_value)
-                flags.append(patient.hospital_expire_flg)
-                ids.append(patient.subject_id)
+        lab_x = np.zeros([n_steps, len(l_hadm_id), len(l_lab_id)])
+        lab_m = np.zeros([n_steps, len(l_hadm_id)])
+        vit_x = np.zeros([n_steps, len(l_hadm_id), len(l_chart_id)])
+        vit_m = np.zeros([n_steps, len(l_hadm_id)])
 
-        lab_array = np.array(lab_values)
-        chart_array = np.array(chart_values)
+        for idx, adm_id in enumerate(l_hadm_id):
+            for isteps in range(n_steps):
+                if not np.isnan(l_lab_data[idx][isteps]).any():
+                    lab_x[isteps][idx] = l_lab_data[idx][isteps]
+                    lab_m[isteps][idx] = 1.
+                if not np.isnan(l_chart_data[idx][isteps]).any():
+                    vit_x[isteps][idx] = l_chart_data[idx][isteps]
+                    vit_m[isteps][idx] = 1.
 
-        y = np.zeros(len(flags), dtype='int')
-        y[np.array(flags) == 'Y'] = 1
+        lab_tseries = [lab_x, lab_m]
+        vit_tseries = [vit_x, vit_m]
 
-        return lab_array, chart_array, y, ids
+        readm_duration = np.array(l_readm_duration)
+        death_duration = np.array(l_death_duration)
+        expire_flag = np.array(l_expire_flag).astype('int')
+
+        return (lab_tseries, vit_tseries, expire_flag, l_subject_id,
+                readm_duration, death_duration, l_hadm_id)
 
     def __get_lab_chart_from_admission(self, admission, l_lab_id, l_chart_id,
                                        days=0., from_discharge=True):
@@ -316,115 +374,16 @@ class PatientData:
 
         return lab_value, chart_value
 
-    def get_lab_chart_tseries_all_adm(self, l_lab_id, l_chart_id, freq, duration,
-                                      from_discharge=True):
-        l_subject_id = []
-        l_hadm_id = []
-
-        l_lab_data = []
-        l_chart_data = []
-
-        readm_duration = np.array([])
-        death_duration = np.array([])
-        expire_flag = np.array([]).astype('int')
-
-        n_steps = int(duration / freq)
-        for patient in self.l_patient:
-            for adm_idx, admission in enumerate(patient.admissions):
-                a_lab_value = np.zeros((n_steps, len(l_lab_id)))
-                a_vit_value = np.zeros((n_steps, len(l_chart_id)))
-                for idx in range(n_steps):
-                    days = idx * freq
-                    lab_value, chart_value = self.__get_lab_chart_from_admission(
-                        admission, l_lab_id, l_chart_id, days, from_discharge)
-                    a_lab_value[idx, :] = lab_value
-                    a_vit_value[idx, :] = chart_value
-
-                rd = self.__readmission_duration(patient, adm_idx)
-                dd = self.__death_duration(patient, adm_idx)
-                ef = self.__expire_flag(patient, adm_idx)
-
-                def validation(lab_value, chart_value):
-                    return True
-
-                if validation(lab_value, chart_value):
-                    l_lab_data.append(a_lab_value)
-                    l_chart_data.append(a_vit_value)
-                    readm_duration = np.append(readm_duration, rd)
-                    death_duration = np.append(death_duration, dd)
-                    expire_flag = np.append(expire_flag, ef)
-                    l_subject_id.append(patient.subject_id)
-                    l_hadm_id.append(admission.hadm_id)
-
-        lab_x = np.zeros([n_steps, len(l_hadm_id), len(l_lab_id)])
-        lab_m = np.zeros([n_steps, len(l_hadm_id)])
-        vit_x = np.zeros([n_steps, len(l_hadm_id), len(l_chart_id)])
-        vit_m = np.zeros([n_steps, len(l_hadm_id)])
-
-        for idx, adm_id in enumerate(l_hadm_id):
-            for isteps in range(n_steps):
-                if not np.isnan(l_lab_data[idx][isteps]).any():
-                    lab_x[isteps][idx] = l_lab_data[idx][isteps]
-                    lab_m[isteps][idx] = 1.
-                if not np.isnan(l_chart_data[idx][isteps]).any():
-                    vit_x[isteps][idx] = l_chart_data[idx][isteps]
-                    vit_m[isteps][idx] = 1.
-
-        lab_tseries = [lab_x, lab_m]
-        vit_tseries = [vit_x, vit_m]
-        return (lab_tseries, vit_tseries, expire_flag, l_subject_id,
-                readm_duration, death_duration, l_hadm_id)
-
-    def get_lab_chart_tseries_final_adm(self, l_lab_id, l_chart_id, freq, duration,
-                                        from_discharge=True):
-
-        l_results = []
-        n_steps = int(duration / freq)
-        for idx in range(n_steps):
-            days = idx * freq
-            l_results.append(self.get_lab_chart_point_final_adm(l_lab_id, l_chart_id,
-                                                                days, from_discharge))
-
-        ids = l_results[0][3]
-        flags = l_results[0][2]
-
-        lab_x = np.zeros([n_steps, len(ids), len(l_lab_id)])
-        lab_m = np.zeros([n_steps, len(ids)])
-        vit_x = np.zeros([n_steps, len(ids), len(l_chart_id)])
-        vit_m = np.zeros([n_steps, len(ids)])
-
-        for i_steps in range(n_steps):
-            s_lab = l_results[i_steps][0]
-            s_vit = l_results[i_steps][1]
-            s_id = l_results[i_steps][3]
-
-            for i_id, id in enumerate(ids):
-                try:
-                    lab_x[i_steps][i_id] = s_lab[s_id.index(id)]
-                    lab_m[i_steps][i_id] = 1.
-                except ValueError:
-                    pass
-
-                try:
-                    vit_x[i_steps][i_id] = s_vit[s_id.index(id)]
-                    vit_m[i_steps][i_id] = 1.
-                except ValueError:
-                    pass
-
-        lab_tseries = [lab_x, lab_m]
-        vit_tseries = [vit_x, vit_m]
-
-        return lab_tseries, vit_tseries, flags, ids
-
 
 class Mimic2:
     """ MIMIC2 Controller """
+    vital_charts = [211, 618, 646, 455]
+    vital_descs = ['Heart Rate', 'Respiratory Rate', 'SpO2', 'NBP']
+    vital_units = ['BPM', 'BPM', '%', 'mmHg']
+
     def __init__(self):
         self.conn = psycopg2.connect("dbname=MIMIC2 user=%s" % getpass.getuser())
         self.cur = self.conn.cursor()
-        self.vital_charts = [211, 618, 646, 455]
-        self.vital_descs = ['Heart Rate', 'Respiratory Rate', 'SpO2', 'NBP']
-        self.vital_units = ['BPM', 'BPM', '%', 'mmHg']
 
     def __del__(self):
         self.cur.close()

@@ -1,6 +1,5 @@
 """Predict death in next n days."""
 
-from mutil import p_info
 from get_sample import Mimic2, PatientData
 
 import alg.timeseries
@@ -20,7 +19,7 @@ class PredictDeath(ControlExperiment):
     """Evaluate metrics for predicting death."""
 
     def __init__(self,
-                 max_id=200000,
+                 max_id=0,
                  target_codes='chf',
                  matched_only=False,
                  n_lab=20,
@@ -78,15 +77,15 @@ class PredictDeath(ControlExperiment):
         l_lab, l_descs, l_units = self.patients.get_common_labs(self.n_lab)
 
         if self.tseries_flag:
-            data = self.patients.get_lab_chart_tseries_final_adm(l_lab, mimic2.vital_charts,
-                                                                 self.tseries_cycle,
-                                                                 self.tseries_duration,
-                                                                 self.disch_origin)
+            data = self.patients.get_tseries_from_adm(l_lab, mimic2.vital_charts,
+                                                      self.tseries_cycle,
+                                                      self.tseries_duration,
+                                                      self.disch_origin)
             result = self.__eval_tseries(data)
 
         else:
-            data = self.patients.get_lab_chart_point_final_adm(l_lab, mimic2.vital_charts,
-                                                               self.l_poi, self.disch_origin)
+            data = self.patients.get_point_from_adm(l_lab, mimic2.vital_charts,
+                                                    self.l_poi, self.disch_origin)
             result = self.__eval_point(data)
         return result
 
@@ -130,17 +129,5 @@ class PredictDeath(ControlExperiment):
             vit=alg.timeseries.cv(vit_series, self.n_cv_fold, self.tseries_param))
 
 if __name__ == '__main__':
-    class_param = alg.classification.Default_param
-
-    pd = PredictDeath(max_id=0,
-                      target_codes='chf',
-                      n_lab=20,
-                      disch_origin=False,
-                      l_poi=0.,
-                      tseries_duration=1.,
-                      tseries_cycle=0.1,
-                      class_param=class_param,
-                      tseries_param=alg.timeseries.Default_param,
-                      n_cv_fold=10)
-
-    pd.execution()
+    pd = PredictDeath()
+    result = pd.execution()

@@ -79,16 +79,16 @@ class PredictReadmission(ControlExperiment):
         l_lab, l_descs, l_units = self.patients.get_common_labs(self.n_lab)
 
         if self.tseries_flag:
-            data = self.patients.get_lab_chart_tseries_all_adm(l_lab, mimic2.vital_charts,
-                                                               self.tseries_cycle,
-                                                               self.tseries_duration,
-                                                               self.disch_origin)
+            data = self.patients.get_tseries_from_adm(l_lab, mimic2.vital_charts,
+                                                      self.tseries_cycle,
+                                                      self.tseries_duration,
+                                                      self.disch_origin)
 
             result = self.__eval_tseries(data)
         else:
-            data = self.patients.get_lab_chart_point_all_adm(l_lab, mimic2.vital_charts,
-                                                             self.l_poi,
-                                                             self.disch_origin)
+            data = self.patients.get_point_from_adm(l_lab, mimic2.vital_charts,
+                                                    self.l_poi,
+                                                    self.disch_origin)
             result = self.__eval_point(data)
         return result
 

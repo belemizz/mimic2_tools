@@ -4,7 +4,6 @@ Experiment date, update date, and purpose should be recorded
 '''
 import alg.classification
 
-from matplotlib.pyplot import waitforbuttonpress
 from mutil import Graph, Stopwatch
 graph = Graph()
 sw = Stopwatch()
@@ -70,7 +69,7 @@ def death_prediction():
 
     l_duration = [1., 2., 3., 4., 5.]
     duration_comparison(pd, l_duration, 'death')
-    waitforbuttonpress()
+    graph.waitforbuttonpress()
 
 
 def readmission_prediction():
@@ -88,6 +87,7 @@ def readmission_prediction():
                             tseries_flag=True,
                             tseries_duration=2.,
                             tseries_cycle=0.1,
+                            visualize_data=False,
                             class_param=class_param,
                             tseries_param=tseries_param,
                             n_cv_fold=10)
@@ -97,8 +97,8 @@ def readmission_prediction():
 
     l_duration = [1., 2., 3., 4., 5.]
     duration_comparison(pr, l_duration, 'readm')
-    waitforbuttonpress()
-    
+    graph.waitforbuttonpress()
+
 
 def classify_vital_and_lab_timeseries():
     '''Predict death with vital and lab timeseries data
@@ -202,7 +202,7 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
     sw.reset()
-    readmission_prediction()
-#    death_prediction()
+#    readmission_prediction()
+    death_prediction()
     sw.stop()
     sw.print_cpu_elapsed()

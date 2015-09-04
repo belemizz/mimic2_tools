@@ -6,14 +6,145 @@ from more_itertools import chunked
 import cPickle
 
 
-class Graph:
+class MGraph:
+    """Control graphs and visualizaton."""
+    def __init__(self):
+        self.dir_to_save = "../data/"
 
+    def comparison_bar(self, data, labels, legend="", metric_label="", comparison_label="", lim=[],
+                       horizontal=False, title="", filename="", show_flag=True):
+        '''Draw a bar graph for comparing items.'''
+        original_data = locals().copy()
+        fig, ax = plt.subplots()
+
+        if horizontal:
+            [set_lim1, set_lim2] = [ax.set_ylim, ax.set_xlim]
+            set_label1 = ax.set_xlabel
+            set_label2 = ax.set_ylabel
+            set_ticks = plt.yticks
+        else:
+            [set_lim1, set_lim2] = [ax.set_xlim, ax.set_ylim]
+            set_label1 = ax.set_ylabel
+            set_label2 = ax.set_xlabel
+            set_ticks = plt.xticks
+
+        if isinstance(data[0], (int, float)):
+            Y = range(len(data))
+            bar_height = 0.5
+            if horizontal:
+                ax.barh(Y, data, height=bar_height)
+            else:
+                ax.bar(Y, data, width=bar_height)
+
+            if len(labels) == len(data):
+                set_ticks([item + 0.25 for item in Y], labels)
+            elif len(labels) == len(data) + 1:
+                pos = [p - 0.25 for p in range(len(labels) + 1)]
+                set_ticks(pos, labels)
+        else:
+            Y = range(len(labels))
+            bar_height = 1. / (len(data) + 1)
+            cmap = plt.cm.rainbow
+            cmap_v = cmap.N / (len(data) - 1)
+            for idx, d in enumerate(data):
+                if horizontal:
+                    ax.barh([y + bar_height * (len(data) - idx - 1) for y in Y], d,
+                            height=bar_height, color=cmap(idx * cmap_v))
+                else:
+                    ax.bar([y + bar_height * idx for y in Y], d,
+                           width=bar_height, color=cmap(idx * cmap_v))
+                set_ticks([item + bar_height / 2 * len(data) for item in Y], labels)
+
+        set_lim1([-bar_height, len(labels)])
+        if lim:
+            set_lim2(lim)
+        if metric_label:
+            set_label1(metric_label)
+        if comparison_label:
+            set_label2(comparison_label)
+        if legend:
+            plt.legend(legend, loc='upper right')
+        if title:
+            ax.set_title(title)
+        self.show_and_save(fig, filename, show_flag, original_data)
+
+    def line_series(self, data, y_points, legend="", x_label="", y_label="", ylim=[],
+                    markersize=10, title="", filename="", show_flag=True):
+        """Draw a line graph of the series."""
+        original_data = locals().copy()
+        fig, ax = plt.subplots()
+        for item in data:
+            if markersize is 0:
+                ax.plot(y_points, item, '-')
+            else:
+                ax.plot(y_points, item, 'o--', markersize=markersize)
+
+        if legend:
+            ax.legend(legend)
+        ax.set_xlim(self.__calc_lim(y_points, 0.05))
+
+        if ylim:
+            ax.set_ylim(ylim)
+        if x_label:
+            ax.set_xlabel(x_label)
+        if y_label:
+            ax.set_ylabel(y_label)
+        if title:
+            ax.set_title(title)
+        self.show_and_save(fig, filename, show_flag, original_data)
+
+    def labeled_line_series(self, data, label, y_points,
+                           x_label="", y_label="", ylim=[],
+                           title="", filename="", show_flag=True):
+        """Draw a line graph of the series."""
+        original_data = locals().copy()
+        fig, ax = plt.subplots()
+        for idx, item in enumerate(data):
+            if label[idx] == 0:
+                ax.plot(y_points, item, 'b-')
+
+        for idx, item in enumerate(data):
+            if label[idx] == 1:
+                ax.plot(y_points, item, 'r-')
+
+        ax.set_xlim(self.__calc_lim(y_points, 0.05))
+
+        if ylim:
+            ax.set_ylim(ylim)
+        if x_label:
+            ax.set_xlabel(x_label)
+        if y_label:
+            ax.set_ylabel(y_label)
+        if title:
+            ax.set_title(title)
+        self.show_and_save(fig, filename, show_flag, original_data)
+
+    def __calc_lim(self, values, margin_ratio):
+        margin = (max(values) - min(values)) * margin_ratio
+        return [min(values) - margin, max(values) + margin]
+
+    def show_and_save(self, fig, filename, show_flag, data=None):
+        if len(filename) > 0:
+            path = self.dir_to_save + filename
+            fig.savefig(path)
+
+            if data is not None:
+                p_path = path + '.pkl'
+                f = open(p_path, 'w')
+                cPickle.dump(data, f)
+                f.close()
+
+        if show_flag:
+            fig.show()
+
+
+class Graph(MGraph):
     """Control all the graphs and visualizations."""
 
     def __init__(self):
         """Initializer of Graph class."""
+        MGraph.__init__(self)
         self.limit_timeseries = 25
-        self.dir_to_save = "../data/"
 
     def visualize_image(self, data,
                         h_len=28, n_cols=0, filename="", show_flag=True):
@@ -57,7 +188,7 @@ class Graph:
                     ax.tick_params(labelbottom='off')
                     ax.tick_params(labelleft='off')
 
-        self.__show_and_save(fig, filename, show_flag)
+        MGraph.show_and_save(self, fig, filename, show_flag)
 
     def draw_lab_adm(self, admission, title, filename="", show_flag=True):
         """Draw lab tests data of admissions."""
@@ -119,7 +250,7 @@ class Graph:
                    for icustay in admission.icustays]
         for span in icu_ios:
             ax1.axvspan(span[0], span[1], alpha=0.2, color='red')
-        self.__show_and_save(fig, filename, show_flag)
+        MGraph.show_and_save(self, fig, filename, show_flag)
 
     def draw_lab_distribution(self, expire_values, recover_values, title,
                               filename="", show_flag=True):
@@ -132,7 +263,7 @@ class Graph:
         ax.set_xlabel("Creatinine [mg/dL]")
         ax.set_ylabel("Urea Nitrogen[mg/dL]")
 
-        self.__show_and_save(fig, filename, show_flag)
+        MGraph.show_and_save(self, fig, filename, show_flag)
 
     def plot_classification(self, positive, negative, line, title,
                             filename="", show_flag=True, x_label="", y_label=""):
@@ -157,7 +288,7 @@ class Graph:
         if len(y_label) > 0:
             ax.set_ylabel(y_label)
 
-        self.__show_and_save(fig, filename, show_flag)
+        MGraph.show_and_save(self, fig, filename, show_flag)
 
     def plot_classification_with_contour(self, x, y, xx, yy, z, x_label, y_label,
                                          filename="", show_flag=True):
@@ -170,7 +301,7 @@ class Graph:
         ax.set_ylabel(y_label)
         ax.set_xlim(xx.min(), xx.max())
         ax.set_ylim(yy.min(), yy.max())
-        self.__show_and_save(fig, filename, show_flag)
+        MGraph.show_and_save(self, fig, filename, show_flag)
 
     def bar_feature_importance(self, entropy_reduction, labels, filename="", show_flag=True):
         fig, ax = plt.subplots()
@@ -183,7 +314,7 @@ class Graph:
         plt.tick_params(axis='both', which='both', labelsize=8)
         plt.tight_layout()
 
-        self.__show_and_save(fig, filename, show_flag)
+        MGraph.show_and_save(self, fig, filename, show_flag)
 
     def bar_classification(self, l_classification_result, labels, comparison_label="",
                            title="", filename="", show_flag=True):
@@ -191,18 +322,18 @@ class Graph:
         l_prec = [item.prec for item in l_classification_result]
         l_f = [item.f for item in l_classification_result]
         legend = ['recall', 'precision', 'f_measure']
-        self.comparison_bar([l_rec, l_prec, l_f], labels, legend, lim=[0, 1],
-                            comparison_label=comparison_label, title=title,
-                            filename=filename, show_flag=show_flag)
+        MGraph.comparison_bar(self, [l_rec, l_prec, l_f], labels, legend, lim=[0, 1],
+                              comparison_label=comparison_label, title=title,
+                              filename=filename, show_flag=show_flag)
 
     def bar_histogram(self, hist, bin_edges, hist_label, bin_label, only_left_edge=False,
                       title="", filename="", show_flag=True):
         label = list(bin_edges)
         if only_left_edge:
             label.pop()
-
-        self.comparison_bar(hist, label, metric_label=hist_label, comparison_label=bin_label,
-                            title=title, filename=filename, show_flag=show_flag)
+        MGraph.comparison_bar(self, hist, label, metric_label=hist_label,
+                              comparison_label=bin_label,
+                              title=title, filename=filename, show_flag=show_flag)
 
     def series_classification(self, l_classification_result, timestamp, x_label,
                               title="", filename="", show_flag=True):
@@ -210,116 +341,8 @@ class Graph:
         l_prec = [item.prec for item in l_classification_result]
         l_f = [item.f for item in l_classification_result]
         legend = ['recall', 'precision', 'f_measure']
-        self.line_series([l_rec, l_prec, l_f], timestamp, legend, ylim=[0, 1],
-                         x_label=x_label, title=title, filename=filename, show_flag=show_flag)
-
-    # general graphs
-    def comparison_bar(self, data, labels, legend="", metric_label="", comparison_label="", lim=[],
-                       horizontal=False, title="", filename="", show_flag=True):
-        '''Draw a bar graph for comparing items.'''
-        original_data = locals().copy()
-        fig, ax = plt.subplots()
-
-        if horizontal:
-            [set_lim1, set_lim2] = [ax.set_ylim, ax.set_xlim]
-            set_label1 = ax.set_xlabel
-            set_label2 = ax.set_ylabel
-            set_ticks = plt.yticks
-        else:
-            [set_lim1, set_lim2] = [ax.set_xlim, ax.set_ylim]
-            set_label1 = ax.set_ylabel
-            set_label2 = ax.set_xlabel
-            set_ticks = plt.xticks
-
-        if isinstance(data[0], (int, float)):
-            Y = range(len(data))
-            bar_height = 0.5
-            if horizontal:
-                ax.barh(Y, data, height=bar_height)
-            else:
-                ax.bar(Y, data, width=bar_height)
-
-            if len(labels) == len(data):
-                set_ticks([item + 0.25 for item in Y], labels)
-            elif len(labels) == len(data) + 1:
-                pos = [p - 0.25 for p in range(len(labels) + 1)]
-                set_ticks(pos, labels)
-        else:
-            Y = range(len(labels))
-            bar_height = 1. / (len(data) + 1)
-            cmap = plt.cm.rainbow
-            cmap_v = cmap.N / (len(data) - 1)
-            for idx, d in enumerate(data):
-                if horizontal:
-                    ax.barh([y + bar_height * (len(data) - idx - 1) for y in Y], d,
-                            height=bar_height, color=cmap(idx * cmap_v))
-                else:
-                    ax.bar([y + bar_height * idx for y in Y], d,
-                           width=bar_height, color=cmap(idx * cmap_v))
-                set_ticks([item + bar_height / 2 * len(data) for item in Y], labels)
-
-        set_lim1([-bar_height, len(labels)])
-        if lim:
-            set_lim2(lim)
-        if metric_label:
-            set_label1(metric_label)
-        if comparison_label:
-            set_label2(comparison_label)
-        if legend:
-            plt.legend(legend, loc='upper right')
-        if title:
-            ax.set_title(title)
-        self.__show_and_save(fig, filename, show_flag, original_data)
-
-    def line_series(self, data, y_points, legend="", x_label="", y_label="", ylim=[],
-                    markersize=10, title="", filename="", show_flag=True):
-        original_data = locals().copy()
-        fig, ax = plt.subplots()
-        for item in data:
-            if markersize is 0:
-                
-                ax.plot(y_points, item, '-')
-            else:
-                ax.plot(y_points, item, 'o--', markersize=markersize)
-
-        if legend:
-            ax.legend(legend)
-        ax.set_xlim(self.__calc_lim(y_points, 0.05))
-
-        if ylim:
-            ax.set_ylim(ylim)
-        if x_label:
-            ax.set_xlabel(x_label)
-        if y_label:
-            ax.set_ylabel(y_label)
-        if title:
-            ax.set_title(title)
-        self.__show_and_save(fig, filename, show_flag, original_data)
-
-    def labeled_line_series(self, data, label, y_points,
-                           x_label="", y_label="", ylim=[],
-                           title="", filename="", show_flag=True):
-        original_data = locals().copy()
-        fig, ax = plt.subplots()
-        for idx, item in enumerate(data):
-            if label[idx] == 0:
-                ax.plot(y_points, item, 'b-')
-
-        for idx, item in enumerate(data):
-            if label[idx] == 1:
-                ax.plot(y_points, item, 'r-')
-
-        ax.set_xlim(self.__calc_lim(y_points, 0.05))
-
-        if ylim:
-            ax.set_ylim(ylim)
-        if x_label:
-            ax.set_xlabel(x_label)
-        if y_label:
-            ax.set_ylabel(y_label)
-        if title:
-            ax.set_title(title)
-        self.__show_and_save(fig, filename, show_flag, original_data)
+        MGraph.line_series(self, [l_rec, l_prec, l_f], timestamp, legend, ylim=[0, 1],
+                           x_label=x_label, title=title, filename=filename, show_flag=show_flag)
 
     def draw_series_data_class(self, series, n_draw_sample=0):
         """Visualize the deata of SeriesData class."""
@@ -335,35 +358,16 @@ class Graph:
 
         for idx_f in range(series.n_feature()):
             f_series = series.slice_by_feature(idx_f)
-            self.labeled_line_series(f_series.series.transpose(), f_series.label, y_points)
-        self.waitforbuttunpress()
+            MGraph.labeled_line_series(self, f_series.series.transpose(), f_series.label, y_points)
 
-    def waitforbuttunpress(self):
+    def waitforbuttonpress(self):
         plt.waitforbuttonpress()
-
-    def __calc_lim(self, values, margin_ratio):
-        margin = (max(values) - min(values)) * margin_ratio
-        return [min(values) - margin, max(values) + margin]
 
     def normalize(self, value):
         max_val = max(abs(value))
         order = 10.0 ** int(log10(float(max_val)))
         n_value = value / order
         return n_value, order
-
-    def __show_and_save(self, fig, filename, show_flag, data=None):
-        if len(filename) > 0:
-            path = self.dir_to_save + filename
-            fig.savefig(path)
-
-            if data is not None:
-                p_path = path + '.pkl'
-                f = open(p_path, 'w')
-                cPickle.dump(data, f)
-                f.close()
-
-        if show_flag:
-            fig.show()
 
     def __figure_with_legend(self):
         fig = plt.figure(figsize=plt.figaspect(0.5))
@@ -403,4 +407,4 @@ class Graph:
             ax.set_xlabel("Hours since Admission")
 
             self.__show_legend(ax)
-            self.__show_and_save(fig, filename, show_flag)
+            MGraph.show_and_save(self, fig, filename, show_flag)
