@@ -21,7 +21,7 @@ class PredictDeath(ControlExperiment):
 
     def __init__(self,
                  max_id=200000,
-                 target_codes=['428.0'],
+                 target_codes='chf',
                  matched_only=False,
                  n_lab=20,
                  disch_origin=True,
@@ -143,4 +143,4 @@ if __name__ == '__main__':
                       tseries_param=alg.timeseries.Default_param,
                       n_cv_fold=10)
 
-    pd.n_day_prediction()
+    pd.execution()

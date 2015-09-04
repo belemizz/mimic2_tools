@@ -19,10 +19,20 @@ graph = Graph()
 class PredictReadmission(ControlExperiment):
     ''''Prediction of readmission prediction.'''
 
-    def __init__(self, max_id, target_codes, matched_only,
-                 n_lab, disch_origin, l_poi,
-                 tseries_flag, tseries_duration, tseries_cycle, visualize_data,
-                 class_param, tseries_param, n_cv_fold):
+    def __init__(self,
+                 max_id=0,
+                 target_codes='chf',
+                 matched_only=False,
+                 n_lab=20,
+                 disch_origin=True,
+                 l_poi=0.,
+                 tseries_flag=True,
+                 tseries_duration=1.,
+                 tseries_cycle=0.1,
+                 visualize_data=True,
+                 class_param=alg.classification.Default_param,
+                 tseries_param=alg.timeseries.Default_param,
+                 n_cv_fold=10):
         '''Initializer.
 
         :param max_id: maximum of subject id (0 for using all ids)

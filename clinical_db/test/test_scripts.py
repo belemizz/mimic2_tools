@@ -1,9 +1,8 @@
 """Test code for scripts."""
+from nose.plugins.attrib import attr
 
-import unittest
 
-
-class TestScripts(unittest.TestCase):
+class TestScripts():
 
     def test_list_id_from_code(self):
         import list_id_form_code
@@ -21,7 +20,10 @@ class TestScripts(unittest.TestCase):
     def test_predict_death(self):
         from predict_death import PredictDeath
         pd = PredictDeath(max_id=2000)
-        pd.n_day_prediction()
+        pd.execution()
 
-if __name__ == '__main__':
-    unittest.main()
+    @attr(work=True)
+    def test_predict_readmission(self):
+        from predict_readmission import PredictReadmission
+        pr = PredictReadmission(max_id=2000)
+        pr.execution()
