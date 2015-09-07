@@ -6,8 +6,7 @@ import theano as th
 import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
-import get_sample
-from get_sample import select_tseries
+from get_sample import select_tseries, TimeSeries, SeriesData
 from . import calc_classification_result
 
 import sys
@@ -18,48 +17,16 @@ from mutil import p_info
 from bunch import Bunch
 from alg.metrics import BinaryClassResult, BinaryClassCVResult
 
-L_algorithm = ['lstm', 'lr', 'coin']
-Default_param = Bunch(name='lr', lr_max_step=50)
+L_algorithm = ['lr', 'coin']
+Default_param = Bunch(name='lr', lr_max_step=50, alg_fill='fv')
 
-
-class SeriesData():
-    '''Series Data Handler'''
-    def __init__(self, series, mask, label):
-        self.series = series
-        self.mask = mask
-        self.label = label
-
-    def slice_by_time(self, index):
-        return SeriesData(self.series[index, :, :],
-                          self.mask[index, :],
-                          self.label)
-
-    def slice_by_sample(self, index):
-        return SeriesData(self.series[:, index, :],
-                          self.mask[:, index],
-                          self.label[index])
-
-    def slice_by_feature(self, index):
-        return SeriesData(self.series[:, :, index],
-                          self.mask,
-                          self.label)
-
-    def n_step(self):
-        return self.series.shape[0]
-
-    def n_sample(self):
-        return self.series.shape[1]
-
-    def n_feature(self):
-        return self.series.shape[2]
+ts = TimeSeries()
 
 
 def example(param=Default_param):
     """Function for showing how to use this module."""
-    sample_set = get_sample.tseries(0, 2)
-    sample = SeriesData(sample_set[0], sample_set[1], sample_set[2])
-
-    train_set, test_set = train_test_split_ts(sample)
+    sample = ts.sample(0, 2)
+    train_set, test_set = sample.split_train_test()
     result = fit_and_test(train_set, test_set)
     print result.get_dict()
 
@@ -442,18 +409,20 @@ class Lstm():
         return self.f_pred(test_sample[0], test_sample[1])
 
 
-class LR_ts():
-    def __init__(self, max_step=40):
-        self.clf = linear_model.LogisticRegression(random_state=0)
-        self.max_step = max_step
+class SeriesClassifier():
+    def __init__(self, alg_fill):
+        self.alg_fill = alg_fill
 
-    def fill_missing(self, x, m, algorithm='fv'):
+    def fill_missing(self, series_data, algorithm='fv'):
+        x = series_data.series
+        m = series_data.mask
 
-        if algorithm == 'none':
+        if algorithm is 'zero':
             pass
-        elif algorithm == 'fv':
-            fill_mat = np.zeros(x.shape[1:3])
+
+        elif algorithm is 'fv':
             """ fill by final available value """
+            fill_mat = np.zeros(x.shape[1:3])
             for s in range(x.shape[0]):
                 for i in range(x.shape[1]):
                     if m[s, i] == 1:
@@ -461,7 +430,8 @@ class LR_ts():
                     else:
                         x[s, i] = fill_mat[i]
 
-        elif algorithm == 'sample_ave':
+        elif algorithm is 'sample_ave':
+            """Fill with sample avarage value"""
             count_m = m.sum(axis=0)
             sum_x = x.sum(axis=0)
             ave_x = np.zeros(sum_x.shape)
@@ -469,43 +439,43 @@ class LR_ts():
             for dim in range(x.shape[2]):
                 ave_x[:, dim] = np.divide(sum_x[:, dim], count_m)
 
-            """ fill by final available value """
             for s in range(x.shape[0]):
                 for i in range(x.shape[1]):
                     if m[s, i] == 0:
                         x[s, i] = ave_x[i]
         else:
-            ValueError
+            raise ValueError
 
-    def fit(self, train_set):
-        self.fill_missing(train_set[0], train_set[1])
-        train_x = train_set[0]
-        train_y = train_set[2]
+        return SeriesData(x, m, series_data.label)
 
-        n_sample = train_x.shape[1]
-        s_train_x = np.array(
-            [train_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
 
-        self.clf.fit(s_train_x, train_y)
+class LR(SeriesClassifier):
+    def __init__(self, max_step=40, alg_fill='fv'):
+        SeriesClassifier.__init__(self, alg_fill)
+        self.clf = linear_model.LogisticRegression(random_state=0)
+        self.max_step = max_step
 
-    def predict(self, test_sample):
-        self.fill_missing(test_sample[0], test_sample[1])
-        test_x = test_sample[0]
+    def fit(self, train):
+        self.fill_missing(train, self.alg_fill)
+        n_sample = train.n_sample()
+        train_x = np.array(
+            [train.series[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
 
-        n_sample = test_x.shape[1]
-        s_test_x = np.array([test_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
+        self.clf.fit(train_x, train.label)
 
-        predict_y = self.clf.predict(s_test_x)
-        return predict_y
+    def predict(self, test):
+        self.fill_missing(test, self.alg_fill)
+        n_sample = test.n_sample()
+        test_x = np.array(
+            [test.series[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
+        return self.clf.predict(test_x)
 
-    def score(self, test_sample):
-        self.fill_missing(test_sample[0], test_sample[1])
-        test_x = test_sample[0]
-
-        n_sample = test_x.shape[1]
-        s_test_x = np.array([test_x[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
-        score_y = self.clf.decision_function(s_test_x)
-        return score_y
+    def score(self, test):
+        self.fill_missing(test, self.alg_fill)
+        n_sample = test.n_sample()
+        test_x = np.array(
+            [test.series[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
+        return self.clf.decision_function(test_x)
 
 
 class Cointoss():
@@ -516,7 +486,7 @@ class Cointoss():
         pass
 
     def predict(self, test_sample):
-        n_sample = test_sample[0].shape[1]
+        n_sample = test_sample.n_sample()
         predict_y = np.zeros(n_sample)
 
         for i in range(n_sample):
@@ -528,33 +498,25 @@ class Cointoss():
 
 
 def get_algorithm(param=Default_param):
-    if param.name is 'lstm':
-        clf = Lstm()
-    elif param.name is 'lr':
-        clf = LR_ts(max_step=param.lr_max_step)
+    if param.name is 'lr':
+        clf = LR(max_step=param.lr_max_step, alg_fill=param.alg_fill)
+#        clf = LR_ts(max_step=param.lr_max_step)
     elif param.name is 'coin':
         clf = Cointoss()
+    elif param.name is 'lstm':
+        clf = Lstm()
     else:
         raise ValueError("algorithm has to be either %s" % L_algorithm)
     return clf
 
 
-def train_test_split_ts(sample):
-    cv_iter = cross_validation.StratifiedKFold(sample.label)
-    train_idx, test_idx = list(cv_iter)[0]
-    train_sample = sample.slice_by_sample(train_idx)
-    test_sample = sample.slice_by_sample(test_idx)
-    return (train_sample, test_sample)
-
-
 def fit_and_test(train_set, test_set, param=Default_param):
     '''Train and test with samples'''
     clf = get_algorithm(param)
-    clf.fit([train_set.series, train_set.mask, train_set.label])
-    predict_y = clf.predict([test_set.series, test_set.mask])
-
-    if clf.__class__.__name__ in ['LR_ts', 'Cointoss']:
-        score_y = clf.score([test_set.series, test_set.mask])
+    clf.fit(train_set)
+    predict_y = clf.predict(test_set)
+    if clf.__class__.__name__ in ['LR', 'Cointoss']:
+        score_y = clf.score(test_set)
     else:
         score_y = None
 

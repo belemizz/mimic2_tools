@@ -1,13 +1,18 @@
 """
 Test code for algorithm codes
 """
-import unittest
-import get_sample
 import numpy as np
-
 from sys import exit
-from mutil import Cache
 from nose.tools import ok_, eq_
+from nose.plugins.attrib import attr
+
+import get_sample
+
+from mutil import Cache
+
+import alg.timeseries
+import alg.auto_encoder
+import alg.feature_selection
 
 save_result = False
 
@@ -17,13 +22,12 @@ if save_result:
         exit()
 
 
-class TestSequenceFunctions(unittest.TestCase):
+class TestAutoEncoder:
 
     def test_real_test_mode(self):
         ok_(not save_result, 'this is save mode')
 
     def test_auto_encoder(self):
-        import alg.auto_encoder
         x, y = get_sample.normal_dist(4)
 
         encoded = alg.auto_encoder.pca(x, x, 2, cache_key='')
@@ -45,15 +49,9 @@ class TestSequenceFunctions(unittest.TestCase):
         self.__check_data('dae_selected', dae_s)
 
         # check selection consistency
-        import alg.feature_selection
         i_index = alg.feature_selection.select_feature_index(dae, y, n_select=5)
         dae_s_c = dae[:, i_index]
         ok_((dae_s == dae_s_c).all())
-
-    def test_classification(self):
-        pass
-#        import alg.classification
-#        result_ex = alg.classification.example(0, 2)
 
     def __check_data(self, cache_key, data):
         cc = Cache(cache_key, cache_dir='../data/test/')
@@ -66,5 +64,28 @@ class TestSequenceFunctions(unittest.TestCase):
             else:
                 eq_(data, correct_data, cache_key)
 
-if __name__ == '__main__':
-    unittest.main()
+
+class TestClassification:
+    def setUp(self):
+        pass
+
+
+@attr(alg_work=True)
+class TestTimeseries:
+
+    def setUp(self):
+        pass
+
+    def test_example(self):
+        alg.timeseries.example()
+
+    def test_lr(self):
+        # get data
+        ts = get_sample.TimeSeries()
+        data = ts.sample()
+        train, test = data.split_train_test()
+
+        lf = alg.timeseries.LR()
+        lf.fit(train)
+        eq_(lf.predict(test)[66], 0)
+        lf.score(test)

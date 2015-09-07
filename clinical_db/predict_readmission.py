@@ -7,7 +7,7 @@ from patient_classification import ControlExperiment
 
 import alg.classification
 import alg.timeseries
-from alg.timeseries import SeriesData
+from get_sample.timeseries import SeriesData
 
 import numpy as np
 from mutil import Graph
@@ -76,17 +76,17 @@ class PredictReadmission(ControlExperiment):
         self.n_cv_fold = self.original_algo_params[2]
 
     def execution(self):
-        l_lab, l_descs, l_units = self.patients.get_common_labs(self.n_lab)
+        l_lab, l_descs, l_units = self.patients.common_lab(self.n_lab)
 
         if self.tseries_flag:
-            data = self.patients.get_tseries_from_adm(l_lab, mimic2.vital_charts,
+            data = self.patients.tseries_from_adm(l_lab, mimic2.vital_charts,
                                                       self.tseries_cycle,
                                                       self.tseries_duration,
                                                       self.disch_origin)
 
             result = self.__eval_tseries(data)
         else:
-            data = self.patients.get_point_from_adm(l_lab, mimic2.vital_charts,
+            data = self.patients.point_from_adm(l_lab, mimic2.vital_charts,
                                                     self.l_poi,
                                                     self.disch_origin)
             result = self.__eval_point(data)

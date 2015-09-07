@@ -75,10 +75,10 @@ class ControlClassification(ControlExperiment):
             return cache.load(self.reproduction_param)
         except IOError:
             patients = PatientData(self.id_list)
-            n_patients = patients.get_n_patient()
+            n_patients = patients.n_patient()
 
-            l_icd9, l_icd9_desc = patients.get_common_icd9(self.n_icd9)
-            comat_icd9, hist_icd9, _ = patients.get_comat_icd9(l_icd9)
+            l_icd9, l_icd9_desc = patients.common_icd9(self.n_icd9)
+            comat_icd9, hist_icd9, _ = patients.comat_icd9(l_icd9)
             retval = [n_patients, l_icd9, comat_icd9, hist_icd9]
             return retval
             return cache.save(retval, self.reproduction_param)

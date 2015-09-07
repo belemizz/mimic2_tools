@@ -40,16 +40,16 @@ class PatientData:
                     p_info("ID %d is not available" % id)
             return cache.save(l_patient, param)
 
-    def get_n_patient(self):
+    def n_patient(self):
         return len(self.l_patient)
 
-    def get_n_admission(self):
+    def n_adm(self):
         n_adm = 0
         for patient in self.l_patient:
             n_adm += len(patient.admissions)
         return n_adm
 
-    def get_common_labs(self, n_select):
+    def common_lab(self, n_select):
         ids = {}
         descs = {}
         units = {}
@@ -65,7 +65,7 @@ class PatientData:
         common_tests, [l_descs, l_units], _ = self.__get_common_item(ids, n_select, [descs, units])
         return common_tests, l_descs, l_units
 
-    def get_common_icd9(self, n_select):
+    def common_icd9(self, n_select):
         codes = {}
         descs = {}
         for patient in self.l_patient:
@@ -80,7 +80,7 @@ class PatientData:
 
         return common_icd9, l_desc[0]
 
-    def get_common_medication(self, n_select):
+    def common_medication(self, n_select):
         ids = {}
         descs = {}
         units = {}
@@ -97,7 +97,7 @@ class PatientData:
         common_meds, [l_desc, l_unit], _ = self.__get_common_item(ids, n_select, [descs, units])
         return common_meds, l_desc, l_unit
 
-    def get_comat_icd9(self, l_icd9, cache_key='get_comat_icd9'):
+    def comat_icd9(self, l_icd9, cache_key='get_comat_icd9'):
         param = locals().copy()
         del param['self']
         param.update(self.__reproduce_param())
@@ -109,13 +109,13 @@ class PatientData:
             comat = self.__comat_helper(l_icd9, l_icd9, self.__icd9_get_func, self.__icd9_get_func)
             return cache.save(comat, param)
 
-    def get_comat_med(self, l_med):
+    def comat_med(self, l_med):
         return self.__comat_helper(l_med, l_med, self.__med_get_func, self.__med_get_func)
 
-    def get_comat_icd9_med(self, l_icd9, l_med_id):
+    def comat_icd9_med(self, l_icd9, l_med_id):
         return self.__comat_helper(l_icd9, l_med_id, self.__icd9_get_func, self.__med_get_func)
 
-    def get_comat_icd9_lab(self, l_icd9, l_med_id):
+    def comat_icd9_lab(self, l_icd9, l_med_id):
         return self.__comat_helper(l_icd9, l_med_id, self.__icd9_get_func, self.__lab_get_func)
 
     def __icd9_get_func(self, admission):
@@ -200,8 +200,8 @@ class PatientData:
             ef = 0
         return ef
 
-    def get_point_from_adm(self, l_lab_id, l_chart_id, days=0.,
-                           from_discharge=True, final_adm_only=False):
+    def point_from_adm(self, l_lab_id, l_chart_id, days=0.,
+                       from_discharge=True, final_adm_only=False):
         l_subject_id = []
         l_hadm_id = []
 
@@ -220,7 +220,7 @@ class PatientData:
                 return False
 
         def append_adm_data(patient, idx, admission):
-            lab_value, chart_value = self.__get_lab_chart_from_admission(
+            lab_value, chart_value = self.__point_from_adm(
                 admission, l_lab_id, l_chart_id, days, from_discharge)
             rd = self.__readmission_duration(patient, idx)
             dd = self.__death_duration(patient, idx)
@@ -258,8 +258,8 @@ class PatientData:
         death_after_30 = np.logical_and(alive_on_disch, death_duration >= 31)
         readm_after_30 = np.logical_and(alive_on_disch, readm_duration >= 31)
 
-        p_info("#Subject: {} (Total: {})".format(len(set(l_subject_id)), self.get_n_patient()))
-        p_info("#Admission: {} (Total: {})".format(len(l_hadm_id), self.get_n_admission()))
+        p_info("#Subject: {} (Total: {})".format(len(set(l_subject_id)), self.n_patient()))
+        p_info("#Admission: {} (Total: {})".format(len(l_hadm_id), self.n_adm()))
         p_info("__discharge status__")
         p_info("Death:{}".format(sum(death_on_disch)))
         p_info("Alive:{}".format(sum(alive_on_disch)))
@@ -274,8 +274,8 @@ class PatientData:
 
         return a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id
 
-    def get_tseries_from_adm(self, l_lab_id, l_chart_id, freq, duration,
-                             from_discharge=True, final_adm_only=False):
+    def tseries_from_adm(self, l_lab_id, l_chart_id, cycle, duration,
+                         from_discharge=True, final_adm_only=False):
         l_subject_id = []
         l_hadm_id = []
 
@@ -285,7 +285,7 @@ class PatientData:
         l_readm_duration = []
         l_death_duration = []
         l_expire_flag = []
-        n_steps = int(duration / freq)
+        n_steps = int(duration / cycle)
 
         def validation(lab_value, chart_value):
             return True
@@ -294,8 +294,8 @@ class PatientData:
             a_lab_value = np.zeros((n_steps, len(l_lab_id)))
             a_vit_value = np.zeros((n_steps, len(l_chart_id)))
             for idx in range(n_steps):
-                days = idx * freq
-                lab_value, chart_value = self.__get_lab_chart_from_admission(
+                days = idx * cycle
+                lab_value, chart_value = self.__point_from_adm(
                     admission, l_lab_id, l_chart_id, days, from_discharge)
                 a_lab_value[idx, :] = lab_value
                 a_vit_value[idx, :] = chart_value
@@ -346,8 +346,7 @@ class PatientData:
         return (lab_tseries, vit_tseries, expire_flag, l_subject_id,
                 readm_duration, death_duration, l_hadm_id)
 
-    def __get_lab_chart_from_admission(self, admission, l_lab_id, l_chart_id,
-                                       days=0., from_discharge=True):
+    def __point_from_adm(self, admission, l_lab_id, l_chart_id, days=0., from_discharge=True):
         '''get a datapoint of lab and chart in a admission'''
         if from_discharge:
             if admission.get_estimated_disch_time() > datetime.datetime.min + timedelta(days):

@@ -10,6 +10,7 @@ class TestScripts():
     def test_analyze_icd9(self):
         import analyze_icd9
 
+    @attr(slow=True)
     def test_show_medical_record(self):
         import show_medical_record
 

@@ -5,7 +5,7 @@ from nose.plugins.attrib import attr
 from nose.tools import eq_, ok_
 
 import datetime
-from get_sample import Mimic2, Mimic2m, PatientData
+from get_sample import Mimic2, Mimic2m, PatientData, TimeSeries
 
 
 class TestMimic2m:
@@ -81,31 +81,44 @@ class TestPatientData:
         self.patients = PatientData(id_list)
 
     def test_counter(self):
-        eq_(self.patients.get_n_patient(), 42)
-        eq_(self.patients.get_n_admission(), 64)
+        eq_(self.patients.n_patient(), 42)
+        eq_(self.patients.n_adm(), 64)
 
     def test_get_data(self):
-        lab_list = self.patients.get_common_labs(2)
+        lab_list = self.patients.common_lab(2)
         eq_(lab_list[0], [50177, 50383])
 
-        icd9_list = self.patients.get_common_icd9(2)
+        icd9_list = self.patients.common_icd9(2)
         eq_(icd9_list[0], ['428.0', '427.31'])
 
-        med_list = self.patients.get_common_medication(2)
+        med_list = self.patients.common_medication(2)
         eq_(med_list[0], [25, 43])
 
-        pt_all_adm = self.patients.get_point_from_adm(lab_list[0], Mimic2.vital_charts,
-                                                      0.0, from_discharge=False)
-        pt_final_adm = self.patients.get_point_from_adm(lab_list[0], Mimic2.vital_charts,
-                                                        0.0, from_discharge=False,
-                                                        final_adm_only=True)
+        pt_all_adm = self.patients.point_from_adm(lab_list[0], Mimic2.vital_charts,
+                                                  0.0, from_discharge=False)
+        pt_final_adm = self.patients.point_from_adm(lab_list[0], Mimic2.vital_charts, 0.0,
+                                                    from_discharge=False, final_adm_only=True)
         ok_((pt_all_adm[0][6] == pt_final_adm[0][3]).all())
 
-        ts_all_adm = self.patients.get_tseries_from_adm(lab_list[0],
-                                                        Mimic2.vital_charts,
-                                                        0.1, 1.0, False)
-        ts_final_adm = self.patients.get_tseries_from_adm(lab_list[0],
-                                                          Mimic2.vital_charts,
-                                                          0.1, 1.0, False,
-                                                          final_adm_only=True)
+        ts_all_adm = self.patients.tseries_from_adm(lab_list[0], Mimic2.vital_charts,
+                                                    0.1, 1.0, False)
+        ts_final_adm = self.patients.tseries_from_adm(lab_list[0], Mimic2.vital_charts,
+                                                      0.1, 1.0, False, final_adm_only=True)
         ok_((ts_all_adm[0][0][:, 1, :] == ts_final_adm[0][0][:, 0, :]).all())
+
+
+@attr(timeseries=True)
+class TestTimeSeries:
+    '''Test for TimeSeries class.'''
+    def setUp(self):
+        self.ts = TimeSeries()
+
+    def test_normal(self):
+        data = self.ts.normal(n_dim=3, bias=[-10, -9], length=5)
+        eq_(data.series[8, 199, 2], 0.)
+        eq_(data.label[199], 1)
+
+    def test_imdb(self):
+        data = self.ts.imdb_data()
+        eq_(data.series[2955, 27102, 0], 4.0)
+        eq_(data.label[27102], 1)

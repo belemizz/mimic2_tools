@@ -1,19 +1,16 @@
 """Get sample by accesssing database or generating."""
 
-import sys
-sys.path.append('../../DeepLearningTutorials/code/')
-
 import numpy as np
 import theano
 import theano.tensor as T
 
 import random
-import imdb
 
 from .mimic2 import Mimic2, PatientData
 from .mimic2m import Mimic2m
+from .timeseries import TimeSeries, SeriesData
 
-__all__ = [Mimic2, PatientData, Mimic2m]
+__all__ = [Mimic2, PatientData, Mimic2m, TimeSeries, SeriesData]
 
 
 def vector(source_num=0, n_dim=0, n_flag=2):
@@ -48,99 +45,12 @@ def vector(source_num=0, n_dim=0, n_flag=2):
     return x, y
 
 
-def tseries(source_num=0, n_dim=2):
-    """
-    Get timeseries data.
-
-    returns [x, m, y]:
-    x: 3-d array of [step, sample feature]
-    m: 2-d array of [step, sample]
-    y: 1-d array of labels
-    """
-    if source_num is 0:
-        [x, mask, y] = normal_timeseries(n_dim=n_dim, bias=[-10, -9], length=5)
-    elif source_num is 1:
-        [x, mask, y] = imdb_data()
-    else:
-        raise ValueError('source_num must be 0 or 1')
-    return x, mask, y
-
-
 def select_tseries(sample_all, index):
     """Select elements in timeseries according to the index."""
     sel_x = sample_all[0][:, index, :]
     sel_m = sample_all[1][:, index]
     sel_y = sample_all[2][index]
     return [sel_x, sel_m, sel_y]
-
-
-def l_tseries_to_ar(ts_x):
-    """Convert list of timeseries to numpy arrays of value and mask."""
-    max_length = max([len(s) for s in ts_x])
-
-    if np.array(ts_x[0]).ndim == 1:
-        # data is one dimentional
-        dim = 1
-    elif np.array(ts_x[0]).ndim == 2:
-        dim = ts_x[0].shape[1]
-    else:
-        raise ValueError('Invalid data format')
-
-    x = np.zeros((max_length, len(ts_x), dim))
-    mask = np.zeros((max_length, len(ts_x)))
-
-    for i_series, series in enumerate(ts_x):
-        if dim == 1:
-            x[:len(series), i_series] = [[val] for val in series]
-        else:
-            x[:len(series), i_series] = series
-        mask[:len(series), i_series] = 1
-    return x, mask
-
-
-def normal_timeseries(length=50, n_dim=2, random_length=True,
-                      n_neg_sample=1500, n_pos_sample=500, bias=[-1, +1],
-                      seed=0):
-    """Generate timeseries by random values based on normal distribution."""
-    random.seed(seed)
-    np.random.seed(seed)
-
-    def get_series(bias, flag, n_sample):
-        data = []
-        for num in xrange(0, n_sample):
-            if random_length:
-                s_len = np.random.randint(length) + length
-            else:
-                s_len = length
-            sample = np.zeros([s_len, n_dim])
-            for i in xrange(0, s_len):
-                sample[i] = np.random.randn(1, n_dim) + bias
-            data.append([sample, flag])
-        return data
-
-    negative_data = get_series(bias[0], 0, n_neg_sample)
-    positive_data = get_series(bias[1], 1, n_pos_sample)
-
-    data = negative_data + positive_data
-    random.shuffle(data)
-
-    x = [item[0] for item in data]
-    x, mask = l_tseries_to_ar(x)
-    y = np.array([item[1] for item in data])
-    return [x, mask, y]
-
-
-def imdb_data():
-    """Load IMDB data."""
-    train, valid, test = imdb.load_data(n_words=10000,
-                                        valid_portion=0.05,
-                                        maxlen=100)
-
-    x = train[0] + valid[0] + test[0]
-    x, mask = l_tseries_to_ar(x)
-
-    y = np.array(train[1] + valid[1] + test[1])
-    return [x, mask, y]
 
 
 def chop_data(all_data, all_target, data_dim, n_flag):
