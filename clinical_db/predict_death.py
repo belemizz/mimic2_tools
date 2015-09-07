@@ -78,14 +78,13 @@ class PredictDeath(ControlExperiment):
 
         if self.tseries_flag:
             data = self.patients.tseries_from_adm(l_lab, mimic2.vital_charts,
-                                                      self.tseries_cycle,
-                                                      self.tseries_duration,
-                                                      self.disch_origin)
+                                                  self.tseries_cycle, self.tseries_duration,
+                                                  self.disch_origin)
             result = self.__eval_tseries(data)
 
         else:
             data = self.patients.point_from_adm(l_lab, mimic2.vital_charts,
-                                                    self.l_poi, self.disch_origin)
+                                                self.l_poi, self.disch_origin)
             result = self.__eval_point(data)
         return result
 
@@ -131,3 +130,4 @@ class PredictDeath(ControlExperiment):
 if __name__ == '__main__':
     pd = PredictDeath()
     result = pd.execution()
+    print result.lab.get_dict()

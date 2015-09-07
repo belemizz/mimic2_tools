@@ -77,7 +77,15 @@ class TestTimeseries:
         pass
 
     def test_example(self):
-        alg.timeseries.example()
+        ts = get_sample.TimeSeries()
+        data = ts.sample(0, 2)
+        train, test = data.split_train_test()
+
+        result = alg.timeseries.fit_and_test(train, test)
+        print result.get_dict()
+
+        cv_result = alg.timeseries.cv(data)
+        print cv_result.get_dict()
 
     def test_lr(self):
         # get data

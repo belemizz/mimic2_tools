@@ -9,6 +9,39 @@ graph = Graph()
 sw = Stopwatch()
 
 
+def class_weight_comparison():
+    from get_sample.timeseries import TimeSeries
+    import alg.timeseries
+    ts = TimeSeries()
+    sample = ts.normal(length=10, n_dim=2,
+                       n_negative=900, n_positive=100, bias=[9, 10])
+    train_set, test_set = sample.split_train_test()
+
+    param = alg.timeseries.Default_param
+
+    step = 0.005
+    minimum = 0.1
+    maximum = 0.16
+
+    n_step = int((maximum - minimum) / step) + 1
+    for idx in range(n_step):
+        weight_0 = minimum + idx * step
+        weight_1 = 1.0 - weight_0
+        param.class_weight = {0: weight_0,
+                              1: weight_1}
+        result = alg.timeseries.fit_and_test(train_set, test_set, param=param)
+        print (weight_0, result.f, result.recall, result.prec)
+
+    print ('---')
+    param.class_weight = "auto"
+    result = alg.timeseries.fit_and_test(train_set, test_set, param=param)
+    print ('auto', result.f, result.recall, result.prec)
+
+    param.class_weight = None
+    result = alg.timeseries.fit_and_test(train_set, test_set, param=param)
+    print ('None', result.f, result.recall, result.prec)
+
+
 def cycle_comparison(predictor, l_cycle, filename):
     result = predictor.compare_cycle(l_cycle)
     l_lab_result = [r.lab for r in result]

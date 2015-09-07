@@ -18,15 +18,17 @@ from bunch import Bunch
 from alg.metrics import BinaryClassResult, BinaryClassCVResult
 
 L_algorithm = ['lr', 'coin']
-Default_param = Bunch(name='lr', lr_max_step=50, alg_fill='fv')
+Default_param = Bunch(name='lr', lr_max_step=50, class_weight='auto', alg_fill='fv')
 
 ts = TimeSeries()
 
 
 def example(param=Default_param):
     """Function for showing how to use this module."""
-    sample = ts.sample(0, 2)
+    sample = ts.normal(length=10, n_dim=2,
+                       n_negative=900, n_positive=100, bias=[9, 10])
     train_set, test_set = sample.split_train_test()
+
     result = fit_and_test(train_set, test_set)
     print result.get_dict()
 
@@ -450,9 +452,9 @@ class SeriesClassifier():
 
 
 class LR(SeriesClassifier):
-    def __init__(self, max_step=40, alg_fill='fv'):
+    def __init__(self, max_step=40, class_weight='auto', alg_fill='fv'):
         SeriesClassifier.__init__(self, alg_fill)
-        self.clf = linear_model.LogisticRegression(random_state=0)
+        self.clf = linear_model.LogisticRegression(random_state=0, class_weight=class_weight)
         self.max_step = max_step
 
     def fit(self, train):
@@ -460,7 +462,6 @@ class LR(SeriesClassifier):
         n_sample = train.n_sample()
         train_x = np.array(
             [train.series[:self.max_step, idx, :].flatten() for idx in range(n_sample)])
-
         self.clf.fit(train_x, train.label)
 
     def predict(self, test):
@@ -499,8 +500,8 @@ class Cointoss():
 
 def get_algorithm(param=Default_param):
     if param.name is 'lr':
-        clf = LR(max_step=param.lr_max_step, alg_fill=param.alg_fill)
-#        clf = LR_ts(max_step=param.lr_max_step)
+        clf = LR(max_step=param.lr_max_step, class_weight=param.class_weight,
+                 alg_fill=param.alg_fill)
     elif param.name is 'coin':
         clf = Cointoss()
     elif param.name is 'lstm':
