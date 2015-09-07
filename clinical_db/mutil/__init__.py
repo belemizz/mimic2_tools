@@ -14,6 +14,7 @@ def p_info(word):
 
 
 def is_number(s):
+    """Check if s is nuber"""
     try:
         float(s)
         return True
@@ -22,10 +23,19 @@ def is_number(s):
 
 
 def is_number_list(l):
+    """Check if list l is all numbers"""
     for s in l:
         if not is_number(s):
             return False
     return True
+
+
+def include_any_number(l):
+    """Check if list l includes any number"""
+    for s in l:
+        if is_number(s):
+            return True
+    return False
 
 
 def float_list(l):

@@ -94,6 +94,11 @@ class TestPatientData:
         med_list = self.patients.common_medication(2)
         eq_(med_list[0], [25, 43])
 
+        tr_all_adm = self.patients.trend_from_adm(lab_list[0], Mimic2.vital_charts,
+                                                  days=0.0, span=1.0, from_discharge=False)
+        ok_(33. < tr_all_adm[0][35, 2] < 34.)
+        ok_(2. < tr_all_adm[1][35, 7] < 3.)
+
         pt_all_adm = self.patients.point_from_adm(lab_list[0], Mimic2.vital_charts,
                                                   0.0, from_discharge=False)
         pt_final_adm = self.patients.point_from_adm(lab_list[0], Mimic2.vital_charts, 0.0,
@@ -107,7 +112,6 @@ class TestPatientData:
         ok_((ts_all_adm[0][0][:, 1, :] == ts_final_adm[0][0][:, 0, :]).all())
 
 
-@attr(timeseries=True)
 class TestTimeSeries:
     '''Test for TimeSeries class.'''
     def setUp(self):

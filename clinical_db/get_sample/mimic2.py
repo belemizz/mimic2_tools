@@ -5,9 +5,11 @@ import numpy as np
 
 import mutil.mycsv
 import datetime
-from mutil import Cache, p_info, is_number
+from mutil import Cache, p_info, is_number, include_any_number
 from collections import Counter
 from datetime import timedelta
+
+from sklearn.linear_model import LinearRegression
 
 
 class PatientData:
@@ -200,6 +202,57 @@ class PatientData:
             ef = 0
         return ef
 
+    def trend_from_adm(self, l_lab_id, l_chart_id, days=0., span=1.,
+                       from_discharge=True, final_adm_only=False):
+        l_subject_id = []
+        l_hadm_id = []
+
+        l_lab_data = []
+        l_chart_data = []
+
+        l_readm_duration = []
+        l_death_duration = []
+        l_expire_flag = []
+
+        def validation(lab_value, chart_value):
+            if (True not in np.isnan(lab_value)
+                    and True not in np.isnan(chart_value)):
+                return True
+            else:
+                return False
+
+        def append_adm_data(patient, idx, admission):
+            lab_value, chart_value = self.__trend_from_adm(
+                admission, l_lab_id, l_chart_id, days, span, from_discharge)
+            rd = self.__readmission_duration(patient, idx)
+            dd = self.__death_duration(patient, idx)
+            ef = self.__expire_flag(patient, idx)
+            if validation(lab_value, chart_value):
+                l_lab_data.append(lab_value)
+                l_chart_data.append(chart_value)
+                l_readm_duration.append(rd)
+                l_death_duration.append(dd)
+                l_expire_flag.append(ef)
+                l_subject_id.append(patient.subject_id)
+                l_hadm_id.append(admission.hadm_id)
+
+        for patient in self.l_patient:
+            if final_adm_only:
+                adm_idx = len(patient.admissions) - 1
+                admission = patient.admissions[adm_idx]
+                append_adm_data(patient, adm_idx, admission)
+            else:
+                for idx, admission in enumerate(patient.admissions):
+                    append_adm_data(patient, idx, admission)
+
+        a_lab = np.array(l_lab_data)
+        a_chart = np.array(l_chart_data)
+
+        readm_duration = np.array(l_readm_duration)
+        death_duration = np.array(l_death_duration)
+        expire_flag = np.array(l_expire_flag).astype('int')
+        return a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id
+
     def point_from_adm(self, l_lab_id, l_chart_id, days=0.,
                        from_discharge=True, final_adm_only=False):
         l_subject_id = []
@@ -371,6 +424,53 @@ class PatientData:
                 index = l_chart_id.index(item[0])
                 chart_value[index] = float(item[4])
 
+        return lab_value, chart_value
+
+    def __trend_from_adm(self, admission, l_lab_id, l_chart_id,
+                         days, span, from_discharge):
+        '''get trend data on a datapoint of lab and chart in a admission'''
+        if from_discharge:
+            if admission.get_estimated_disch_time() > datetime.datetime.min + timedelta(days):
+                toi_end = (admission.get_estimated_disch_time() - timedelta(days))
+            else:
+                toi_end = datetime.datetime.min
+        else:
+            toi_end = (admission.get_estimated_admit_time() + timedelta(days))
+
+        if toi_end > datetime.datetime.min + timedelta(span):
+            toi_begin = toi_end - timedelta(span)
+        else:
+            toi_begin = datetime.datetime.min
+
+        lab_result = admission.get_lab_in_span(toi_begin, toi_end)
+        chart_result = admission.get_chart_in_span(toi_begin, toi_end)
+
+        def get_linear_coef(data, l_id):
+            n_coef = 2
+            value = [float('NaN')] * len(l_id) * n_coef
+            for item in data:
+                if item[0] in l_id and include_any_number(item[4]):
+                    idx_item = l_id.index(item[0]) * n_coef
+                    X = []
+                    Y = []
+                    for idx_step in range(len(item[4])):
+                        if is_number(item[4][idx_step]):
+                            X.append((item[3][idx_step] - toi_end).total_seconds() / 86400)
+                            Y.append(float(item[4][idx_step]))
+
+                    reg = LinearRegression()
+                    if len(X) == 0:
+                        import ipdb
+                        ipdb.set_trace()
+                    print len(X), len(Y)
+                    reg.fit(np.array([X]).transpose(), np.array(Y))
+
+                    value[idx_item] = reg.predict(0.)[0]
+                    value[idx_item + 1] = reg.predict(1.)[0] - reg.predict(0.)[0]
+            return value
+
+        lab_value = get_linear_coef(lab_result, l_lab_id)
+        chart_value = get_linear_coef(chart_result, l_chart_id)
         return lab_value, chart_value
 
 
