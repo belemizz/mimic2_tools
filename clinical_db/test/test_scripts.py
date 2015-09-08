@@ -1,6 +1,8 @@
 """Test code for scripts."""
 from nose.plugins.attrib import attr
 
+from predict_death import PredictDeath
+
 
 class TestScripts():
 
@@ -18,10 +20,14 @@ class TestScripts():
         import classify_patients
         classify_patients.main(max_id=2000)
 
-    @attr(work=True)
     def test_predict_death(self):
-        from predict_death import PredictDeath
         pd = PredictDeath(max_id=2000)
+        pd.execution()
+
+    @attr(work_script=True)
+    def test_predict_death_with_coef(self):
+        pd = PredictDeath(max_id=2000, coef_flag=True, coef_span=3., tseries_flag=False,
+                          n_cv_fold=2)
         pd.execution()
 
     def test_predict_readmission(self):

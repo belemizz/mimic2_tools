@@ -2,7 +2,8 @@
 Experiments are recorded in this script
 Experiment date, update date, and purpose should be recorded
 '''
-import alg.classification
+from patient_classification import Default_db_param, Default_data_param, Default_alg_param
+
 
 from mutil import Graph, Stopwatch
 graph = Graph()
@@ -10,8 +11,8 @@ sw = Stopwatch()
 
 
 def class_weight_comparison():
-    from get_sample.timeseries import TimeSeries
     import alg.timeseries
+    from get_sample.timeseries import TimeSeries
     ts = TimeSeries()
     sample = ts.normal(length=10, n_dim=2,
                        n_negative=900, n_positive=100, bias=[9, 10])
@@ -81,27 +82,52 @@ def duration_comparison(predictor, l_duration, filename):
     print [r.lab.n_nega for r in result]
 
 
+def coef_span_comparison(predictor, l_span, filename):
+    result = predictor.compare_coef(l_span, True)
+    l_lab_result = [r.lab for r in result]
+    l_vit_result = [r.vit for r in result]
+
+    label = ['no_coef'] + l_span
+    comparison_label = 'coef_span'
+    graph.bar_classification(l_lab_result, label,
+                             comparison_label=comparison_label,
+                             title='Coef Span Comparison:Lab',
+                             filename=filename + '_CoefLab')
+    graph.bar_classification(l_vit_result, label,
+                             comparison_label=comparison_label,
+                             title='Coef Span Comparison:Vit',
+                             filename=filename + '_CoefVit')
+    print [r.lab.n_posi for r in result]
+    print [r.lab.n_nega for r in result]
+
+
 def death_prediction():
     from predict_death import PredictDeath
 
-    class_param = alg.classification.Default_param
-    tseries_param = alg.timeseries.Default_param
-    pd = PredictDeath(max_id=0,
-                      target_codes='chf',
-                      n_lab=20,
-                      disch_origin=False,
-                      l_poi=0.,
-                      tseries_duration=2.,
-                      tseries_cycle=0.1,
-                      class_param=class_param,
-                      tseries_param=tseries_param,
-                      n_cv_fold=10)
+    db_param = Default_db_param
+    data_param = Default_data_param
+    alg_param = Default_alg_param
 
-    l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
-    cycle_comparison(pd, l_cycle, 'death')
+    data_param.disch_origin = False
+    data_param.tseries_duration = 2.
+    data_param.tseries_cycle = 0.1
 
-    l_duration = [1., 2., 3., 4., 5.]
-    duration_comparison(pd, l_duration, 'death')
+    ## pd = PredictDeath(db_param, data_param, alg_param)
+
+    ## l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
+    ## l_cycle = [1., 0.5]
+    ## cycle_comparison(pd, l_cycle, 'death')
+
+    ## l_duration = [1., 2., 3., 4., 5.]
+    ## l_duration = [1., 2.]
+    ## duration_comparison(pd, l_duration, 'death')
+
+    data_param.tseries_flag = False
+    data_param.l_poi = 2.
+    pd = PredictDeath(db_param, data_param, alg_param)
+    l_span = [2.]
+    coef_span_comparison(pd, l_span, 'death')
+
     graph.waitforbuttonpress()
 
 
@@ -109,27 +135,31 @@ def readmission_prediction():
     from predict_readmission import PredictReadmission
 
     # Parameter
-    class_param = alg.classification.Default_param
-    tseries_param = alg.timeseries.Default_param
-    pr = PredictReadmission(max_id=0,
-                            target_codes='chf',
-                            matched_only=False,
-                            n_lab=20,
-                            disch_origin=True,
-                            l_poi=0.,
-                            tseries_flag=True,
-                            tseries_duration=2.,
-                            tseries_cycle=0.1,
-                            visualize_data=False,
-                            class_param=class_param,
-                            tseries_param=tseries_param,
-                            n_cv_fold=10)
+    db_param = Default_db_param
+    data_param = Default_data_param
+    alg_param = Default_alg_param
+
+    data_param.disch_origin = True
+    data_param.tseries_duration = 2.
+    data_param.tseries_cycle = 0.1
+
+    pr = PredictReadmission(db_param, data_param, alg_param)
+
     # comparison in cycle parameter
     l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
+    l_cycle = [1., 0.5]
     cycle_comparison(pr, l_cycle, 'readm')
 
     l_duration = [1., 2., 3., 4., 5.]
+    l_duration = [1., 2.]
     duration_comparison(pr, l_duration, 'readm')
+
+    data_param.tseries_flag = False
+    data_param.l_poi = 0.
+    pr = PredictReadmission(db_param, data_param, alg_param)
+    l_span = [2.]
+    coef_span_comparison(pr, l_span, 'readm')
+
     graph.waitforbuttonpress()
 
 
@@ -235,7 +265,7 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
     sw.reset()
-#    readmission_prediction()
-    death_prediction()
+    readmission_prediction()
+#    death_prediction()
     sw.stop()
     sw.print_cpu_elapsed()

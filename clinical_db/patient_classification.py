@@ -1,13 +1,45 @@
 """Classification of the patinets."""
+from bunch import Bunch
+import numpy as np
 
 from mutil import p_info, Cache
 from get_sample import PatientData, Mimic2m, Mimic2
 import alg.clustering
-import numpy as np
-
+import alg.classification
+import alg.timeseries
 
 mimic2m = Mimic2m()
 mimic2 = Mimic2()
+
+Default_db_param = Bunch(max_id=0, target_codes='chf', matched_only=False)
+"""Param for database preparation.
+
+:param max_id: maximum of subject id (0 for using all ids)
+:param target_codes: keyword of a list of icd9 codes to select subjects
+:param matched_only: select only subjects with continuous record
+"""
+
+Default_data_param = Bunch(n_lab=20, disch_origin=True, l_poi=0.,
+                           coef_flag=False, coef_span=1.,
+                           tseries_flag=True, tseries_duration=1.,
+                           tseries_cycle=0.25)
+"""Param for database preparation.
+
+:param tseries_flag: True for use timeseries
+:param tseries_duraction: Duration of the timeseries
+:param tseres_cycle: Cycle of the timeseries
+"""
+
+Default_alg_param = Bunch(visualize_data=False,
+                          class_param=alg.classification.Default_param,
+                          tseries_param=alg.timeseries.Default_param,
+                          n_cv_fold=10)
+"""Param for algorithm
+
+:param class_param: param for classification algorithm
+:param tsereis_param: param for timeseries classification algorithm
+:param n_cv_fold: number of folds in cross validation
+"""
 
 
 class ControlExperiment:
@@ -27,6 +59,14 @@ class ControlExperiment:
 
         self.id_list = self.__get_id_list()
 
+    def set_db_param(self, db_param):
+        self.db_param = db_param
+
+        self.max_id = db_param.max_id
+        self.target_codes = db_param.target_codes
+        self.matched_only = db_param.matched_only
+        self.id_list = self.__get_id_list()
+
     def __get_id_list(self):
         if self.target_codes == 'all':
             id_list = mimic2.subject_all(self.max_id)
@@ -40,6 +80,41 @@ class ControlExperiment:
             id_list = list(set(id_list).intersection(set(id_matched)))
 
         return sorted(id_list)
+
+    def set_data_param(self, data_param=None):
+        """Set and Reset data_param
+
+        :param data_param:  new parameter (None to reset param)
+        """
+        if data_param is not None:
+            self.data_param = data_param
+        else:
+            data_param = self.data_param
+
+        self.n_lab = data_param.n_lab
+        self.disch_origin = data_param.disch_origin
+        self.l_poi = data_param.l_poi
+        self.coef_flag = data_param.coef_flag
+        self.coef_span = data_param.coef_span
+        self.tseries_flag = data_param.tseries_flag
+        self.tseries_duration = data_param.tseries_duration
+        self.tseries_cycle = data_param.tseries_cycle
+
+    def set_alg_param(self, alg_param=None):
+        """Set and Reset alg_param
+
+        :param alg_param:  new parameter (None to reset param)
+        """
+
+        if alg_param is not None:
+            self.alg_param = alg_param
+        else:
+            alg_param = self.alg_param
+
+        self.visualize_data = alg_param.visualize_data
+        self.class_param = alg_param.class_param
+        self.tseries_param = alg_param.tseries_param
+        self.n_cv_fold = alg_param.n_cv_fold
 
 
 class ControlClassification(ControlExperiment):

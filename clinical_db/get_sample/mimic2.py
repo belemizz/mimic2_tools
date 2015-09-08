@@ -459,10 +459,6 @@ class PatientData:
                             Y.append(float(item[4][idx_step]))
 
                     reg = LinearRegression()
-                    if len(X) == 0:
-                        import ipdb
-                        ipdb.set_trace()
-                    print len(X), len(Y)
                     reg.fit(np.array([X]).transpose(), np.array(Y))
 
                     value[idx_item] = reg.predict(0.)[0]
