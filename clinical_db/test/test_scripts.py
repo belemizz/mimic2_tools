@@ -1,7 +1,10 @@
 """Test code for scripts."""
 from nose.plugins.attrib import attr
+from bunch import Bunch
 
 from predict_death import PredictDeath
+from predict_readmission import PredictReadmission
+from patient_classification import Default_db_param, Default_data_param, Default_alg_param
 
 
 class TestScripts():
@@ -21,16 +24,28 @@ class TestScripts():
         classify_patients.main(max_id=2000)
 
     def test_predict_death(self):
-        pd = PredictDeath(max_id=2000)
+        db_param = Bunch(Default_db_param.copy())
+        db_param.max_id = 2000
+        pd = PredictDeath(db_param=db_param)
+        pd.execution()
+
+    def test_predict_death_with_coef(self):
+        db_param = Bunch(Default_db_param.copy())
+        data_param = Bunch(Default_data_param.copy())
+        db_param.max_id = 2000
+        data_param.coef_flag = True
+        data_param.coef_span = 2.
+        data_param.tseries_flag = False
+
+        pd = PredictDeath(db_param=db_param)
         pd.execution()
 
     @attr(work_script=True)
-    def test_predict_death_with_coef(self):
-        pd = PredictDeath(max_id=2000, coef_flag=True, coef_span=3., tseries_flag=False,
-                          n_cv_fold=2)
-        pd.execution()
-
     def test_predict_readmission(self):
-        from predict_readmission import PredictReadmission
-        pr = PredictReadmission(max_id=2000)
+        db_param = Bunch(Default_db_param.copy())
+        data_param = Bunch(Default_data_param.copy())
+        alg_param = Bunch(Default_alg_param.copy())
+        db_param.max_id = 2000
+        alg_param.n_cv_fold = 2
+        pr = PredictReadmission(db_param, data_param, alg_param)
         pr.execution()

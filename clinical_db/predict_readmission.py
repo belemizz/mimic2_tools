@@ -32,7 +32,6 @@ class PredictReadmission(ControlExperiment):
     def execution(self):
         """Prediction in a single condition"""
         l_lab, l_descs, l_units = self.patients.common_lab(self.n_lab)
-
         if self.tseries_flag and self.coef_flag:
             raise NotImplementedError
 
