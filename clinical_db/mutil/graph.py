@@ -68,6 +68,27 @@ class MGraph:
             ax.set_title(title)
         self.show_and_save(fig, filename, show_flag, original_data)
 
+    def line_scatter(self, x_data, y_data, legend="", x_label="", y_label="", ylim=[],
+                     title="", filename="", show_flag=True):
+        """Draw a scatter graph connected by lines"""
+        original_data = locals().copy()
+        fig, ax = plt.subplots()
+        for x, y in zip(x_data, y_data):
+            ax.plot(x, y, '.-')
+
+        if legend:
+            ax.legend(legend, ncol=4, fontsize=10)
+
+        if ylim:
+            ax.set_ylim(ylim)
+        if x_label:
+            ax.set_xlabel(x_label)
+        if y_label:
+            ax.set_ylabel(y_label)
+        if title:
+            ax.set_title(title)
+        self.show_and_save(fig, filename, show_flag, original_data)
+
     def line_series(self, data, y_points, legend="", x_label="", y_label="", ylim=[],
                     markersize=10, title="", filename="", show_flag=True):
         """Draw a line graph of the series."""

@@ -15,9 +15,10 @@ class TestScripts():
     def test_analyze_icd9(self):
         import analyze_icd9
 
-    @attr(slow=True)
+    @attr(work_script=True)
     def test_show_medical_record(self):
         import show_medical_record
+        show_medical_record.visualize_data([1855])
 
     def test_classification(self):
         import classify_patients
@@ -40,7 +41,6 @@ class TestScripts():
         pd = PredictDeath(db_param=db_param)
         pd.execution()
 
-    @attr(work_script=True)
     def test_predict_readmission(self):
         db_param = Bunch(Default_db_param.copy())
         data_param = Bunch(Default_data_param.copy())

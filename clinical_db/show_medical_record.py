@@ -12,11 +12,28 @@ def visualize_data(l_subject_id):
     patients = PatientData(l_subject_id)
     l_lab_id = [50017]
     l_chart_id = mimic2db.vital_charts
+    l_chart_legend = mimic2db.vital_descs
+    from_discharge = False
 
-    data = patients.trend_from_adm(l_lab_id, l_chart_id, days=0., span=10.,
-                                   from_discharge=False)
-    import ipdb
-    ipdb.set_trace()
+    data = patients.data_from_adm(l_lab_id, l_chart_id, from_discharge=from_discharge)
+    if from_discharge:
+        x_label = 'Days from Discharge'
+    else:
+        x_label = 'Days from Admission'
+
+    lab_ts = data[0]
+    lab_data = data[1]
+    vit_ts = data[2]
+    vit_data = data[3]
+
+    for ts, data in zip(lab_ts, lab_data):
+        graph.line_scatter(ts, data, l_lab_id, x_label,
+                           title="Lab Data")
+
+    for ts, data in zip(vit_ts, vit_data):
+        graph.line_scatter(ts, data, l_chart_legend, x_label,
+                           title="Vital Data")
+    graph.waitforbuttonpress()
 
 
 def show_records(subject_id):

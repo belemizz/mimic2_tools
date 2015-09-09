@@ -202,8 +202,7 @@ class PatientData:
             ef = 0
         return ef
 
-    def data_from_adm(self, l_lab_id, l_chart_id):
-        from_discharge = True
+    def data_from_adm(self, l_lab_id, l_chart_id, from_discharge = True):
         l_subject_id = []
         l_hadm_id = []
 
@@ -245,11 +244,9 @@ class PatientData:
             for idx, admission in enumerate(patient.admissions):
                 append_adm_data(patient, idx, admission)
 
-        a_lab = np.array(l_lab_data)
-        a_chart = np.array(l_chart_data)
         expire_flag = np.array(l_expire_flag).astype('int')
-        return a_lab, a_chart, expire_flag, l_subject_id, l_hadm_id
-    
+        return l_lab_ts, l_lab_data, l_chart_ts, l_chart_data, expire_flag, l_subject_id, l_hadm_id
+
     def trend_from_adm(self, l_lab_id, l_chart_id, days=0., span=1.,
                        from_discharge=True, final_adm_only=False):
         l_subject_id = []
@@ -1115,7 +1112,6 @@ class admission:
                                 val_interest.append(val)
                         result.append([item.itemid, item.description,
                                        item.unit, ts_interest, val_interest])
-
         return result
 
     def __zero_point(self, from_discharge):
@@ -1142,6 +1138,7 @@ class admission:
                     self.final_medication_time,
                     self.final_chart_time])
 
+    # TODO:bagfix
     def get_estimated_admit_time(self):
         return min([self.final_labs_time,
                     self.final_ios_time,
