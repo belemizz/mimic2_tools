@@ -29,7 +29,7 @@ class TestAutoEncoder:
         ok_(not save_result, 'this is save mode')
 
     def test_auto_encoder(self):
-        x, y = get_sample.normal_dist(4)
+        x, y = get_sample.point_data.normal_dist(4)
 
         encoded = alg.auto_encoder.pca(x, x, 2, cache_key='')
         self.__check_data('pca', encoded)
