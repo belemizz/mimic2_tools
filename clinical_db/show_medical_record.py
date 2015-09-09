@@ -9,6 +9,8 @@ graph = Graph()
 
 
 def visualize_data(l_subject_id):
+    import ipdb
+    ipdb.set_trace()
     patients = PatientData(l_subject_id)
     l_lab_id = [50017]
     l_chart_id = mimic2db.vital_charts

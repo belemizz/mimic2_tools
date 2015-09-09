@@ -958,9 +958,19 @@ class admission:
             self.final_chart_time = datetime.min
             self.final_medication_time = datetime.min
 
+        if len(icustay_list) > 0:
+            self.first_ios_time = min([stay.first_ios_time for stay in icustay_list])
+            self.first_chart_time = min([stay.first_chart_time for stay in icustay_list])
+            self.first_medication_time = min([stay.first_medication_time for stay in icustay_list])
+        else:
+            self.first_ios_time = datetime.min
+            self.first_chart_time = datetime.min
+            self.first_medication_time = datetime.min
+
     def set_labs(self, lab_event_trends):
         self.labs = lab_event_trends
         self.final_labs_time = final_timestamp(self.labs)
+        self.first_labs_time = first_timestamp(self.labs)
 
     # simple getter
     def get_lab_info(self):
@@ -1140,10 +1150,10 @@ class admission:
 
     # TODO:bagfix
     def get_estimated_admit_time(self):
-        return min([self.final_labs_time,
-                    self.final_ios_time,
-                    self.final_medication_time,
-                    self.final_chart_time])
+        return min([self.first_labs_time,
+                    self.first_ios_time,
+                    self.first_medication_time,
+                    self.first_chart_time])
 
 
 class icustay:
@@ -1156,14 +1166,17 @@ class icustay:
     def set_medications(self, medications):
         self.medications = medications
         self.final_medication_time = final_timestamp(medications)
+        self.first_medication_time = first_timestamp(medications)
 
     def set_charts(self, charts):
         self.charts = charts
         self.final_chart_time = final_timestamp(charts)
+        self.first_chart_time = first_timestamp(charts)
 
     def set_ios(self, ios):
         self.ios = ios
         self.final_ios_time = final_timestamp(ios)
+        self.first_ios_time = first_timestamp(ios)
 
 
 class series:
@@ -1185,3 +1198,11 @@ def final_timestamp(list_of_series):
         return max(final_ts)
     else:
         return datetime.min
+
+
+def first_timestamp(list_of_series):
+    if len(list_of_series) > 0:
+        first_ts = [min(series.timestamps) for series in list_of_series]
+        return min(first_ts)
+    else:
+        return datetime.max
