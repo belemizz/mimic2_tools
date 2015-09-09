@@ -7,7 +7,7 @@ import mutil.mycsv
 import datetime
 from mutil import Cache, p_info, is_number, include_any_number
 from collections import Counter
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from sklearn.linear_model import LinearRegression
 
@@ -202,6 +202,54 @@ class PatientData:
             ef = 0
         return ef
 
+    def data_from_adm(self, l_lab_id, l_chart_id):
+        from_discharge = True
+        l_subject_id = []
+        l_hadm_id = []
+
+        l_lab_data = []
+        l_lab_ts = []
+
+        l_chart_data = []
+        l_chart_ts = []
+        l_expire_flag = []
+
+        def data_and_ts(data, l_id):
+            l_data = [0] * len(l_id)
+            l_ts = [0] * len(l_id)
+            for item in data:
+                if item[0] in l_id:
+                    idx_item = l_id.index(item[0])
+                    l_ts[idx_item] = item[3]
+                    l_data[idx_item] = item[4]
+            return (l_data, l_ts)
+
+        def append_adm_data(patient, idx, admission):
+            lab_result = admission.get_lab_in_span(None, None, from_discharge)
+            lab_data, lab_ts = data_and_ts(lab_result, l_lab_id)
+            chart_result = admission.get_chart_in_span(None, None, from_discharge)
+            chart_data, chart_ts = data_and_ts(chart_result, l_chart_id)
+
+            l_lab_data.append(lab_data)
+            l_lab_ts.append(lab_ts)
+            l_chart_data.append(chart_data)
+            l_chart_ts.append(chart_ts)
+
+            ef = self.__expire_flag(patient, idx)
+            l_expire_flag.append(ef)
+
+            l_subject_id.append(patient.subject_id)
+            l_hadm_id.append(admission.hadm_id)
+
+        for patient in self.l_patient:
+            for idx, admission in enumerate(patient.admissions):
+                append_adm_data(patient, idx, admission)
+
+        a_lab = np.array(l_lab_data)
+        a_chart = np.array(l_chart_data)
+        expire_flag = np.array(l_expire_flag).astype('int')
+        return a_lab, a_chart, expire_flag, l_subject_id, l_hadm_id
+    
     def trend_from_adm(self, l_lab_id, l_chart_id, days=0., span=1.,
                        from_discharge=True, final_adm_only=False):
         l_subject_id = []
@@ -327,6 +375,7 @@ class PatientData:
 
         return a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id
 
+
     def tseries_from_adm(self, l_lab_id, l_chart_id, cycle, duration,
                          from_discharge=True, final_adm_only=False):
         l_subject_id = []
@@ -402,7 +451,7 @@ class PatientData:
     def __point_from_adm(self, admission, l_lab_id, l_chart_id, days=0., from_discharge=True):
         '''get a datapoint of lab and chart in a admission'''
         if from_discharge:
-            if admission.get_estimated_disch_time() > datetime.datetime.min + timedelta(days):
+            if admission.get_estimated_disch_time() > datetime.min + timedelta(days):
                 time_of_interest = (admission.get_estimated_disch_time() - timedelta(days))
             else:
                 time_of_interest = admission.get_estimated_disch_time()
@@ -430,20 +479,13 @@ class PatientData:
                          days, span, from_discharge):
         '''get trend data on a datapoint of lab and chart in a admission'''
         if from_discharge:
-            if admission.get_estimated_disch_time() > datetime.datetime.min + timedelta(days):
-                toi_end = (admission.get_estimated_disch_time() - timedelta(days))
-            else:
-                toi_end = datetime.datetime.min
+            begin_pt = -days
         else:
-            toi_end = (admission.get_estimated_admit_time() + timedelta(days))
+            begin_pt = days
+        end_pt = begin_pt + span
 
-        if toi_end > datetime.datetime.min + timedelta(span):
-            toi_begin = toi_end - timedelta(span)
-        else:
-            toi_begin = datetime.datetime.min
-
-        lab_result = admission.get_lab_in_span(toi_begin, toi_end)
-        chart_result = admission.get_chart_in_span(toi_begin, toi_end)
+        lab_result = admission.get_lab_in_span(begin_pt, end_pt, from_discharge)
+        chart_result = admission.get_chart_in_span(begin_pt, end_pt, from_discharge)
 
         def get_linear_coef(data, l_id):
             n_coef = 2
@@ -455,9 +497,8 @@ class PatientData:
                     Y = []
                     for idx_step in range(len(item[4])):
                         if is_number(item[4][idx_step]):
-                            X.append((item[3][idx_step] - toi_end).total_seconds() / 86400)
+                            X.append(item[3][idx_step])
                             Y.append(float(item[4][idx_step]))
-
                     reg = LinearRegression()
                     reg.fit(np.array([X]).transpose(), np.array(Y))
 
@@ -916,9 +957,9 @@ class admission:
             self.final_chart_time = max([stay.final_chart_time for stay in icustay_list])
             self.final_medication_time = max([stay.final_medication_time for stay in icustay_list])
         else:
-            self.final_ios_time = datetime.datetime.min
-            self.final_chart_time = datetime.datetime.min
-            self.final_medication_time = datetime.datetime.min
+            self.final_ios_time = datetime.min
+            self.final_chart_time = datetime.min
+            self.final_medication_time = datetime.min
 
     def set_labs(self, lab_event_trends):
         self.labs = lab_event_trends
@@ -1013,7 +1054,16 @@ class admission:
                     result.append([item.itemid, item.description, item.unit, timestamp, value])
         return result
 
-    def get_lab_in_span(self, toi_begin, toi_end):
+    def get_lab_in_span(self, begin_pt, end_pt, from_discharge=True):
+        '''Get lab data in this admission.
+
+        :param begin_pt: begin point of the span (unit: days, None for minimum)
+        :param end_pt: end point of the span (unit: days, None for maximum)
+        :param from_discharge: count time from discharge point (False: admission point)
+        '''
+        zero_point = self.__zero_point(from_discharge)
+        toi_begin, toi_end = self.__toi_span(begin_pt, end_pt, zero_point)
+
         result = []
         for item in self.labs:
             first_timestamp = item.timestamps[0]
@@ -1026,13 +1076,22 @@ class admission:
 
                 for (ts, val) in zip(item.timestamps, item.values):
                     if toi_begin <= ts <= toi_end:
-                        ts_interest.append(ts)
+                        pt = (ts - zero_point).total_seconds() / 86400
+                        ts_interest.append(pt)
                         val_interest.append(val)
                 result.append([item.itemid, item.description,
                                item.unit, ts_interest, val_interest])
         return result
 
-    def get_chart_in_span(self, toi_begin, toi_end):
+    def get_chart_in_span(self, begin_pt, end_pt, from_discharge=True):
+        '''Get chart data in this admission.
+
+        :param begin_pt: begin point of the span (unit: days, None for minimum)
+        :param end_pt: end point of the span (unit: days, None for maximum)
+        :param from_discharge: count time from discharge point (False: admission point)
+        '''
+        zero_point = self.__zero_point(from_discharge)
+        toi_begin, toi_end = self.__toi_span(begin_pt, end_pt, zero_point)
 
         valid_stays = []
         for stay in self.icustays:
@@ -1051,12 +1110,31 @@ class admission:
 
                         for (ts, val) in zip(item.timestamps, item.values):
                             if toi_begin <= ts <= toi_end:
-                                ts_interest.append(ts)
+                                pt = (ts - zero_point).total_seconds() / 86400
+                                ts_interest.append(pt)
                                 val_interest.append(val)
                         result.append([item.itemid, item.description,
                                        item.unit, ts_interest, val_interest])
 
         return result
+
+    def __zero_point(self, from_discharge):
+        if from_discharge:
+            return self.get_estimated_disch_time()
+        else:
+            return self.get_estimated_admit_time()
+
+    def __toi_span(self, begin_pt, end_pt, zero_pt):
+        if begin_pt is None:
+            toi_begin = datetime.min
+        else:
+            toi_begin = zero_pt + timedelta(begin_pt)
+
+        if end_pt is None:
+            toi_end = datetime.max
+        else:
+            toi_end = zero_pt + timedelta(end_pt)
+        return (toi_begin, toi_end)
 
     def get_estimated_disch_time(self):
         return max([self.final_labs_time,
@@ -1109,4 +1187,4 @@ def final_timestamp(list_of_series):
         final_ts = [max(series.timestamps) for series in list_of_series]
         return max(final_ts)
     else:
-        return datetime.datetime.min
+        return datetime.min

@@ -6,7 +6,7 @@ from sklearn import cross_validation
 
 from alg.metrics import BinaryClassResult, BinaryClassCVResult
 
-import get_sample
+from get_sample import point_data
 from mutil import Graph, p_info
 
 from bunch import Bunch
@@ -14,12 +14,12 @@ from bunch import Bunch
 graph = Graph()
 
 L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
-Default_param = Bunch(name='lr', lr_dim=10, svm_max_iter=20000)
+Default_param = Bunch(name='lr', lr_dim=10, svm_max_iter=20000, class_weight='auto')
 
 
 def example(source_num=2, n_dim=784, n_flag=2, param=Default_param):
     """Sample code for this package."""
-    [x, y] = get_sample.vector(source_num, n_dim, n_flag)
+    [x, y] = point_data.sample(source_num, n_dim, n_flag)
     try:
         plot_2d(x, y, param=param)
     except ValueError, detail:
@@ -48,21 +48,41 @@ def example(source_num=2, n_dim=784, n_flag=2, param=Default_param):
     print [r.auc for r in l_result]
 
 
+def inbalancet_data(param=Default_param):
+    p_info("Imbalanced Dataset")
+    [x, y] = point_data.normal_dist(n_dim=2, l_amount=[900, 100], bias=[8.5, 10])
+    param = Default_param
+    param.class_weight = 'auto'
+    result_cv = cv(x, y, param=param)
+    plot_2d(x, y, param=param)
+    print result_cv.get_dict()
+    print result_cv.mean_auc2
+
+    param.class_weight = None
+    plot_2d(x, y, param=param)
+    result_cv = cv(x, y, param=param)
+    print result_cv.get_dict()
+    print result_cv.mean_auc2
+
+
 def get_algorithm(param=Default_param):
     """Get an algorithm for classification."""
     def _get_algorithm(name):
         if name == 'svm':
-            clf = svm.SVC(random_state=0, kernel='linear', max_iter=param.svm_max_iter)
+            clf = svm.SVC(random_state=0, kernel='linear', max_iter=param.svm_max_iter,
+                          class_weight=param.class_weight)
         elif name == 'rsvm':
-            clf = svm.SVC(random_state=0, kernel='rbf', max_iter=param.svm_max_iter)
+            clf = svm.SVC(random_state=0, kernel='rbf', max_iter=param.svm_max_iter,
+                          class_weight=param.class_weight)
         elif name == 'psvm':
-            clf = svm.SVC(random_state=0, kernel='poly', max_iter=param.svm_max_iter)
+            clf = svm.SVC(random_state=0, kernel='poly', max_iter=param.svm_max_iter,
+                          class_weight=param.class_weight)
         elif name == 'dt':
-            clf = tree.DecisionTreeClassifier(random_state=0)
+            clf = tree.DecisionTreeClassifier(random_state=0, class_weight=param.class_weight)
         elif name == 'lr':
-            clf = linear_model.LogisticRegression(random_state=0)
+            clf = linear_model.LogisticRegression(random_state=0, class_weight=param.class_weight)
         elif name == 'rf':
-            clf = ensemble.RandomForestClassifier(random_state=0)
+            clf = ensemble.RandomForestClassifier(random_state=0, class_weight=param.class_weight)
         elif name == 'ab':
             clf = ensemble.AdaBoostClassifier(random_state=0)
         else:

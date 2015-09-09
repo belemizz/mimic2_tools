@@ -60,7 +60,7 @@ class ControlExperiment:
         self.id_list = self.__get_id_list()
 
     def set_db_param(self, db_param):
-        self.db_param = db_param
+        self.db_param = Bunch(db_param.copy())
 
         self.max_id = db_param.max_id
         self.target_codes = db_param.target_codes
@@ -87,9 +87,9 @@ class ControlExperiment:
         :param data_param:  new parameter (None to reset param)
         """
         if data_param is not None:
-            self.data_param = data_param
+            self.data_param = Bunch(data_param.copy())
         else:
-            data_param = self.data_param
+            data_param = Bunch(self.data_param.copy())
 
         self.n_lab = data_param.n_lab
         self.disch_origin = data_param.disch_origin
@@ -107,9 +107,9 @@ class ControlExperiment:
         """
 
         if alg_param is not None:
-            self.alg_param = alg_param
+            self.alg_param = Bunch(alg_param.copy())
         else:
-            alg_param = self.alg_param
+            alg_param = Bunch(self.alg_param.copy())
 
         self.visualize_data = alg_param.visualize_data
         self.class_param = alg_param.class_param

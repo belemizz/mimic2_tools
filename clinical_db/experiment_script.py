@@ -3,11 +3,12 @@ Experiments are recorded in this script
 Experiment date, update date, and purpose should be recorded
 '''
 from patient_classification import Default_db_param, Default_data_param, Default_alg_param
-
+import alg.classification
 
 from mutil import Graph, Stopwatch
 graph = Graph()
 sw = Stopwatch()
+from bunch import Bunch
 
 
 def class_weight_comparison():
@@ -101,6 +102,25 @@ def coef_span_comparison(predictor, l_span, filename):
     print [r.lab.n_nega for r in result]
 
 
+def alg_comparison(predictor, l_alg_param, l_label, filename):
+    result = predictor.compare_class_alg(l_alg_param)
+    l_lab_result = [r.lab for r in result]
+    l_vit_result = [r.vit for r in result]
+
+    comparison_label = 'Algorithm'
+    graph.bar_classification(l_lab_result, l_label,
+                             comparison_label=comparison_label,
+                             title='Alg Comparison:Lab',
+                             filename=filename + '_AlgLab')
+    graph.bar_classification(l_vit_result, l_label,
+                             comparison_label=comparison_label,
+                             title='Alg Comparison:Vit',
+                             filename=filename + '_AlgVit')
+    print [r.lab.n_posi for r in result]
+    print [r.lab.n_nega for r in result]
+    print [r.lab.f for r in result]
+
+
 def death_prediction():
     from predict_death import PredictDeath
 
@@ -108,9 +128,24 @@ def death_prediction():
     data_param = Default_data_param
     alg_param = Default_alg_param
 
-    data_param.disch_origin = False
-    data_param.tseries_duration = 2.
-    data_param.tseries_cycle = 0.1
+    data_param.tseries_flag = False
+    data_param.l_poi = 0.
+    pd = PredictDeath(db_param, data_param, alg_param)
+
+    class_param1 = Bunch(alg.classification.Default_param.copy())
+    class_param1.class_weight = None
+    class_param2 = Bunch(alg.classification.Default_param.copy())
+    class_param2.class_weight = 'auto'
+    l_param = [class_param1, class_param2]
+    l_label = ['None', 'Auto']
+    alg_comparison(pd, l_param, l_label, 'death')
+
+    l_span = [2.]
+    coef_span_comparison(pd, l_span, 'death')
+
+#    data_param.disch_origin = False
+#    data_param.tseries_duration = 2.
+#    data_param.tseries_cycle = 0.1
 
     ## pd = PredictDeath(db_param, data_param, alg_param)
 
@@ -122,11 +157,6 @@ def death_prediction():
     ## l_duration = [1., 2.]
     ## duration_comparison(pd, l_duration, 'death')
 
-    data_param.tseries_flag = False
-    data_param.l_poi = 2.
-    pd = PredictDeath(db_param, data_param, alg_param)
-    l_span = [2.]
-    coef_span_comparison(pd, l_span, 'death')
 
     graph.waitforbuttonpress()
 
@@ -265,7 +295,7 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
     sw.reset()
-    readmission_prediction()
-#    death_prediction()
+#    readmission_prediction()
+    death_prediction()
     sw.stop()
     sw.print_cpu_elapsed()

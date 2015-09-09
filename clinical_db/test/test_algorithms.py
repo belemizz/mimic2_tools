@@ -10,6 +10,7 @@ import get_sample
 
 from mutil import Cache
 
+import alg.classification
 import alg.timeseries
 import alg.auto_encoder
 import alg.feature_selection
@@ -65,12 +66,19 @@ class TestAutoEncoder:
                 eq_(data, correct_data, cache_key)
 
 
+@attr(alg_work=True)
 class TestClassification:
     def setUp(self):
         pass
 
+    def test_example(self):
 
-@attr(alg_work=True)
+        pass
+
+    def test_inbalance(self):
+        pass
+
+
 class TestTimeseries:
 
     def setUp(self):

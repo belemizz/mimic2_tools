@@ -55,6 +55,14 @@ class PredictDeath(ControlExperiment):
 
         return result
 
+    def compare_class_alg(self, l_param):
+        result = []
+        for param in l_param:
+            self.class_param = param
+            result.append(self.execution())
+        ControlExperiment.set_alg_param(self)
+        return result
+
     def compare_coef(self, l_span, include_raw_data):
         result = []
         if include_raw_data:
