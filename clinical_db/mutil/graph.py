@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from math import log10, ceil, sqrt
 from more_itertools import chunked
 import cPickle
+from .type import is_number, float_list
 
 
 class MGraph:
@@ -68,17 +69,21 @@ class MGraph:
             ax.set_title(title)
         self.show_and_save(fig, filename, show_flag, original_data)
 
-    def line_scatter(self, x_data, y_data, legend="", x_label="", y_label="", ylim=[],
-                     title="", filename="", show_flag=True):
+    def line_scatter(self, x_data, y_data, hl_span=None, legend="", x_label="", y_label="",
+                     ylim=[], title="", filename="", show_flag=True):
         """Draw a scatter graph connected by lines"""
         original_data = locals().copy()
         fig, ax = plt.subplots()
-        for x, y in zip(x_data, y_data):
-            ax.plot(x, y, '.-')
 
+        for x, y in zip(x_data, y_data):
+            if is_number(y):
+                y = [y]
+            ax.plot(x, float_list(y), '.-')
+
+        if hl_span:
+            ax.axvspan(hl_span[0], hl_span[1], alpha=0.2, color='red')
         if legend:
             ax.legend(legend, ncol=4, fontsize=10)
-
         if ylim:
             ax.set_ylim(ylim)
         if x_label:

@@ -43,7 +43,7 @@ class PredictReadmission(ControlExperiment):
 
         elif not self.tseries_flag and self.coef_flag:
             data = self.patients.trend_from_adm(l_lab, mimic2.vital_charts,
-                                                days=self.l_poi, span=self.coef_span,
+                                                poi=self.l_poi, span=self.coef_span,
                                                 from_discharge=self.disch_origin)
             result = self.__eval_point(data)
 

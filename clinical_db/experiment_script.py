@@ -128,38 +128,36 @@ def death_prediction():
     data_param = Default_data_param
     alg_param = Default_alg_param
 
-    data_param.tseries_flag = False
-    data_param.l_poi = 0.
-    pd = PredictDeath(db_param, data_param, alg_param)
-
-    class_param1 = Bunch(alg.classification.Default_param.copy())
-    class_param1.class_weight = None
-    class_param2 = Bunch(alg.classification.Default_param.copy())
-    class_param2.class_weight = 'auto'
-    l_param = [class_param1, class_param2]
-    l_label = ['None', 'Auto']
-    alg_comparison(pd, l_param, l_label, 'death')
-
-    l_span = [2.]
-    coef_span_comparison(pd, l_span, 'death')
-
-#    data_param.disch_origin = False
-#    data_param.tseries_duration = 2.
-#    data_param.tseries_cycle = 0.1
-
+    ## data_param.tseries_flag = False
+    ## data_param.l_poi = 0.
     ## pd = PredictDeath(db_param, data_param, alg_param)
 
-    ## l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
-    ## l_cycle = [1., 0.5]
-    ## cycle_comparison(pd, l_cycle, 'death')
+    ## class_param1 = Bunch(alg.classification.Default_param.copy())
+    ## class_param1.class_weight = None
+    ## class_param2 = Bunch(alg.classification.Default_param.copy())
+    ## class_param2.class_weight = 'auto'
+    ## l_param = [class_param1, class_param2]
+    ## l_label = ['None', 'Auto']
+    ## alg_comparison(pd, l_param, l_label, 'death')
 
-    ## l_duration = [1., 2., 3., 4., 5.]
-    ## l_duration = [1., 2.]
-    ## duration_comparison(pd, l_duration, 'death')
+#    l_span = [2.]
+#    coef_span_comparison(pd, l_span, 'death')
 
+    data_param.disch_origin = False
+    data_param.tseries_duration = 2.
+    data_param.tseries_cycle = 0.1
+
+    pd = PredictDeath(db_param, data_param, alg_param)
+
+    l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
+    l_cycle = [1., 0.5]
+    cycle_comparison(pd, l_cycle, 'death')
+
+    l_duration = [1., 2., 3., 4., 5.]
+    l_duration = [1., 2.]
+    duration_comparison(pd, l_duration, 'death')
 
     graph.waitforbuttonpress()
-
 
 def readmission_prediction():
     from predict_readmission import PredictReadmission
@@ -177,18 +175,16 @@ def readmission_prediction():
 
     # comparison in cycle parameter
     l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
-    l_cycle = [1., 0.5]
     cycle_comparison(pr, l_cycle, 'readm')
 
     l_duration = [1., 2., 3., 4., 5.]
-    l_duration = [1., 2.]
     duration_comparison(pr, l_duration, 'readm')
 
-    data_param.tseries_flag = False
-    data_param.l_poi = 0.
-    pr = PredictReadmission(db_param, data_param, alg_param)
-    l_span = [2.]
-    coef_span_comparison(pr, l_span, 'readm')
+    ## data_param.tseries_flag = False
+    ## data_param.l_poi = 0.
+    ## pr = PredictReadmission(db_param, data_param, alg_param)
+    ## l_span = [2.]
+    ## coef_span_comparison(pr, l_span, 'readm')
 
     graph.waitforbuttonpress()
 
@@ -295,7 +291,7 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
     sw.reset()
-#    readmission_prediction()
-    death_prediction()
+    readmission_prediction()
+#    death_prediction()
     sw.stop()
     sw.print_cpu_elapsed()

@@ -96,7 +96,7 @@ class TestPatientData:
 
         # trend data
         tr_all_adm = self.patients.trend_from_adm(lab_list[0], Mimic2.vital_charts,
-                                                  days=0.0, span=1.0, from_discharge=False)
+                                                  poi=0.0, span=1.0, from_discharge=False)
 #        ok_(33. < tr_all_adm[0][35, 2] < 34.)
 #        ok_(2. < tr_all_adm[1][35, 7] < 3.)
         

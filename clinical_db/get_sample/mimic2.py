@@ -202,7 +202,14 @@ class PatientData:
             ef = 0
         return ef
 
-    def data_from_adm(self, l_lab_id, l_chart_id, from_discharge = True):
+    def data_from_adm(self, l_lab_id, l_chart_id, from_discharge=True):
+        '''Get data from each admission
+
+        :param l_lab_id: Lab ID list of interest
+        :param l_chart_id: Chart ID list of interest
+        :param from_discharge: True->Set zero point on discharge. False-> set on admission
+        '''
+
         l_subject_id = []
         l_hadm_id = []
 
@@ -247,8 +254,17 @@ class PatientData:
         expire_flag = np.array(l_expire_flag).astype('int')
         return l_lab_ts, l_lab_data, l_chart_ts, l_chart_data, expire_flag, l_subject_id, l_hadm_id
 
-    def trend_from_adm(self, l_lab_id, l_chart_id, days=0., span=1.,
+    def trend_from_adm(self, l_lab_id, l_chart_id, poi=0., span=1.,
                        from_discharge=True, final_adm_only=False):
+        '''Get data from each admission
+
+        :param l_lab_id: Lab ID list of interest
+        :param l_chart_id: Chart ID list of interest
+        :param poi: point of interest
+        :param span: time span where trend is calucurated
+        :param from_discharge: True->Set zero point on discharge. False-> set on admission
+        :param final_adm_only: Extract data only from final admissions of the patients
+        '''
         l_subject_id = []
         l_hadm_id = []
 
@@ -268,7 +284,7 @@ class PatientData:
 
         def append_adm_data(patient, idx, admission):
             lab_value, chart_value = self.__trend_from_adm(
-                admission, l_lab_id, l_chart_id, days, span, from_discharge)
+                admission, l_lab_id, l_chart_id, poi, span, from_discharge)
             rd = self.__readmission_duration(patient, idx)
             dd = self.__death_duration(patient, idx)
             ef = self.__expire_flag(patient, idx)
@@ -292,7 +308,6 @@ class PatientData:
 
         a_lab = np.array(l_lab_data)
         a_chart = np.array(l_chart_data)
-
         readm_duration = np.array(l_readm_duration)
         death_duration = np.array(l_death_duration)
         expire_flag = np.array(l_expire_flag).astype('int')
@@ -300,6 +315,7 @@ class PatientData:
 
     def point_from_adm(self, l_lab_id, l_chart_id, days=0.,
                        from_discharge=True, final_adm_only=False):
+
         l_subject_id = []
         l_hadm_id = []
 
@@ -371,7 +387,6 @@ class PatientData:
         p_info("R/D=F/F:{}".format(sum(np.logical_and(readm_after_30, death_after_30))))
 
         return a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id
-
 
     def tseries_from_adm(self, l_lab_id, l_chart_id, cycle, duration,
                          from_discharge=True, final_adm_only=False):
