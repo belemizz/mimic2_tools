@@ -389,6 +389,9 @@ class Graph(MGraph):
     def waitforbuttonpress(self):
         plt.waitforbuttonpress()
 
+    def close_all(self):
+        plt.close('all')
+
     def normalize(self, value):
         max_val = max(abs(value))
         order = 10.0 ** int(log10(float(max_val)))

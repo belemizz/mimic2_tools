@@ -209,25 +209,19 @@ class PatientData:
         :param l_chart_id: Chart ID list of interest
         :param from_discharge: True->Set zero point on discharge. False-> set on admission
         '''
-
-        l_subject_id = []
-        l_hadm_id = []
-
-        l_lab_data = []
-        l_lab_ts = []
-
-        l_chart_data = []
-        l_chart_ts = []
+        l_subject_id, l_hadm_id = [], []
+        l_lab_data, l_chart_data = [], []
+        l_lab_ts, l_chart_ts = [], []
         l_expire_flag = []
 
         def data_and_ts(data, l_id):
-            l_data = [0] * len(l_id)
-            l_ts = [0] * len(l_id)
+            l_data = [[]] * len(l_id)
+            l_ts = [[]] * len(l_id)
             for item in data:
                 if item[0] in l_id:
                     idx_item = l_id.index(item[0])
-                    l_ts[idx_item] = item[3]
-                    l_data[idx_item] = item[4]
+                    l_ts[idx_item] = l_ts[idx_item] + item[3]
+                    l_data[idx_item] = l_data[idx_item] + item[4]
             return (l_data, l_ts)
 
         def append_adm_data(patient, idx, admission):
@@ -254,37 +248,34 @@ class PatientData:
         expire_flag = np.array(l_expire_flag).astype('int')
         return l_lab_ts, l_lab_data, l_chart_ts, l_chart_data, expire_flag, l_subject_id, l_hadm_id
 
-    def trend_from_adm(self, l_lab_id, l_chart_id, poi=0., span=1.,
-                       from_discharge=True, final_adm_only=False):
+    def trend_from_adm(self, l_lab_id, l_chart_id, span,
+                       from_discharge=True, accept_none=True, final_adm_only=False):
         '''Get data from each admission
 
         :param l_lab_id: Lab ID list of interest
         :param l_chart_id: Chart ID list of interest
-        :param poi: point of interest
         :param span: time span where trend is calucurated
         :param from_discharge: True->Set zero point on discharge. False-> set on admission
+        :param accept_none: True to include data with None , False to exclude data contains None.
         :param final_adm_only: Extract data only from final admissions of the patients
         '''
-        l_subject_id = []
-        l_hadm_id = []
-
-        l_lab_data = []
-        l_chart_data = []
-
-        l_readm_duration = []
-        l_death_duration = []
-        l_expire_flag = []
+        l_subject_id, l_hadm_id = [], []
+        l_lab_data, l_chart_data = [], []
+        l_readm_duration, l_death_duration, l_expire_flag = [], [], []
 
         def validation(lab_value, chart_value):
-            if (True not in np.isnan(lab_value)
+            if accept_none:
+                return True
+            elif (True not in np.isnan(lab_value)
                     and True not in np.isnan(chart_value)):
                 return True
             else:
                 return False
 
         def append_adm_data(patient, idx, admission):
-            lab_value, chart_value = self.__trend_from_adm(
-                admission, l_lab_id, l_chart_id, poi, span, from_discharge)
+            lab_value, chart_value = self.__trend_from_adm(admission,
+                                                           l_lab_id, l_chart_id,
+                                                           span, from_discharge)
             rd = self.__readmission_duration(patient, idx)
             dd = self.__death_duration(patient, idx)
             ef = self.__expire_flag(patient, idx)
@@ -313,29 +304,34 @@ class PatientData:
         expire_flag = np.array(l_expire_flag).astype('int')
         return a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id
 
-    def point_from_adm(self, l_lab_id, l_chart_id, days=0.,
-                       from_discharge=True, final_adm_only=False):
+    def point_from_adm(self, l_lab_id, l_chart_id, poi=0.,
+                       from_discharge=True, accept_none=True,
+                       final_adm_only=False):
+        """Extract Point Data from MIMIC2 database.
 
-        l_subject_id = []
-        l_hadm_id = []
-
-        l_lab_data = []
-        l_chart_data = []
-
-        l_readm_duration = []
-        l_death_duration = []
-        l_expire_flag = []
+        :param l_lab_id: list of id of lab tests to extract
+        :param l_chart_id: list of id of chart tests to extract
+        :param poi: point of interest (negative if from_discharge)
+        :param from_discharge: set 0 point on discharge point, otherwise 0 point is on admission
+        :param accept_none: True to include data with None , False to exclude data contains None.
+        :param final_adm_only: Use only final admissions of each patient
+        """
+        l_subject_id, l_hadm_id = [], []
+        l_lab_data, l_chart_data = [], []
+        l_readm_duration, l_death_duration, l_expire_flag = [], [], []
 
         def validation(lab_value, chart_value):
-            if (True not in np.isnan(lab_value)
-                    and True not in np.isnan(chart_value)):
+            if accept_none:
+                return True
+            elif (True not in np.isnan(lab_value)
+                  and True not in np.isnan(chart_value)):
                 return True
             else:
                 return False
 
         def append_adm_data(patient, idx, admission):
             lab_value, chart_value = self.__point_from_adm(
-                admission, l_lab_id, l_chart_id, days, from_discharge)
+                admission, l_lab_id, l_chart_id, poi, from_discharge)
             rd = self.__readmission_duration(patient, idx)
             dd = self.__death_duration(patient, idx)
             ef = self.__expire_flag(patient, idx)
@@ -388,27 +384,30 @@ class PatientData:
 
         return a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id
 
-    def tseries_from_adm(self, l_lab_id, l_chart_id, cycle, duration,
+    def tseries_from_adm(self, l_lab_id, l_chart_id, span, cycle,
                          from_discharge=True, final_adm_only=False):
-        l_subject_id = []
-        l_hadm_id = []
+        """Extract Point Data from MIMIC2 database.
 
-        l_lab_data = []
-        l_chart_data = []
-
-        l_readm_duration = []
-        l_death_duration = []
-        l_expire_flag = []
-        n_steps = int(duration / cycle)
+        :param l_lab_id: list of id of lab tests to extract
+        :param l_chart_id: list of id of chart tests to extract
+        :param span: span of the time series
+        :param cycle: cycle of the data
+        :param from_discharge: set 0 point on discharge point, otherwise 0 point is on admission
+        :param final_adm_only: Use only final admissions of each patient
+        """
+        l_subject_id, l_hadm_id = [], []
+        l_lab_data, l_chart_data = [], []
+        l_readm_duration, l_death_duration, l_expire_flag = [], [], []
+        n_steps = int((span[1] - span[0]) / cycle)
 
         def validation(lab_value, chart_value):
-            return True
+            return True  # TODO:add validataion condition
 
         def append_adm_data(patient, adm_idx, admission):
             a_lab_value = np.zeros((n_steps, len(l_lab_id)))
             a_vit_value = np.zeros((n_steps, len(l_chart_id)))
             for idx in range(n_steps):
-                days = idx * cycle
+                days = span[0] + idx * cycle
                 lab_value, chart_value = self.__point_from_adm(
                     admission, l_lab_id, l_chart_id, days, from_discharge)
                 a_lab_value[idx, :] = lab_value
@@ -443,16 +442,13 @@ class PatientData:
 
         for idx, adm_id in enumerate(l_hadm_id):
             for isteps in range(n_steps):
-                if not np.isnan(l_lab_data[idx][isteps]).any():
-                    lab_x[isteps][idx] = l_lab_data[idx][isteps]
-                    lab_m[isteps][idx] = 1.
-                if not np.isnan(l_chart_data[idx][isteps]).any():
-                    vit_x[isteps][idx] = l_chart_data[idx][isteps]
-                    vit_m[isteps][idx] = 1.
+                lab_x[isteps][idx] = l_lab_data[idx][isteps]
+                lab_m[isteps][idx] = 1.
+                vit_x[isteps][idx] = l_chart_data[idx][isteps]
+                vit_m[isteps][idx] = 1.
 
         lab_tseries = [lab_x, lab_m]
         vit_tseries = [vit_x, vit_m]
-
         readm_duration = np.array(l_readm_duration)
         death_duration = np.array(l_death_duration)
         expire_flag = np.array(l_expire_flag).astype('int')
@@ -460,18 +456,10 @@ class PatientData:
         return (lab_tseries, vit_tseries, expire_flag, l_subject_id,
                 readm_duration, death_duration, l_hadm_id)
 
-    def __point_from_adm(self, admission, l_lab_id, l_chart_id, days=0., from_discharge=True):
+    def __point_from_adm(self, admission, l_lab_id, l_chart_id, poi=0., from_discharge=True):
         '''get a datapoint of lab and chart in a admission'''
-        if from_discharge:
-            if admission.get_estimated_disch_time() > datetime.min + timedelta(days):
-                time_of_interest = (admission.get_estimated_disch_time() - timedelta(days))
-            else:
-                time_of_interest = admission.get_estimated_disch_time()
-        else:
-            time_of_interest = (admission.get_estimated_admit_time() + timedelta(days))
-
-        lab_result = admission.get_newest_lab_at_time(time_of_interest)
-        chart_result = admission.get_newest_chart_at_time(time_of_interest)
+        lab_result = admission.get_lab_at_point(poi, from_discharge)
+        chart_result = admission.get_chart_at_point(poi, from_discharge)
 
         lab_value = [float('NaN')] * len(l_lab_id)
         for item in lab_result:
@@ -487,17 +475,10 @@ class PatientData:
 
         return lab_value, chart_value
 
-    def __trend_from_adm(self, admission, l_lab_id, l_chart_id,
-                         days, span, from_discharge):
+    def __trend_from_adm(self, admission, l_lab_id, l_chart_id, span, from_discharge):
         '''get trend data on a datapoint of lab and chart in a admission'''
-        if from_discharge:
-            begin_pt = -days
-        else:
-            begin_pt = days
-        end_pt = begin_pt + span
-
-        lab_result = admission.get_lab_in_span(begin_pt, end_pt, from_discharge)
-        chart_result = admission.get_chart_in_span(begin_pt, end_pt, from_discharge)
+        lab_result = admission.get_lab_in_span(span[0], span[1], from_discharge)
+        chart_result = admission.get_chart_in_span(span[0], span[1], from_discharge)
 
         def get_linear_coef(data, l_id):
             n_coef = 2
@@ -1033,48 +1014,27 @@ class admission:
             raise Exception("There is more than one record")
         return result[0]
 
-    def get_newest_lab_at_time(self, time_of_interest):
-        result = []
-        for item in self.labs:
-            if item.timestamps[0] < time_of_interest:
+    def get_lab_at_point(self, poi, from_discharge=True):
+        '''Get lab data at the selected point
+        :param poi: point of interest (set negative value if from_discharge)
+        :param from_discharge: count time from discharge point (False: admission point)
+        '''
+        all_data = self.get_lab_in_span(None, poi, from_discharge)
+        return self.__point_from_span(all_data)
 
-                over = False
-                for i, t in enumerate(item.timestamps):
-                    if t > time_of_interest:
-                        over = True
-                        break
+    def get_chart_at_point(self, poi, from_discharge=True):
+        '''Get chart data at the selected point
+        :param poi: point of interest (set negative value if from_discharge)
+        :param from_discharge: count time from discharge point (False: admission point)
+        '''
+        all_data = self.get_chart_in_span(None, poi, from_discharge)
+        return self.__point_from_span(all_data)
 
-                if over:
-                    timestamp = item.timestamps[i - 1]
-                    value = item.values[i - 1]
-                else:
-                    timestamp = item.timestamps[i]
-                    value = item.values[i]
-
-                result.append([item.itemid, item.description, item.unit, timestamp, value])
-        return result
-
-    def get_newest_chart_at_time(self, time_of_interest):
-        valid_stays = [stay for stay in self.icustays if stay.intime < time_of_interest]
-
-        result = []
-        if len(valid_stays) > 0:
-            stay = valid_stays[len(valid_stays) - 1]
-            for item in stay.charts:
-                if item.timestamps[0] < time_of_interest:
-                    over = False
-                    for i, t in enumerate(item.timestamps):
-                        if t > time_of_interest:
-                            over = True
-                            break
-                    if over:
-                        timestamp = item.timestamps[i - 1]
-                        value = item.values[i - 1]
-                    else:
-                        timestamp = item.timestamps[i]
-                        value = item.values[i]
-                    result.append([item.itemid, item.description, item.unit, timestamp, value])
-        return result
+    def __point_from_span(self, all_data):
+        for data in all_data:
+            data[3] = data[3][-1]
+            data[4] = data[4][-1]
+        return all_data
 
     def get_lab_in_span(self, begin_pt, end_pt, from_discharge=True):
         '''Get lab data in this admission.

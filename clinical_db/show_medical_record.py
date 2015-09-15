@@ -16,7 +16,7 @@ def visualize_data(subj_b_id):
     l_lab_id = patients.common_lab(2)[0]
     l_chart_id = mimic2db.vital_charts
 
-    from_discharge = False
+    from_discharge = True
     poi = 0.
     duration = 3.
     cycle = 0.1
@@ -26,7 +26,7 @@ def visualize_data(subj_b_id):
         span = [-poi - duration, -poi]
     else:
         x_label = 'Days from Admission'
-        span = [poi, poi+duration]
+        span = [poi, poi + duration]
 
     # Get All Data as a baseline
     [lab_b_ts, lab_b_data, ch_b_ts, ch_b_data, b_flag, subj_b_id, hadm_b_id] \
@@ -34,10 +34,9 @@ def visualize_data(subj_b_id):
 
     def single_sample(poi, from_discharge):
         a_lab, a_chart, _, _, _, _, hadm_p_id \
-            = patients.point_from_adm(l_lab_id, l_chart_id, poi, from_discharge)
-        x = [0, 10]
-        lab_point_ts = [x] * len(l_lab_id)
-        chart_point_ts = [x] * len(l_chart_id)
+            = patients.point_from_adm(l_lab_id, l_chart_id, span[1], from_discharge)
+        lab_point_ts = [span] * len(l_lab_id)
+        chart_point_ts = [span] * len(l_chart_id)
         lab_p_data = np.dstack((a_lab, a_lab))
         chart_p_data = np.dstack((a_chart, a_chart))
         return lab_point_ts, lab_p_data, chart_point_ts, chart_p_data, hadm_p_id
@@ -45,16 +44,13 @@ def visualize_data(subj_b_id):
         = single_sample(poi + duration, from_discharge)
 
     def sampled_series(poi, cycle, duration, from_discharge):
-        data = patients.tseries_from_adm(l_lab_id, l_chart_id, cycle=cycle, duration=duration,
+        data = patients.tseries_from_adm(l_lab_id, l_chart_id, span, cycle,
                                          from_discharge=from_discharge)
         lab_sample = SeriesData(data[0][0], data[0][1], data[2])
         chart_sample = SeriesData(data[1][0], data[1][1], data[2])
         l_hadm_sample = data[6]
 
-        if from_discharge:
-            x = [-(poi + cycle * i) for i in range(int(duration / cycle))]
-        else:
-            x = [(poi + cycle * i) for i in range(int(duration / cycle))]
+        x = [span[0] + cycle * i for i in range(int(duration / cycle))]
         lab_sample_ts = [x] * len(l_lab_id)
         chart_sample_ts = [x] * len(l_chart_id)
         return lab_sample_ts, lab_sample, chart_sample_ts, chart_sample, l_hadm_sample
@@ -64,16 +60,18 @@ def visualize_data(subj_b_id):
 
     def coef(poi, duration, from_discharge):
         a_lab, a_chart, expire_flag, l_subject_id, readm_duration, death_duration, l_hadm_id_coef \
-            = patients.trend_from_adm(l_lab_id, l_chart_id, poi, duration, from_discharge)
+            = patients.trend_from_adm(l_lab_id, l_chart_id, span, from_discharge)
 
-        lab_ts_coef = span * len(l_lab_id)
-        chart_ts_coef = span * len(l_chart_id)
+        lab_ts_coef = [span] * len(l_lab_id)
+        chart_ts_coef = [span] * len(l_chart_id)
 
         def __coef(array):
             coef = np.zeros((array.shape[0], array.shape[1] / 2, 2))
-            coef[:, :, 0] = array[:, range(0, array.shape[1], 2)]
+            coef[:, :, 0] = array[:, range(0, array.shape[1], 2)] \
+                + span[0] * array[:, range(1, array.shape[1], 2)]
+
             coef[:, :, 1] = array[:, range(0, array.shape[1], 2)] \
-                + duration * array[:, range(1, array.shape[1], 2)]
+                + span[1] * array[:, range(1, array.shape[1], 2)]
             return coef
 
         lab_coef = __coef(a_lab)
@@ -95,21 +93,21 @@ def visualize_data(subj_b_id):
             data = b_data[i_b] + c_data.slice_by_sample(i_c).series.transpose().tolist()
             graph.line_scatter(ts, data, hl_span=span)
 
-        __sample_graph(i_b, i_s, lab_b_ts, lab_s_ts, lab_b_data, lab_s_data)
-        __sample_graph(i_b, i_s, ch_b_ts, ch_s_ts, ch_b_data, ch_s_data)
-
         def __coef_graph(i_b, i_c, b_ts, c_ts, b_data, c_data):
             ts = b_ts[i_b] + c_ts
             data = b_data[i_b] + c_data[i_c].tolist()
             graph.line_scatter(ts, data, hl_span=span)
 
-        __coef_graph(i_b, i_c, lab_b_ts, lab_c_ts, lab_b_data, lab_c_data)
-        __coef_graph(i_b, i_c, ch_b_ts, ch_c_ts, ch_b_data, ch_c_data)
-
         __coef_graph(i_b, i_p, lab_b_ts, lab_p_ts, lab_b_data, lab_p_data)
         __coef_graph(i_b, i_p, ch_b_ts, ch_p_ts, ch_b_data, ch_p_data)
 
-    graph.waitforbuttonpress()
+        __sample_graph(i_b, i_s, lab_b_ts, lab_s_ts, lab_b_data, lab_s_data)
+        __sample_graph(i_b, i_s, ch_b_ts, ch_s_ts, ch_b_data, ch_s_data)
+
+        __coef_graph(i_b, i_c, lab_b_ts, lab_c_ts, lab_b_data, lab_c_data)
+        __coef_graph(i_b, i_c, ch_b_ts, ch_c_ts, ch_b_data, ch_c_data)
+        graph.waitforbuttonpress()
+        graph.close_all()
 
 
 def show_records(subject_id):
@@ -161,10 +159,6 @@ def show_records(subject_id):
 
 if __name__ == '__main__':
     id_list = mimic2db.subject_with_chf(0)
-    idx = 50
-
-    visualize_data(id_list[idx: idx + 1])
+    idx = 6
+    visualize_data(id_list[idx: idx + 3])
 #    show_records(subject_id)
-
-    graph.waitforbuttonpress()
-
