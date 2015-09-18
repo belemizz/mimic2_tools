@@ -19,14 +19,10 @@ Default_db_param = Bunch(max_id=0, target_codes='chf', matched_only=False)
 :param matched_only: select only subjects with continuous record
 """
 
-Default_data_param = Bunch(n_lab=20, disch_origin=True, l_poi=0.,
-                           coef_flag=False, coef_span=1.,
-                           tseries_flag=True, tseries_duration=1.,
-                           tseries_cycle=0.25)
+Default_data_param = Bunch(n_lab=20, disch_origin=True, span=[-1., 0.],
+                           coef_flag=False, tseries_flag=True, tseries_cycle=0.25)
 """Param for database preparation.
-
 :param tseries_flag: True for use timeseries
-:param tseries_duraction: Duration of the timeseries
 :param tseres_cycle: Cycle of the timeseries
 """
 
@@ -35,7 +31,6 @@ Default_alg_param = Bunch(visualize_data=False,
                           tseries_param=alg.timeseries.Default_param,
                           n_cv_fold=10)
 """Param for algorithm
-
 :param class_param: param for classification algorithm
 :param tsereis_param: param for timeseries classification algorithm
 :param n_cv_fold: number of folds in cross validation
@@ -52,7 +47,6 @@ class ControlExperiment:
         param = locals().copy()
         del param['self']
         self.reproduction_param = param
-
         self.max_id = max_id
         self.target_codes = target_codes
         self.matched_only = matched_only
@@ -61,7 +55,6 @@ class ControlExperiment:
 
     def set_db_param(self, db_param):
         self.db_param = Bunch(db_param.copy())
-
         self.max_id = db_param.max_id
         self.target_codes = db_param.target_codes
         self.matched_only = db_param.matched_only
@@ -93,11 +86,9 @@ class ControlExperiment:
 
         self.n_lab = data_param.n_lab
         self.disch_origin = data_param.disch_origin
-        self.l_poi = data_param.l_poi
+        self.span = data_param.span
         self.coef_flag = data_param.coef_flag
-        self.coef_span = data_param.coef_span
         self.tseries_flag = data_param.tseries_flag
-        self.tseries_duration = data_param.tseries_duration
         self.tseries_cycle = data_param.tseries_cycle
 
     def set_alg_param(self, alg_param=None):
@@ -115,6 +106,62 @@ class ControlExperiment:
         self.class_param = alg_param.class_param
         self.tseries_param = alg_param.tseries_param
         self.n_cv_fold = alg_param.n_cv_fold
+
+    def compare_class_alg(self, l_param):
+        result = []
+        for param in l_param:
+            self.class_param = param
+            result.append(self.execution())
+        self.set_alg_param()
+        return result
+
+    def compare_span(self, l_span, include_point=False):
+        result = []
+        if include_point:
+            self.tseries_flag = False
+            result.append(self.execution())
+
+        self.tseries_flag = True
+        for span in l_span:
+            self.span = span
+            result.append(self.execution())
+
+        self.set_data_param()
+        return result
+
+    def compare_cycle(self, l_cycle, include_point=False):
+        result = []
+        if include_point:
+            self.tseries_flag = False
+            result.append(self.execution())
+        self.tseries_flag = True
+        for cycle in l_cycle:
+            self.tseries_cycle = cycle
+            result.append(self.execution())
+
+        self.set_data_param()
+        return result
+
+    def compare_coef(self, l_span, include_point=False, include_ts=False):
+        result = []
+        if include_point:
+            self.coef_flag = False
+            self.tseries_flag = False
+            result.append(self.execution())
+
+        if include_ts:
+            self.coef_flag = False
+            self.tseries_flag = True
+            result.append(self.execution())
+
+        self.coef_flag = True
+        self.tseries_flag = False
+        for span in l_span:
+            self.span = span
+            result.append(self.execution())
+
+        self.set_data_param()
+        return result
 
 
 class ControlClassification(ControlExperiment):

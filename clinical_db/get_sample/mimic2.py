@@ -254,7 +254,7 @@ class PatientData:
 
         :param l_lab_id: Lab ID list of interest
         :param l_chart_id: Chart ID list of interest
-        :param span: time span where trend is calucurated
+
         :param from_discharge: True->Set zero point on discharge. False-> set on admission
         :param accept_none: True to include data with None , False to exclude data contains None.
         :param final_adm_only: Extract data only from final admissions of the patients
@@ -1109,12 +1109,19 @@ class admission:
         if begin_pt is None:
             toi_begin = datetime.min
         else:
-            toi_begin = zero_pt + timedelta(begin_pt)
+            try:
+                toi_begin = zero_pt + timedelta(begin_pt)
+            except OverflowError:
+                toi_begin = zero_pt
 
         if end_pt is None:
             toi_end = datetime.max
         else:
-            toi_end = zero_pt + timedelta(end_pt)
+            try:
+                toi_end = zero_pt + timedelta(end_pt)
+            except OverflowError:
+                toi_end = zero_pt
+
         return (toi_begin, toi_end)
 
     def get_estimated_disch_time(self):

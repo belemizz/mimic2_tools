@@ -441,7 +441,7 @@ class evaluate_fetaure:
                 self.dae_hidden, 1, self.dae_corruption)
 
             feature_desc = encoded_values.keys()
-            feature_id = range( len(feature_desc))
+            feature_id = range(len(feature_desc))
             feature_unit = ['None'] * len(feature_desc)
             feature_data = np.hstack(encoded_values.viewvalues())
 

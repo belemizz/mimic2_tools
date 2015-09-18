@@ -427,10 +427,17 @@ class SeriesClassifier():
             fill_mat = np.zeros(x.shape[1:3])
             for s in range(x.shape[0]):
                 for i in range(x.shape[1]):
-                    if m[s, i] == 1:
-                        fill_mat[i] = x[s, i]
-                    else:
+                    if m[s, i] == 0:
                         x[s, i] = fill_mat[i]
+                    elif np.isnan(x[s, i]).any():
+                        for j, v in enumerate(x[s, i]):
+                            if np.isnan(v):
+                                x[s, i, j] = fill_mat[i, j]
+                            else:
+                                fill_mat[i, j] = x[s, i, j]
+                        x[s, i] = fill_mat[i]
+                    else:
+                        fill_mat[i] = x[s, i]
 
         elif algorithm is 'sample_ave':
             """Fill with sample avarage value"""

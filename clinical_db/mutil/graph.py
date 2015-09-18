@@ -52,8 +52,10 @@ class MGraph:
                     ax.barh([y + bar_height * (len(data) - idx - 1) for y in Y], d,
                             height=bar_height, color=cmap(idx * cmap_v))
                 else:
-                    ax.bar([y + bar_height * idx for y in Y], d,
-                           width=bar_height, color=cmap(idx * cmap_v))
+                    rects = ax.bar([y + bar_height * idx for y in Y], d,
+                                   width=bar_height, color=cmap(idx * cmap_v))
+                    self.__autolabel(rects, ax)
+
                 set_ticks([item + bar_height / 2 * len(data) for item in Y], labels)
 
         set_lim1([-bar_height, len(labels)])
@@ -68,6 +70,11 @@ class MGraph:
         if title:
             ax.set_title(title)
         self.show_and_save(fig, filename, show_flag, original_data)
+
+    def __autolabel(self, rects, ax):
+            for rect in rects:
+                height = rect.get_height()
+                ax.text(rect.get_x(), 1.05 * height, '%0.3f' % height)
 
     def line_scatter(self, x_data, y_data, hl_span=None, legend="", x_label="", y_label="",
                      ylim=[], title="", filename="", show_flag=True):

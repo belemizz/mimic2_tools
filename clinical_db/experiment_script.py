@@ -3,7 +3,6 @@ Experiments are recorded in this script
 Experiment date, update date, and purpose should be recorded
 '''
 from patient_classification import Default_db_param, Default_data_param, Default_alg_param
-import alg.classification
 
 from mutil import Graph, Stopwatch
 graph = Graph()
@@ -45,11 +44,11 @@ def class_weight_comparison():
 
 
 def cycle_comparison(predictor, l_cycle, filename):
-    result = predictor.compare_cycle(l_cycle)
+    result = predictor.compare_cycle(l_cycle, True)
     l_lab_result = [r.lab for r in result]
     l_vit_result = [r.vit for r in result]
 
-    label = [int(1. / cycle) for cycle in l_cycle]
+    label = ['Point'] + [int(1. / cycle) for cycle in l_cycle]
     comparison_label = 'Points per Day'
     graph.bar_classification(l_lab_result, label,
                              comparison_label=comparison_label,
@@ -63,13 +62,13 @@ def cycle_comparison(predictor, l_cycle, filename):
     print [r.lab.n_nega for r in result]
 
 
-def duration_comparison(predictor, l_duration, filename):
-    result = predictor.compare_duration(l_duration)
+def span_comparison(predictor, l_span, filename):
+    result = predictor.compare_span(l_span, True)
     l_lab_result = [r.lab for r in result]
     l_vit_result = [r.vit for r in result]
 
-    label = [int(duration) for duration in l_duration]
-    comparison_label = 'Duration in Days'
+    label = ['Point'] + l_span
+    comparison_label = 'Point / Timeseries'
 
     graph.bar_classification(l_lab_result, label,
                              comparison_label=comparison_label,
@@ -84,12 +83,13 @@ def duration_comparison(predictor, l_duration, filename):
 
 
 def coef_span_comparison(predictor, l_span, filename):
-    result = predictor.compare_coef(l_span, True)
+    result = predictor.compare_coef(l_span, True, True)
     l_lab_result = [r.lab for r in result]
     l_vit_result = [r.vit for r in result]
 
-    label = ['no_coef'] + l_span
+    label = ['Point'] + ['Tseries'] + l_span
     comparison_label = 'coef_span'
+
     graph.bar_classification(l_lab_result, label,
                              comparison_label=comparison_label,
                              title='Coef Span Comparison:Lab',
@@ -98,6 +98,7 @@ def coef_span_comparison(predictor, l_span, filename):
                              comparison_label=comparison_label,
                              title='Coef Span Comparison:Vit',
                              filename=filename + '_CoefVit')
+
     print [r.lab.n_posi for r in result]
     print [r.lab.n_nega for r in result]
 
@@ -128,36 +129,56 @@ def death_prediction():
     data_param = Default_data_param
     alg_param = Default_alg_param
 
-    ## data_param.tseries_flag = False
-    ## data_param.l_poi = 0.
-    ## pd = PredictDeath(db_param, data_param, alg_param)
-
-    ## class_param1 = Bunch(alg.classification.Default_param.copy())
-    ## class_param1.class_weight = None
-    ## class_param2 = Bunch(alg.classification.Default_param.copy())
-    ## class_param2.class_weight = 'auto'
-    ## l_param = [class_param1, class_param2]
-    ## l_label = ['None', 'Auto']
-    ## alg_comparison(pd, l_param, l_label, 'death')
-
-#    l_span = [2.]
-#    coef_span_comparison(pd, l_span, 'death')
-
+    # base parameter
     data_param.disch_origin = False
-    data_param.tseries_duration = 2.
-    data_param.tseries_cycle = 0.1
+    data_param.tseries_flag = False
+    data_param.span = [0., 1.]
+    data_param.tseries_cycle = 0.25
 
     pd = PredictDeath(db_param, data_param, alg_param)
 
-    l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
-    l_cycle = [1., 0.5]
-    cycle_comparison(pd, l_cycle, 'death')
+    def feature_importance_graph(importance, filename):
+        ent_reduction = [item[0] for item in importance]
+        labels = [item[3] for item in importance]
+        graph.bar_feature_importance(ent_reduction, labels, filename)
+    importance = pd.ent_reduction_point()
+    feature_importance_graph(importance, 'pd')
 
-    l_duration = [1., 2., 3., 4., 5.]
-    l_duration = [1., 2.]
-    duration_comparison(pd, l_duration, 'death')
+    algorithm_flag = True
+    if algorithm_flag:
+        l_alg_label = ['lr', 'dt', 'svm']
+        l_param = []
+        for name in l_alg_label:
+            param = Bunch(alg_param.class_param.copy())
+            param.name = name
+            l_param.append(param)
+        alg_comparison(pd, l_param, l_alg_label, 'pd_alg1')
+
+        l_alg_label = ['lr', 'pca_lr', 'dae_lr']
+        l_param = []
+        for name in l_alg_label:
+            param = Bunch(alg_param.class_param.copy())
+            param.name = name
+            l_param.append(param)
+        alg_comparison(pd, l_param, l_alg_label, 'pd_alg2')
+
+    span_flag = False
+    if span_flag:
+        l_span = [data_param.span]
+        span_comparison(pd, l_span, 'pd')
+
+    cycle_flag = False
+    if cycle_flag:
+        l_cycle = [0.5, 0.25, 0.2, 0.1]
+        cycle_comparison(pd, l_cycle, 'pd')
+
+    coef_flag = False
+    if coef_flag:
+        l_span = [data_param.span]
+        coef_span_comparison(pd, l_span, 'pd')
 
     graph.waitforbuttonpress()
+
 
 def readmission_prediction():
     from predict_readmission import PredictReadmission
@@ -168,23 +189,51 @@ def readmission_prediction():
     alg_param = Default_alg_param
 
     data_param.disch_origin = True
-    data_param.tseries_duration = 2.
-    data_param.tseries_cycle = 0.1
+    data_param.tseries_flag = False
+    data_param.span = [-2., 0.]
+    data_param.tseries_cycle = 0.25
 
-    pr = PredictReadmission(db_param, data_param, alg_param)
+    pd = PredictReadmission(db_param, data_param, alg_param)
 
-    # comparison in cycle parameter
-    l_cycle = [1., 0.5, 0.25, 0.2, 0.1]
-    cycle_comparison(pr, l_cycle, 'readm')
+    def feature_importance_graph(importance, filename):
+        ent_reduction = [item[0] for item in importance]
+        labels = [item[3] for item in importance]
+        graph.bar_feature_importance(ent_reduction, labels, filename)
+    importance = pd.ent_reduction_point()
+    feature_importance_graph(importance, 'pd')
 
-    l_duration = [1., 2., 3., 4., 5.]
-    duration_comparison(pr, l_duration, 'readm')
+    algorithm_flag = False
+    if algorithm_flag:
+        l_alg_label = ['lr', 'dt', 'svm']
+        l_param = []
+        for name in l_alg_label:
+            param = Bunch(alg_param.class_param.copy())
+            param.name = name
+            l_param.append(param)
+        alg_comparison(pd, l_param, l_alg_label, 'pd_alg1')
 
-    ## data_param.tseries_flag = False
-    ## data_param.l_poi = 0.
-    ## pr = PredictReadmission(db_param, data_param, alg_param)
-    ## l_span = [2.]
-    ## coef_span_comparison(pr, l_span, 'readm')
+        l_alg_label = ['lr', 'pca_lr', 'dae_lr']
+        l_param = []
+        for name in l_alg_label:
+            param = Bunch(alg_param.class_param.copy())
+            param.name = name
+            l_param.append(param)
+        alg_comparison(pd, l_param, l_alg_label, 'pd_alg2')
+
+    span_flag = False
+    if span_flag:
+        l_span = [data_param.span]
+        span_comparison(pd, l_span, 'pd')
+
+    cycle_flag = False
+    if cycle_flag:
+        l_cycle = [0.5, 0.25, 0.2, 0.1]
+        cycle_comparison(pd, l_cycle, 'pd')
+
+    coef_flag = False
+    if coef_flag:
+        l_span = [data_param.span]
+        coef_span_comparison(pd, l_span, 'pd')
 
     graph.waitforbuttonpress()
 
@@ -291,7 +340,7 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
     sw.reset()
-    readmission_prediction()
-#    death_prediction()
+#    readmission_prediction()
+    death_prediction()
     sw.stop()
     sw.print_cpu_elapsed()

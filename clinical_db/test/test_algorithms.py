@@ -5,6 +5,7 @@ import numpy as np
 from sys import exit
 from nose.tools import ok_, eq_
 from nose.plugins.attrib import attr
+from bunch import Bunch
 
 import get_sample
 
@@ -71,12 +72,19 @@ class TestClassification:
     def setUp(self):
         pass
 
-    def test_example(self):
+    def test_default(self):
+        [x, y] = get_sample.point_data.sample(1, 2, 2)
+        cv_result = alg.classification.cv(x, y)
+        print cv_result.get_dict()
 
-        pass
+    def test_encoded(self):
+        [x, y] = get_sample.point_data.sample(1, 2, 2)
 
-    def test_inbalance(self):
-        pass
+        for name in ['dae_lr', 'pca_lr', 'ica_lr']:
+            param = Bunch(alg.classification.Default_param.copy())
+            param.name = name
+            cv_result = alg.classification.cv(x, y, param=param)
+            print (name, cv_result.get_dict())
 
 
 class TestTimeseries:

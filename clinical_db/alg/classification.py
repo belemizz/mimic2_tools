@@ -13,7 +13,7 @@ from bunch import Bunch
 
 graph = Graph()
 
-L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab']
+L_algorithm = ['svm', 'rsvm', 'psvm', 'lr', 'dt', 'rf', 'ab', 'pca_lr']
 Default_param = Bunch(name='lr', lr_dim=10, svm_max_iter=20000, class_weight='auto')
 
 
@@ -85,20 +85,29 @@ def get_algorithm(param=Default_param):
             clf = ensemble.RandomForestClassifier(random_state=0, class_weight=param.class_weight)
         elif name == 'ab':
             clf = ensemble.AdaBoostClassifier(random_state=0)
+        elif name == 'pca_lr':
+            clf = PCA_LR(param)
+        elif name == 'ica_lr':
+            clf = ICA_LR(param)
+        elif name == 'dae_lr':
+            clf = DAE_LR(param)
         else:
             raise ValueError("algorithm has to be either %s" % L_algorithm)
         return clf
 
-    if isinstance(param.name, list):
-        clf = []
-        for name in param.name:
-            try:
-                clf.append(_get_algorithm(name))
-            except ValueError:
-                pass
-    else:
-        clf = _get_algorithm(param.name)
-
+    try:
+        if isinstance(param.name, list):
+            clf = []
+            for name in param.name:
+                try:
+                    clf.append(_get_algorithm(name))
+                except ValueError:
+                    pass
+        else:
+            clf = _get_algorithm(param.name)
+    except AttributeError:
+        import ipdb
+        ipdb.set_trace()
     return clf
 
 
@@ -138,6 +147,9 @@ def plot_2d(x, y, x_label="", y_label="", filename="",
 
 def fit_and_test(train_x, train_y, test_x, test_y, param=Default_param):
     """Train and test with samples."""
+    train_x[np.isnan(train_x)] = 0.
+    test_x[np.isnan(test_x)] = 0.
+
     clf = get_algorithm(param)
     clf.fit(train_x, train_y)
     predict_y = clf.predict(test_x)
@@ -161,3 +173,96 @@ def cv(x, y, n_cv_fold=10, param=Default_param):
         l_result.append(fit_and_test(x[train, :], y[train], x[test, :], y[test], param))
 
     return BinaryClassCVResult(l_result)
+
+
+class AE_LR():
+    def __init__(self, param):
+        self.enc = self.get_encoder()
+        self.clf = linear_model.LogisticRegression(random_state=0, class_weight=param.class_weight)
+
+    def fit(self, train_x, train_y):
+        self.enc.fit(train_x)
+        enc_x = self.enc.transform(train_x)
+        self.clf.fit(enc_x, train_y)
+
+    def predict(self, test_x):
+        enc_x = self.enc.transform(test_x)
+        return self.clf.predict(enc_x)
+
+    def decision_function(self, test_x):
+        enc_x = self.enc.transform(test_x)
+        return self.clf.decision_function(enc_x)
+
+
+class PCA_LR(AE_LR):
+    def get_encoder(self):
+        from sklearn.decomposition import PCA
+        n_components = 4
+        return PCA(n_components=n_components)
+
+
+class ICA_LR(AE_LR):
+    def get_encoder(self):
+        from sklearn.decomposition import FastICA
+        n_components = 2
+        return FastICA(n_components=n_components)
+
+
+class DAE_LR(AE_LR):
+    def get_encoder(self):
+        return DAE()
+
+from sklearn.preprocessing import normalize
+from alg.theano_util import convert_to_tensor_shared_variable
+import theano
+import theano.tensor as T
+from theano.tensor.shared_randomstreams import RandomStreams
+
+import sys
+sys.path.append('../../DeepLearningTutorials/code/')
+import dA
+
+
+class DAE:
+    def fit(self, train_x):
+        learning_rate=0.01
+        n_epochs=200
+        n_hidden=40
+        batch_size=20
+        corruption_level=0.3
+
+        norm_train_x = normalize(train_x)
+        shared_train = convert_to_tensor_shared_variable(norm_train_x)
+
+        n_dim = shared_train.shape.eval()[1]
+        n_train_batches = shared_train.get_value(borrow=True).shape[0] / batch_size
+
+        # model description
+        index = T.lscalar()
+        x = T.matrix('x')
+        numpy_rng = np.random.RandomState(123)
+        theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
+
+        self.da = dA.dA(numpy_rng, theano_rng, input=x, n_visible=n_dim, n_hidden=n_hidden)
+        cost, updates = self.da.get_cost_updates(corruption_level=corruption_level,
+                                            learning_rate=learning_rate)
+
+        train_da = theano.function(
+            [index], cost, updates=updates,
+            givens={x: shared_train[index * batch_size: (index + 1) * batch_size]})
+
+        for epoch in xrange(n_epochs):
+            c = []
+            for batch_index in xrange(n_train_batches):
+                c.append(train_da(batch_index))
+            print 'Epoch %d/%d, Cost %f' % (epoch + 1, n_epochs, np.mean(c))
+
+        hidden_values = self.da.get_hidden_values(x)
+        func_hidden_values = theano.function([x], hidden_values)
+        self.func_hidden_values = func_hidden_values
+
+    def transform(self, x):
+        norm_x = normalize(x)
+        shared_x = convert_to_tensor_shared_variable(norm_x)
+        ret_val = self.func_hidden_values(shared_x.get_value())
+        return ret_val

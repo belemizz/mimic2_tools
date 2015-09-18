@@ -2,7 +2,7 @@
 Test code for scripts
 """
 from nose.plugins.attrib import attr
-from nose.tools import eq_, ok_
+from nose.tools import eq_
 
 import datetime
 from get_sample import Mimic2, Mimic2m, PatientData, TimeSeries
@@ -35,23 +35,6 @@ class TestMimic2:
         eq_(len(patient_class.admissions[0].icustays[0].ios), 34, "Num of ios")
         eq_(patient_class.admissions[0].final_labs_time,
             datetime.datetime(3408, 3, 31, 6, 50))
-
-        eq_(len(
-            patient_class.admissions[1].get_newest_lab_at_time(datetime.datetime(3408, 6, 4))),
-            47)
-        eq_(len(
-            patient_class.admissions[1].get_newest_lab_at_time(datetime.datetime(3408, 6, 1))),
-            0)
-
-        # eq_(patient_class.admissions[1].get_chart_in_span(
-        #     datetime.datetime(3408, 6, 1),
-        #     datetime.datetime(3408, 6, 4))[0][1],
-        #     'Sodium')
-
-        # eq_(patient_class.admissions[1].get_chart_in_span(
-        #     datetime.datetime(3408, 6, 1),
-        #     datetime.datetime(3408, 6, 5))[3][4],
-        #     [38.0, 124.0])
 
     def test_subject_all(self):
         result = self.mimic2.subject_all(2000)
@@ -94,30 +77,13 @@ class TestPatientData:
         med_list = self.patients.common_medication(2)
         eq_(med_list[0], [25, 43])
 
-        # trend data
-        tr_all_adm = self.patients.trend_from_adm(lab_list[0], Mimic2.vital_charts,
-                                                  poi=0.0, span=1.0, from_discharge=False)
-#        ok_(33. < tr_all_adm[0][35, 2] < 34.)
-#        ok_(2. < tr_all_adm[1][35, 7] < 3.)
-        
-        # all data
-        all_data_adm = self.patients.data_from_adm(lab_list[0], Mimic2.vital_charts)
-#        ok_(all_data_adm[0] == 0.)
-        
-        # point data
-        pt_all_adm = self.patients.point_from_adm(lab_list[0], Mimic2.vital_charts,
-                                                  0.0, from_discharge=False)
-        pt_final_adm = self.patients.point_from_adm(lab_list[0], Mimic2.vital_charts, 0.0,
-                                                    from_discharge=False, final_adm_only=True)
-#        ok_((pt_all_adm[0][6] == pt_final_adm[0][3]).all())
+        span = [0, 1.]
+        from_discharge = False
+        self.patients.data_from_adm(lab_list[0], Mimic2.vital_charts, from_discharge)
 
-        # timeseries data
-        ts_all_adm = self.patients.tseries_from_adm(lab_list[0], Mimic2.vital_charts,
-                                                    0.1, 1.0, False)
-        ts_final_adm = self.patients.tseries_from_adm(lab_list[0], Mimic2.vital_charts,
-                                                      0.1, 1.0, False, final_adm_only=True)
-#        ok_((ts_all_adm[0][0][:, 1, :] == ts_final_adm[0][0][:, 0, :]).all())
-
+        self.patients.point_from_adm(lab_list[0], Mimic2.vital_charts, span[1], from_discharge)
+        self.patients.tseries_from_adm(lab_list[0], Mimic2.vital_charts, span, 0.1, from_discharge)
+        self.patients.trend_from_adm(lab_list[0], Mimic2.vital_charts, span, from_discharge)
 
 
 class TestTimeSeries:
