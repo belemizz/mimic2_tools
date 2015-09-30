@@ -67,8 +67,8 @@ class MGraph:
             set_label2(comparison_label)
         if legend:
             plt.legend(legend, loc='upper right')
-        if title:
-            ax.set_title(title)
+
+        self.set_title(ax, title)
         self.show_and_save(fig, filename, show_flag, original_data)
 
     def __autolabel(self, rects, ax):
@@ -80,7 +80,7 @@ class MGraph:
                      ylim=[], title="", filename="", show_flag=True):
         """Draw a scatter graph connected by lines"""
         original_data = locals().copy()
-        fig, ax = plt.subplots()
+        fig, ax = self.figure_with_side_space(0.7)
 
         for x, y in zip(x_data, y_data):
             if is_number(y):
@@ -89,17 +89,25 @@ class MGraph:
 
         if hl_span:
             ax.axvspan(hl_span[0], hl_span[1], alpha=0.2, color='red')
-        if legend:
-            ax.legend(legend, ncol=4, fontsize=10)
         if ylim:
             ax.set_ylim(ylim)
-        if x_label:
-            ax.set_xlabel(x_label)
-        if y_label:
-            ax.set_ylabel(y_label)
-        if title:
-            ax.set_title(title)
+
+        self.set_legend(ax, legend)
+        self.set_label(ax, x_label, y_label)
+        self.set_title(ax, title)
         self.show_and_save(fig, filename, show_flag, original_data)
+
+    def figure_with_side_space(self, space_width):
+        aspect = 1. / (1. + space_width)
+
+        fig = plt.figure(figsize=plt.figaspect(aspect))
+        ax = fig.add_axes([.05, .1, aspect, .8])
+        return fig, ax
+
+    def set_legend(self, ax, legend):
+        if legend:
+            ax.legend(legend, bbox_to_anchor=(1.02, 1.), loc='upper left',
+                      borderaxespad=0, fontsize=8)
 
     def line_series(self, data, y_points, legend="", x_label="", y_label="", ylim=[],
                     markersize=10, title="", filename="", show_flag=True):
@@ -115,15 +123,11 @@ class MGraph:
         if legend:
             ax.legend(legend)
         ax.set_xlim(self.__calc_lim(y_points, 0.05))
-
         if ylim:
             ax.set_ylim(ylim)
-        if x_label:
-            ax.set_xlabel(x_label)
-        if y_label:
-            ax.set_ylabel(y_label)
-        if title:
-            ax.set_title(title)
+
+        self.set_label(ax, x_label, y_label)
+        self.set_title(ax, title)
         self.show_and_save(fig, filename, show_flag, original_data)
 
     def labeled_line_series(self, data, label, y_points,
@@ -141,20 +145,12 @@ class MGraph:
                 ax.plot(y_points, item, 'r-')
 
         ax.set_xlim(self.__calc_lim(y_points, 0.05))
-
         if ylim:
             ax.set_ylim(ylim)
-        if x_label:
-            ax.set_xlabel(x_label)
-        if y_label:
-            ax.set_ylabel(y_label)
-        if title:
-            ax.set_title(title)
-        self.show_and_save(fig, filename, show_flag, original_data)
 
-    def __calc_lim(self, values, margin_ratio):
-        margin = (max(values) - min(values)) * margin_ratio
-        return [min(values) - margin, max(values) + margin]
+        self.set_label(ax, x_label, y_label)
+        self.set_title(ax, title)
+        self.show_and_save(fig, filename, show_flag, original_data)
 
     def show_and_save(self, fig, filename, show_flag, data=None):
         if len(filename) > 0:
@@ -169,6 +165,20 @@ class MGraph:
 
         if show_flag:
             fig.show()
+
+    def set_title(self, ax, title):
+        if title:
+            ax.set_title(title)
+
+    def set_label(self, ax, x_label, y_label):
+        if x_label:
+            ax.set_xlabel(x_label)
+        if y_label:
+            ax.set_ylabel(y_label)
+
+    def __calc_lim(self, values, margin_ratio):
+        margin = (max(values) - min(values)) * margin_ratio
+        return [min(values) - margin, max(values) + margin]
 
 
 class Graph(MGraph):

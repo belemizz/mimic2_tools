@@ -84,23 +84,23 @@ def visualize_data(subj_b_id):
     valid_hadm = intersection((hadm_c_id, hadm_b_id, hadm_p_id, hadm_s_id))
     for id in valid_hadm:
         i_b = hadm_b_id.index(id)
+        i_s = hadm_s_id.index(id)
         i_c = hadm_c_id.index(id)
         i_p = hadm_p_id.index(id)
-        i_s = hadm_s_id.index(id)
 
-        def __sample_graph(i_b, i_c, b_ts, c_ts, b_data, c_data):
-            ts = b_ts[i_b] + c_ts
-            data = b_data[i_b] + c_data.slice_by_sample(i_c).series.transpose().tolist()
-            graph.line_scatter(ts, data, hl_span=span)
+        def __base_graph(i_b, b_ts, b_data, legend, title, filename):
+            graph.line_scatter(b_ts[i_b], b_data[i_b], hl_span=span, x_label=x_label,
+                               legend=legend, title=title, filename=filename)
+
+        def __sampling_graph(i_b, i_s, b_ts, s_ts, b_data, s_data):
+            ts = b_ts[i_b] + s_ts
+            data = b_data[i_b] + s_data.slice_by_sample(i_s).series.transpose().tolist()
+            graph.line_scatter(ts, data, hl_span=span, x_label=x_label)
 
         def __coef_graph(i_b, i_c, b_ts, c_ts, b_data, c_data):
             ts = b_ts[i_b] + c_ts
             data = b_data[i_b] + c_data[i_c].tolist()
             graph.line_scatter(ts, data, hl_span=span)
-
-        def __base_graph(i_b, b_ts, b_data, legend, title, filename):
-            graph.line_scatter(b_ts[i_b], b_data[i_b], hl_span=span, x_label=x_label,
-                               legend=legend, title=title, filename=filename)
 
         title = "Hadm: {}".format(id)
         filename = "Hadm{}".format(id)
@@ -108,14 +108,15 @@ def visualize_data(subj_b_id):
         __base_graph(i_b, lab_b_ts, lab_b_data, l_lab_desc, title, filename + 'lab')
         __base_graph(i_b, ch_b_ts, ch_b_data, mimic2db.vital_descs, title, filename + 'ch')
 
+        __sampling_graph(i_b, i_s, lab_b_ts, lab_s_ts, lab_b_data, lab_s_data)
+        __sampling_graph(i_b, i_s, ch_b_ts, ch_s_ts, ch_b_data, ch_s_data)
+
 #        __coef_graph(i_b, i_p, lab_b_ts, lab_p_ts, lab_b_data, lab_p_data)
 #        __coef_graph(i_b, i_p, ch_b_ts, ch_p_ts, ch_b_data, ch_p_data)
 
-#        __sample_graph(i_b, i_s, lab_b_ts, lab_s_ts, lab_b_data, lab_s_data)
-#        __sample_graph(i_b, i_s, ch_b_ts, ch_s_ts, ch_b_data, ch_s_data)
-
 #        __coef_graph(i_b, i_c, lab_b_ts, lab_c_ts, lab_b_data, lab_c_data)
 #        __coef_graph(i_b, i_c, ch_b_ts, ch_c_ts, ch_b_data, ch_c_data)
+
         graph.waitforbuttonpress()
         graph.close_all()
 
@@ -169,6 +170,6 @@ def show_records(subject_id):
 
 if __name__ == '__main__':
     id_list = mimic2db.subject_with_chf(0)
-    idx = 504
+    idx = 503
     visualize_data(id_list[idx: idx + 1])
 #    show_records(subject_id)

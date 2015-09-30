@@ -24,6 +24,7 @@ if save_result:
         exit()
 
 
+@attr(alg_work=True)
 class TestAutoEncoder:
 
     def test_real_test_mode(self):
@@ -32,28 +33,39 @@ class TestAutoEncoder:
     def test_auto_encoder(self):
         x, y = get_sample.point_data.normal_dist(4)
 
-        encoded = alg.auto_encoder.pca(x, x, 2, cache_key='')
+        param = alg.auto_encoder.AE_Param
+        pca = alg.auto_encoder.PCA_AE(param)
+
+        pca.fit(x)
+        encoded = pca.transform(x)
         self.__check_data('pca', encoded)
 
-        encoded = alg.auto_encoder.pca_selected(x, y, x, 2, 1, cache_key='')
+        pca.fit_select(x, y)
+        encoded = pca.transform_select(x)
         self.__check_data('pca_selected', encoded)
 
-        encoded = alg.auto_encoder.ica(x, x, 4, cache_key='')
+        param.n_components = 4
+        param.n_select = 2
+
+        ica = alg.auto_encoder.ICA_AE(param)
+
+        ica.fit(x)
+        encoded = ica.transform(x)
         self.__check_data('ica', encoded)
 
-        encoded = alg.auto_encoder.ica_selected(x, y, x, 4, 2, cache_key='')
+        ica.fit_select(x, y)
+        encoded = ica.transform_select(x)
         self.__check_data('ica_selected', encoded)
 
-        dae = alg.auto_encoder.dae(x, x, n_epochs=100, cache_key='')
-        self.__check_data('dae', dae)
+        dae = alg.auto_encoder.DAE_AE(param)
+        dae.fit(x)
+        encoded = dae.transform(x)
+        self.__check_data('dae', encoded)
 
-        dae_s = alg.auto_encoder.dae_selected(x, y, x, n_epochs=100, n_select=5, cache_key='')
-        self.__check_data('dae_selected', dae_s)
-
-        # check selection consistency
-        i_index = alg.feature_selection.select_feature_index(dae, y, n_select=5)
-        dae_s_c = dae[:, i_index]
-        ok_((dae_s == dae_s_c).all())
+        param.n_select = 5
+        dae.fit_select(x, y)
+        encoded = dae.transform_select(x)
+        self.__check_data('dae_selected', encoded)
 
     def __check_data(self, cache_key, data):
         cc = Cache(cache_key, cache_dir='../data/test/')
@@ -62,12 +74,14 @@ class TestAutoEncoder:
         else:
             correct_data = cc.load()
             if isinstance(data, np.ndarray):
+                if not (data == correct_data).all():
+                    import ipdb
+                    ipdb.set_trace()
                 ok_((data == correct_data).all(), cache_key)
             else:
                 eq_(data, correct_data, cache_key)
 
 
-@attr(alg_work=True)
 class TestClassification:
     def setUp(self):
         pass
