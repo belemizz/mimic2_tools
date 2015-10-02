@@ -1,12 +1,13 @@
 """Algorithms for encoding the vectors."""
-
 import sys
-sys.path.append('../../DeepLearningTutorials/code/')
 
 from sklearn.decomposition import PCA, FastICA
-import alg.feature_selection
-
 from bunch import Bunch
+
+sys.path.append('../../DeepLearningTutorials/code/')
+
+
+import alg.feature_selection
 from dae import DAE
 
 L_algorithm = ['pca', 'spca', 'ica', 'sica', 'dae', 'sdae']
@@ -53,3 +54,5 @@ class DAE_AE(AE):
     def get_encoder(self, param):
         return DAE(param.learning_rate, param.n_epochs, param.n_hidden,
                    param.batch_size, param.corruption_level)
+
+
