@@ -24,11 +24,19 @@ if save_result:
         exit()
 
 
-@attr(alg_work=True)
 class TestAutoEncoder:
 
     def test_real_test_mode(self):
         ok_(not save_result, 'this is save mode')
+
+    @attr(alg_work=True)
+    def test_auto_encoder_new(self):
+        x, y = get_sample.point_data.normal_dist(4)
+        param = alg.auto_encoder.AE_Param
+        dae = alg.auto_encoder.Chainer_AE(param)
+        dae.fit(x)
+        encoded = dae.transform(x)
+        print encoded
 
     def test_auto_encoder(self):
         x, y = get_sample.point_data.normal_dist(4)

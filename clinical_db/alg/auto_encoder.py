@@ -9,6 +9,7 @@ sys.path.append('../../DeepLearningTutorials/code/')
 
 import alg.feature_selection
 from dae import DAE
+from chainer_alg import Chainer_DAE
 
 L_algorithm = ['pca', 'spca', 'ica', 'sica', 'dae', 'sdae']
 Default_param = Bunch(name='pca')
@@ -56,3 +57,6 @@ class DAE_AE(AE):
                    param.batch_size, param.corruption_level)
 
 
+class Chainer_AE(AE):
+    def get_encoder(self, param):
+        return Chainer_DAE(param.n_hidden, param.n_epochs, param.batch_size)

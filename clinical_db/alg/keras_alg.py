@@ -32,19 +32,20 @@ class Keras_LR():
 
 
 class Keras_DAE():
-    def __init__(self, n_epoch):
+    def __init__(self, n_epoch, batchsize):
         self.n_epoch = n_epoch
+        self.batchsize = batchsize
 
     def fit(self, train_x):
         train_x = train_x.astype('float32')
         n_dim = train_x.shape[1]
 
         encoder = containers.Sequential([Dense(n_dim, 100)])
-        decoder = containers.Sequential([Dense(100), n_dim])
+        decoder = containers.Sequential([Dense(100, n_dim)])
         self.model = Sequential()
         self.model.add(AutoEncoder(encoder=encoder, decoder=decoder, output_reconstruction=False))
-
-        self.model.fit(train_x, batch_size=self.batchsize, nb_epoch=self.n_epoch)
+        self.model.fit(train_x, train_x, batch_size=self.batchsize, nb_epoch=self.n_epoch)
+#        self.model.compile(loss='categorical_crossentropy', optimizer=rms)
 
     def transform(self, test_x):
         return test_x
