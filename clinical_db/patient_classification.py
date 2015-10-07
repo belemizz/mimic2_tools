@@ -51,16 +51,16 @@ class ControlExperiment:
         self.target_codes = target_codes
         self.matched_only = matched_only
 
-        self.id_list = self.__get_id_list()
+        self.id_list = self.get_id_list()
 
     def set_db_param(self, db_param):
         self.db_param = Bunch(db_param.copy())
         self.max_id = db_param.max_id
         self.target_codes = db_param.target_codes
         self.matched_only = db_param.matched_only
-        self.id_list = self.__get_id_list()
+        self.id_list = self.get_id_list()
 
-    def __get_id_list(self):
+    def get_id_list(self):
         if self.target_codes == 'all':
             id_list = mimic2.subject_all(self.max_id)
         elif self.target_codes == 'chf':

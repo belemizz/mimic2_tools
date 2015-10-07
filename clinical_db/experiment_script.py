@@ -8,6 +8,20 @@ from mutil import Graph, Stopwatch
 graph = Graph()
 sw = Stopwatch()
 from bunch import Bunch
+from mutil import Csv
+
+
+def list_matched_id():
+    from predict_readmission import PredictReadmission
+    db_param = Default_db_param
+    data_param = Default_data_param
+    alg_param = Default_alg_param
+
+    db_param.matched_only = True
+
+    pd = PredictReadmission(db_param, data_param, alg_param)
+    csv = Csv('../data/matched_id.csv')
+    csv.write_single_list(pd.id_list)
 
 
 def class_weight_comparison():
@@ -340,7 +354,8 @@ def compare_lab_tests_and_vitals():
 
 if __name__ == '__main__':
     sw.reset()
+    list_matched_id()
 #    readmission_prediction()
-    death_prediction()
+#    death_prediction()
     sw.stop()
     sw.print_cpu_elapsed()

@@ -4,21 +4,34 @@ import getpass
 import numpy as np
 
 import mutil.mycsv
-import datetime
 from mutil import Cache, p_info, is_number, include_any_number
 from collections import Counter
-from datetime import timedelta, datetime
-
+from datetime import timedelta
+from datetime import datetime
 from sklearn.linear_model import LinearRegression
+
+import os
+cont_dir = '../data/matdata/'
+files = os.listdir(cont_dir)
+
+from scipy.io import loadmat
+
+
+def get_rec_time(filename):
+    splitted = filename.split('-')
+    year = int(splitted[1])
+    month = int(splitted[2])
+    day = int(splitted[3])
+    hour = int(splitted[4])
+    minute = int(splitted[5].rstrip('n'))
+    return datetime(year, month, day, hour, minute, 0)
 
 
 class PatientData:
     def __init__(self, id_list):
         """Initializer of this class.
-
         :param id_list: list of subject id included in the instance
         """
-
         self.id_list = id_list
         self.l_patient = self.__get_patient_data()
 
@@ -50,6 +63,19 @@ class PatientData:
         for patient in self.l_patient:
             n_adm += len(patient.admissions)
         return n_adm
+
+    def get_patient(self, subject_id):
+        p_list = [p for p in self.l_patient if p.subject_id == subject_id]
+        if len(p_list) > 1:
+            raise ValueError('There is duplecation in subject id')
+        elif len(p_list) is 1:
+            return p_list[0]
+        else:
+            return None
+
+    def get_admission(self, subject_id, hadm_id):
+        patient = self.get_patient(subject_id)
+        return patient.get_admission(hadm_id)
 
     def common_lab(self, n_select):
         ids = {}
@@ -552,6 +578,16 @@ class Mimic2:
 
             labs = self.get_labs(admission_ins.hadm_id)
             admission_ins.set_labs(labs)
+
+            mat_list = [f for f in files if 's{0:05}'.format(subject_id) in f]
+            cont_filelist = []
+
+            for filename in mat_list:
+                rec_time = get_rec_time(filename)
+                if admission_ins.admit_dt < rec_time < admission_ins.disch_dt + timedelta(1):
+                    cont_filelist.append(filename)
+
+            admission_ins.l_cont = cont_filelist
             admission_list.append(admission_ins)
 
         return admission_list
@@ -926,6 +962,15 @@ class subject:
     def get_final_admission(self):
         return self.admissions[len(self.admissions) - 1]
 
+    def get_admission(self, hadm_id):
+        adm_list = [a for a in self.admissions if a.hadm_id == hadm_id]
+        if len(adm_list) > 1:
+            raise ValueError('There is duplecation in subject id')
+        elif len(adm_list) is 1:
+            return adm_list[0]
+        else:
+            return None
+
 
 class admission:
     """
@@ -1099,6 +1144,31 @@ class admission:
                                        item.unit, ts_interest, val_interest])
         return result
 
+    def get_continuous_data(self):
+        ts_all = None
+        data_all = None
+        for idx, cont_filename in enumerate(self.l_cont):
+            cont_data = loadmat(cont_dir + cont_filename)
+            rec_time = get_rec_time(cont_filename)
+            time_dif = rec_time - self.get_estimated_admit_time()
+            ts = [(cont_data['time'][0, i].flatten() + time_dif.seconds) / 3600. / 24.
+                  for i in range(cont_data['time'].shape[1])]
+            data = [cont_data['data'][0, i].flatten()
+                    for i in range(cont_data['data'].shape[1])]
+            if idx == 0:
+                ts_all = ts
+                data_all = data
+            else:
+                if len(ts_all) != len(ts):
+                    import ipdb
+                    ipdb.set_trace()
+                
+                for idx in range(len(ts_all)):
+                    ts_all[idx] = np.append(ts[idx], ts_all[idx])
+                    data_all[idx] = np.append(data[idx], data_all[idx])
+
+        return ts_all, data_all
+
     def __zero_point(self, from_discharge):
         if from_discharge:
             return self.get_estimated_disch_time()
@@ -1130,7 +1200,6 @@ class admission:
                     self.final_medication_time,
                     self.final_chart_time])
 
-    # TODO:bagfix
     def get_estimated_admit_time(self):
         return min([self.first_labs_time,
                     self.first_ios_time,

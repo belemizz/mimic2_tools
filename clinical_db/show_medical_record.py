@@ -5,13 +5,18 @@ from get_sample import Mimic2, PatientData
 from mutil import Graph, Csv, intersection
 from get_sample import SeriesData
 
+from patient_classification import ControlExperiment
+
 import numpy as np
+from scipy.io import loadmat
+import os
 
 mimic2db = Mimic2()
 graph = Graph()
 
 
-def visualize_data(subj_b_id):
+def visualize_data(subj_b_id, continuous):
+
     patients = PatientData(subj_b_id)
     l_lab_id, l_lab_desc, _ = patients.common_lab(2)
     l_chart_id = mimic2db.vital_charts
@@ -82,11 +87,17 @@ def visualize_data(subj_b_id):
         = coef(poi, duration, from_discharge)
 
     valid_hadm = intersection((hadm_c_id, hadm_b_id, hadm_p_id, hadm_s_id))
-    for id in valid_hadm:
+#    for idx, id in enumerate(valid_hadm):
+    for idx, id in enumerate(hadm_b_id):
         i_b = hadm_b_id.index(id)
         i_s = hadm_s_id.index(id)
         i_c = hadm_c_id.index(id)
         i_p = hadm_p_id.index(id)
+
+        admission = patients.get_admission(subj_b_id[idx], id)
+        if len(admission.l_cont) > 0:
+            ts, data = admission.get_continuous_data()
+            graph.line_scatter(ts, data)
 
         def __base_graph(i_b, b_ts, b_data, legend, title, filename):
             graph.line_scatter(b_ts[i_b], b_data[i_b], hl_span=span, x_label=x_label,
@@ -102,14 +113,14 @@ def visualize_data(subj_b_id):
             data = b_data[i_b] + c_data[i_c].tolist()
             graph.line_scatter(ts, data, hl_span=span)
 
-        title = "Hadm: {}".format(id)
+        title = "ID:{}  Hadm: {}".format(subj_b_id[idx], id)
         filename = "Hadm{}".format(id)
 
         __base_graph(i_b, lab_b_ts, lab_b_data, l_lab_desc, title, filename + 'lab')
         __base_graph(i_b, ch_b_ts, ch_b_data, mimic2db.vital_descs, title, filename + 'ch')
 
-        __sampling_graph(i_b, i_s, lab_b_ts, lab_s_ts, lab_b_data, lab_s_data)
-        __sampling_graph(i_b, i_s, ch_b_ts, ch_s_ts, ch_b_data, ch_s_data)
+#        __sampling_graph(i_b, i_s, lab_b_ts, lab_s_ts, lab_b_data, lab_s_data)
+#        __sampling_graph(i_b, i_s, ch_b_ts, ch_s_ts, ch_b_data, ch_s_data)
 
 #        __coef_graph(i_b, i_p, lab_b_ts, lab_p_ts, lab_b_data, lab_p_data)
 #        __coef_graph(i_b, i_p, ch_b_ts, ch_p_ts, ch_b_data, ch_p_data)
@@ -169,7 +180,12 @@ def show_records(subject_id):
             graph.draw_io_icu(icustay, admission.admit_dt, title, filename)
 
 if __name__ == '__main__':
-    id_list = mimic2db.subject_with_chf(0)
-    idx = 503
-    visualize_data(id_list[idx: idx + 1])
+    exp = ControlExperiment(0, 'chf', True)
+    idx = 3
+    size = 2
+    ids = exp.id_list[idx: idx + size]
+    import ipdb
+    ipdb.set_trace()
+    continuous_data = True
+    visualize_data(ids, continuous_data)
 #    show_records(subject_id)
