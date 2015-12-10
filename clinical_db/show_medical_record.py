@@ -6,16 +6,13 @@ from mutil import Graph, Csv, intersection
 from get_sample import SeriesData
 
 from patient_classification import ControlExperiment
-
 import numpy as np
-from scipy.io import loadmat
-import os
 
 mimic2db = Mimic2()
 graph = Graph()
 
 
-def visualize_data(subj_b_id, continuous):
+def visualize_data(subj_b_id, continuous, xlim):
 
     patients = PatientData(subj_b_id)
     l_lab_id, l_lab_desc, _ = patients.common_lab(2)
@@ -45,6 +42,7 @@ def visualize_data(subj_b_id, continuous):
         lab_p_data = np.dstack((a_lab, a_lab))
         chart_p_data = np.dstack((a_chart, a_chart))
         return lab_point_ts, lab_p_data, chart_point_ts, chart_p_data, hadm_p_id
+
     [lab_p_ts, lab_p_data, ch_p_ts, ch_p_data, hadm_p_id] \
         = single_sample(poi + duration, from_discharge)
 
@@ -94,14 +92,54 @@ def visualize_data(subj_b_id, continuous):
         i_c = hadm_c_id.index(id)
         i_p = hadm_p_id.index(id)
 
+        title = "ID:{}  Hadm: {}".format(subj_b_id[idx], id)
+        filename = "Hadm{}".format(id)
+
         admission = patients.get_admission(subj_b_id[idx], id)
         if len(admission.l_cont) > 0:
             ts, data = admission.get_continuous_data()
-            graph.line_scatter(ts, data)
+
+            def validate_data(data_array):
+                return np.logical_and(~np.isnan(data_array), ~(data_array == 0.))
+
+            def cont_prepro(ts, data):
+                ts_pre = []
+                data_pre = []
+                for idx in range(len(ts)):
+                    valid_idx = validate_data(data[idx])
+                    ts_pre.append(ts[idx][valid_idx])
+                    data_pre.append(data[idx][valid_idx])
+                return ts_pre, data_pre
+
+            def cont_gauss(ts, data):
+                ts_gauss = []
+                data_gauss = []
+                from sklearn import gaussian_process
+                for idx in range(len(ts)):
+                    gp = gaussian_process.GaussianProcess(theta0=1e-2, thetaL=1e-4, thetaU=1e-1, nugget=1e-6)
+                    X = np.atleast_2d(ts[idx]).T
+                    y = data[idx]
+                    gp.fit(X, y)
+                    x = np.atleast_2d(np.linspace(0., 1., 100)).T
+                    y_pred, sigma2pred = gp.predict(x, eval_MSE=True)
+
+                    ts_gauss.append(x)
+                    data_gauss.append(y_pred)
+
+                return ts_gauss, data_gauss
+
+            ts_p, data_p = cont_prepro(ts, data)
+            ts_g, data_g = cont_gauss(ts_p, data_p)
+
+            graph.line_scatter(ts, data, xlim=xlim, title=title, filename=filename + 'cont')
+            graph.line_scatter(ts_p, data_p, xlim=xlim, title=title,
+                               filename=filename + 'cont_valid')
+            graph.line_scatter(ts_g, data_g, xlim=xlim, title=title,
+                               filename=filename + 'cont_gauss')
 
         def __base_graph(i_b, b_ts, b_data, legend, title, filename):
             graph.line_scatter(b_ts[i_b], b_data[i_b], hl_span=span, x_label=x_label,
-                               legend=legend, title=title, filename=filename)
+                               legend=legend, title=title, filename=filename, xlim=xlim)
 
         def __sampling_graph(i_b, i_s, b_ts, s_ts, b_data, s_data):
             ts = b_ts[i_b] + s_ts
@@ -112,9 +150,6 @@ def visualize_data(subj_b_id, continuous):
             ts = b_ts[i_b] + c_ts
             data = b_data[i_b] + c_data[i_c].tolist()
             graph.line_scatter(ts, data, hl_span=span)
-
-        title = "ID:{}  Hadm: {}".format(subj_b_id[idx], id)
-        filename = "Hadm{}".format(id)
 
         __base_graph(i_b, lab_b_ts, lab_b_data, l_lab_desc, title, filename + 'lab')
         __base_graph(i_b, ch_b_ts, ch_b_data, mimic2db.vital_descs, title, filename + 'ch')
@@ -181,11 +216,10 @@ def show_records(subject_id):
 
 if __name__ == '__main__':
     exp = ControlExperiment(0, 'chf', True)
-    idx = 3
-    size = 2
+    idx = 0
+    size = 1
     ids = exp.id_list[idx: idx + size]
-    import ipdb
-    ipdb.set_trace()
     continuous_data = True
-    visualize_data(ids, continuous_data)
+    xlim = [0.5, 1]
+    visualize_data(ids, continuous_data, xlim)
 #    show_records(subject_id)

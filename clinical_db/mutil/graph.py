@@ -77,7 +77,7 @@ class MGraph:
                 ax.text(rect.get_x(), 1.05 * height, '%0.3f' % height)
 
     def line_scatter(self, x_data, y_data, hl_span=None, legend="", x_label="", y_label="",
-                     ylim=[], title="", filename="", show_flag=True):
+                     xlim=[], ylim=[], title="", filename="", show_flag=True):
         """Draw a scatter graph connected by lines"""
         original_data = locals().copy()
         fig, ax = self.figure_with_side_space(0.7)
@@ -89,6 +89,8 @@ class MGraph:
 
         if hl_span:
             ax.axvspan(hl_span[0], hl_span[1], alpha=0.2, color='red')
+        if xlim:
+            ax.set_xlim(xlim)
         if ylim:
             ax.set_ylim(ylim)
 
