@@ -92,4 +92,3 @@ if __name__ == '__main__':
     pd = PredictDeath(db_param, data_param)
     result = pd.execution()
     print result.lab.get_dict()
-

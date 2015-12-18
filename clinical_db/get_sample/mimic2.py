@@ -230,7 +230,6 @@ class PatientData:
 
     def data_from_adm(self, l_lab_id, l_chart_id, from_discharge=True):
         '''Get data from each admission
-
         :param l_lab_id: Lab ID list of interest
         :param l_chart_id: Chart ID list of interest
         :param from_discharge: True->Set zero point on discharge. False-> set on admission
@@ -1144,7 +1143,7 @@ class admission:
                                        item.unit, ts_interest, val_interest])
         return result
 
-    def get_continuous_data(self):
+    def get_continuous_data(self, preprocess=True):
         ts_all = None
         data_all = None
         for idx, cont_filename in enumerate(self.l_cont):
@@ -1162,12 +1161,27 @@ class admission:
                 if len(ts_all) != len(ts):
                     import ipdb
                     ipdb.set_trace()
-                
+
                 for idx in range(len(ts_all)):
                     ts_all[idx] = np.append(ts[idx], ts_all[idx])
                     data_all[idx] = np.append(data[idx], data_all[idx])
 
-        return ts_all, data_all
+        if preprocess:
+            return self.__prepro_cont(ts_all, data_all)
+        else:
+            return (ts_all, data_all)
+
+    def __prepro_cont(self, ts, data):
+        ts_pre = []
+        data_pre = []
+
+        def validate_data(data_array):
+                return np.logical_and(~np.isnan(data_array), ~(data_array == 0.))
+        for idx in range(len(ts)):
+            valid_idx = validate_data(data[idx])
+            ts_pre.append(ts[idx][valid_idx])
+            data_pre.append(data[idx][valid_idx])
+        return ts_pre, data_pre
 
     def __zero_point(self, from_discharge):
         if from_discharge:

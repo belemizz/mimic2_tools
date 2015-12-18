@@ -24,6 +24,9 @@ Default_data_param = Bunch(n_lab=20, disch_origin=True, span=[-1., 0.],
 """Param for database preparation.
 :param tseries_flag: True for use timeseries
 :param tseres_cycle: Cycle of the timeseries
+:param span: Span of interest
+:param coef_flag: True to use coefficient of trend analysis
+:param tseries_cycle: Cycle for sampling time sereis data
 """
 
 Default_alg_param = Bunch(visualize_data=False,

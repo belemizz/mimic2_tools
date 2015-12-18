@@ -4,6 +4,7 @@ Script to show summery of  medical record of a subject.
 from get_sample import Mimic2, PatientData
 from mutil import Graph, Csv, intersection
 from get_sample import SeriesData
+from alg.continuous import gaussian_process_regression
 
 from patient_classification import ControlExperiment
 import numpy as np
@@ -33,7 +34,6 @@ def visualize_data(subj_b_id, continuous, xlim):
     # Get All Data as a baseline
     [lab_b_ts, lab_b_data, ch_b_ts, ch_b_data, b_flag, subj_b_id, hadm_b_id] \
         = patients.data_from_adm(l_lab_id, l_chart_id, from_discharge=from_discharge)
-
     def single_sample(poi, from_discharge):
         a_lab, a_chart, _, _, _, _, hadm_p_id \
             = patients.point_from_adm(l_lab_id, l_chart_id, span[1], from_discharge)
@@ -84,7 +84,7 @@ def visualize_data(subj_b_id, continuous, xlim):
     lab_c_ts, lab_c_data, ch_c_ts, ch_c_data, hadm_c_id \
         = coef(poi, duration, from_discharge)
 
-    valid_hadm = intersection((hadm_c_id, hadm_b_id, hadm_p_id, hadm_s_id))
+#    valid_hadm = intersection((hadm_c_id, hadm_b_id, hadm_p_id, hadm_s_id))
 #    for idx, id in enumerate(valid_hadm):
     for idx, id in enumerate(hadm_b_id):
         i_b = hadm_b_id.index(id)
@@ -98,42 +98,8 @@ def visualize_data(subj_b_id, continuous, xlim):
         admission = patients.get_admission(subj_b_id[idx], id)
         if len(admission.l_cont) > 0:
             ts, data = admission.get_continuous_data()
-
-            def validate_data(data_array):
-                return np.logical_and(~np.isnan(data_array), ~(data_array == 0.))
-
-            def cont_prepro(ts, data):
-                ts_pre = []
-                data_pre = []
-                for idx in range(len(ts)):
-                    valid_idx = validate_data(data[idx])
-                    ts_pre.append(ts[idx][valid_idx])
-                    data_pre.append(data[idx][valid_idx])
-                return ts_pre, data_pre
-
-            def cont_gauss(ts, data):
-                ts_gauss = []
-                data_gauss = []
-                from sklearn import gaussian_process
-                for idx in range(len(ts)):
-                    gp = gaussian_process.GaussianProcess(theta0=1e-2, thetaL=1e-4, thetaU=1e-1, nugget=1e-6)
-                    X = np.atleast_2d(ts[idx]).T
-                    y = data[idx]
-                    gp.fit(X, y)
-                    x = np.atleast_2d(np.linspace(0., 1., 100)).T
-                    y_pred, sigma2pred = gp.predict(x, eval_MSE=True)
-
-                    ts_gauss.append(x)
-                    data_gauss.append(y_pred)
-
-                return ts_gauss, data_gauss
-
-            ts_p, data_p = cont_prepro(ts, data)
-            ts_g, data_g = cont_gauss(ts_p, data_p)
-
+            ts_g, data_g = gaussian_process_regression(ts, data)
             graph.line_scatter(ts, data, xlim=xlim, title=title, filename=filename + 'cont')
-            graph.line_scatter(ts_p, data_p, xlim=xlim, title=title,
-                               filename=filename + 'cont_valid')
             graph.line_scatter(ts_g, data_g, xlim=xlim, title=title,
                                filename=filename + 'cont_gauss')
 
