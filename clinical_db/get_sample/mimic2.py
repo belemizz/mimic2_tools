@@ -1158,11 +1158,7 @@ class admission:
                 ts_all = ts
                 data_all = data
             else:
-                if len(ts_all) != len(ts):
-                    import ipdb
-                    ipdb.set_trace()
-
-                for idx in range(len(ts_all)):
+                for idx in range(min(len(ts_all), len(ts))):
                     ts_all[idx] = np.append(ts[idx], ts_all[idx])
                     data_all[idx] = np.append(data[idx], data_all[idx])
 

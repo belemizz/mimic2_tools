@@ -18,11 +18,7 @@ class TestScripts():
     @attr(work_script=True)
     def test_show_medical_record(self):
         import show_medical_record
-        show_medical_record.visualize_data([1855])
-
-    def test_classification(self):
-        import classify_patients
-        classify_patients.main(max_id=2000)
+        show_medical_record.visualize_data([1855], False, [0.5, 1])
 
     def test_predict_death(self):
         db_param = Bunch(Default_db_param.copy())

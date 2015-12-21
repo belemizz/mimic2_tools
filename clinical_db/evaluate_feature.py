@@ -1,5 +1,5 @@
 """
-Evaluate the importance of the feature
+Evaluate importance of the feature
 """
 import numpy as np
 import datetime
@@ -129,10 +129,13 @@ class evaluate_fetaure:
         print self.__param_code()
 
         """ Basic evaluation method """
-        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = self.__point_preparation()
+        [most_common_tests, lab_data, lab_descs, lab_units, vital_data, flags] = \
+            self.__point_preparation()
 
-        ## importance of each metrics
-        lab_importance = alg.feature_selection.calc_entropy_reduction(lab_data, flags, most_common_tests, lab_descs, lab_units)
+        # importance of each metrics
+        lab_importance = alg.feature_selection.calc_entropy_reduction(lab_data, flags,
+                                                                      most_common_tests,
+                                                                      lab_descs, lab_units)
         vital_importance = alg.feature_selection.calc_entropy_reduction(vital_data, flags, mimic2db.vital_charts, mimic2db.vital_descs, mimic2db.vital_units)
         all_importance = lab_importance + vital_importance
         all_importance.sort(reverse = True)

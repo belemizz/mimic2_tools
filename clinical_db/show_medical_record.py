@@ -98,10 +98,10 @@ def visualize_data(subj_b_id, continuous, xlim):
         admission = patients.get_admission(subj_b_id[idx], id)
         if len(admission.l_cont) > 0:
             ts, data = admission.get_continuous_data()
-            ts_g, data_g = gaussian_process_regression(ts, data)
             graph.line_scatter(ts, data, xlim=xlim, title=title, filename=filename + 'cont')
-            graph.line_scatter(ts_g, data_g, xlim=xlim, title=title,
-                               filename=filename + 'cont_gauss')
+#            ts_g, data_g = gaussian_process_regression(ts, data)
+#            graph.line_scatter(ts_g, data_g, xlim=xlim, title=title,
+#                               filename=filename + 'cont_gauss')
 
         def __base_graph(i_b, b_ts, b_data, legend, title, filename):
             graph.line_scatter(b_ts[i_b], b_data[i_b], hl_span=span, x_label=x_label,
