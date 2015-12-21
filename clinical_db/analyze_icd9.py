@@ -1,3 +1,5 @@
+"""Count the frequency of the icd 9 codes"""
+
 from get_sample import Mimic2
 import csv
 savepath = '../data/tmp.csv'
@@ -30,14 +32,13 @@ for row in dataReader:
 
         codes = [row[3]]
         prev_adm_id = row[1]
-
 f.close()
 
 # count code sequence
 codes_and_counts = {}
 for code in all_codes:
     if target_code in code:
-        if codes_and_counts.has_key(code):
+        if code in codes_and_counts:
             codes_and_counts[code] += 1
         else:
             codes_and_counts[code] = 1
