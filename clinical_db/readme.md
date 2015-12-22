@@ -26,5 +26,5 @@
 
 # Preparing mimic2 clinical database
 1. Make physionet account and get approved to access to the database. Detailed instruction is available on the following link. https://physionet.org/mimic2/mimic2_clinical_flatfiles.shtml
-2. You should be able to access the folloing url when you get approval. https://physionet.org/mimic2/mimic2_clinical_flatfiles.shtml
-3. Download the MIMIC2 importer to setup database. PostgreSQL is recommended.
+2. You should be able to access the folloing url when you get approval. https://physionet.org/works/MIMICIIClinicalDatabase/files/
+3. Download the MIMIC2 importer from there and setup database in your own computer. PostgreSQL is recommended. For full install, huge diskspace (~100GB) is needed.
