@@ -1,9 +1,9 @@
 # Before use
 1. Prepare mimic2 clinical database
-2. Install libraries
+2. Install libraries. See the folloing setup script. https://github.com/belemizz/setuptools/blob/master/setup_python.sh
 3. Run either of the following scripts
 
-- The scripts are tested on only on Ubuntu 14.04 and python 2.7.6.
+- Scripts are tested on only on Ubuntu 14.04 and python 2.7.6.
 
 # Scripts
 - analyze_icd9.py: Count frequency of icd 9 code
