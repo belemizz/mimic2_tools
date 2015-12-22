@@ -3,6 +3,8 @@
 2. Install libraries
 3. Run either of the following scripts
 
+- The scripts are tested on only on Ubuntu 14.04 and python 2.7.6.
+
 # Scripts
 - analyze_icd9.py: Count frequency of icd 9 code
 - list_id_form_code.py Generate a list of subject id that have the selected icd 9 code 
