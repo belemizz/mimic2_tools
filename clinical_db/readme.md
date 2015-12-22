@@ -23,3 +23,8 @@
 - patient_classification.py
 - classify_patients.py
 - learn_visualize_feature.py
+
+# Preparing mimic2 clinical database
+1. Make physionet account and get approved to access to the database. Detailed instruction is available on the following link. https://physionet.org/mimic2/mimic2_clinical_flatfiles.shtml
+2. You should be able to access the folloing url when you get approval. https://physionet.org/mimic2/mimic2_clinical_flatfiles.shtml
+3. Download the MIMIC2 importer to setup database. PostgreSQL is recommended.
